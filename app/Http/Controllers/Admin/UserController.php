@@ -124,9 +124,29 @@ class UserController extends Controller
         return $managableRoles->unique('id');
     }
 
+    /**
+     * NEU: Hilfsfunktion, die die Super-Admin Rolle aus der Anzeige entfernt.
+     */
+    private function filterSuperAdminFromRoles(User $user): User
+    {
+        if ($user->relationLoaded('roles')) {
+            $filteredRoles = $user->roles->reject(function ($role) {
+                return $role->name === $this->superAdminRole;
+            });
+            $user->setRelation('roles', $filteredRoles);
+        }
+        return $user;
+    }
+
     public function index()
     {
-        $users = User::with('roles')->orderBy('name')->get();
+        $users = User::with('roles')->orderBy('personal_number')->get();
+
+        // KORREKTUR: Filtere die Super-Admin-Rolle für die Anzeige heraus.
+        $users->each(function ($user) {
+            $this->filterSuperAdminFromRoles($user);
+        });
+
         return view('admin.users.index', compact('users'));
     }
 
