@@ -7,32 +7,29 @@
 
     <title>@yield('title', 'EMS Panel')</title>
 
-    <!-- AdminLTE & Bootstrap 4 Assets (AdminLTE basiert auf Bootstrap 4) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    
-    <!-- Bootstrap Icons (Wird beibehalten, aber Font Awesome wird für die AdminLTE-Sidebar bevorzugt) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"> 
-    
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- AdminLTE Style -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
 
+    <!-- HIER: DataTables CSS via CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables-bs4/3.0.0/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-responsive-bs4/3.0.0/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-buttons-bs4/3.0.0/buttons.bootstrap4.min.css">
+    
     <!-- Optionales Dark Mode Styling -->
     <style>
-        .dark-mode .main-header.navbar {
-            border-bottom: none;
-        }
-        .nav-icon {
-            font-size: 1.1rem;
-        }
+        .dark-mode .main-header.navbar { border-bottom: none; }
+        .nav-icon { font-size: 1.1rem; }
     </style>
+    @stack('styles')
 </head>
-{{-- KORRIGIERT: Die Dark-Mode Klasse wird über JS auf den Body angewendet --}}
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
 <div class="wrapper">
 
     <!-- Navbar -->
-    {{-- HINWEIS: Die Klassen navbar-white und navbar-light steuern die Standardfarbe --}}
     <nav class="main-header navbar navbar-expand navbar-white navbar-light" id="mainNavbar">
         <!-- Left navbar links -->
         <ul class="navbar-nav">
@@ -43,22 +40,18 @@
 
         <!-- Right navbar links -->
         <ul class="navbar-nav ml-auto">
-            
-            {{-- Dark Mode Toggle (Beibehalten) --}}
             <li class="nav-item">
-                 <a class="nav-link" id="darkModeToggle" href="#" role="button">
+                <a class="nav-link" id="darkModeToggle" href="#" role="button">
                     <i class="fas fa-moon"></i>
                 </a>
             </li>
 
-            {{-- User Dropdown --}}
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
                     <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
                     <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                    <!-- User image -->
                     <li class="user-header bg-primary">
                         <img src="{{ Auth::user()->avatar }}" class="img-circle elevation-2" alt="User Image">
                         <p>
@@ -66,7 +59,6 @@
                             <small>{{ Auth::user()->rank ?? 'Mitarbeiter' }}</small>
                         </p>
                     </li>
-                    <!-- Menu Footer-->
                     <li class="user-footer">
                         <a href="{{ route('profile.show') }}" class="btn btn-default btn-flat">Profil</a>
                         <a href="#" class="btn btn-default btn-flat float-right"
@@ -84,67 +76,57 @@
     <!-- /.navbar -->
 
     <!-- Main Sidebar Container -->
-    {{-- KORRIGIERT: Die ID 'mainSidebar' wurde für JS hinzugefügt --}}
     <aside class="main-sidebar sidebar-dark-primary elevation-4" id="mainSidebar">
-        <!-- Brand Logo -->
         <a href="{{ route('dashboard') }}" class="brand-link">
             <i class="fas fa-ambulance brand-image img-circle elevation-3" style="opacity: .8"></i>
             <span class="brand-text font-weight-light">EMS Panel</span>
         </a>
 
-        <!-- Sidebar -->
         <div class="sidebar">
             <nav class="mt-2">
-                {{-- HIER WIRD DIE NAVIGATION EINGEFÜGT --}}
                 @include('layouts.navigation') 
             </nav>
         </div>
-        <!-- /.sidebar -->
     </aside>
 
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
-        <!-- Content Header (Page header) -->
-        <div class="content-header">
-            <div class="container-fluid">
-                {{-- Hier könnten Breadcrumbs oder Page Titles hin --}}
-            </div>
-        </div>
-        <!-- /.content-header -->
-
-        <!-- Main content -->
         <div class="content">
-            <div class="container-fluid">
-                {{-- Globale Alerts werden nicht mehr hier included, da SweetAlerts verwendet werden. --}}
+            <div class="container-fluid pt-3"> {{-- Padding Top für Abstand --}}
                 @yield('content')
             </div>
         </div>
-        <!-- /.content -->
     </div>
     <!-- /.content-wrapper -->
 
-    <!-- Control Sidebar -->
-    <aside class="control-sidebar control-sidebar-dark">
-        <!-- Control sidebar content goes here -->
-    </aside>
-    <!-- /.control-sidebar -->
-
     <!-- Main Footer -->
     <footer class="main-footer">
-        <div class="float-right d-none d-sm-inline">
-            Version 1.0
-        </div>
+        <div class="float-right d-none d-sm-inline">Version 1.0</div>
         <strong>Copyright &copy; 2025 EMS Panel.</strong> All rights reserved.
     </footer>
 </div>
 <!-- ./wrapper -->
 
 <!-- REQUIRED SCRIPTS -->
-<script src="https://rac-panel.de/adminlte/jquery/jquery.min.js"></script>
-<script src="https://rac-panel.de/adminlte/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/js/adminlte.min.js"></script>
 
-{{-- KORREKTUR: Direkte SweetAlert2-Einbindung (mit Timeout im Ready Block) --}}
+<!-- HIER: DataTables & Plugins JS via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables-bs4/3.0.0/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-responsive/3.0.0/dataTables.responsive.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-responsive-bs4/3.0.0/responsive.bootstrap4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-buttons/3.0.0/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-buttons-bs4/3.0.0/buttons.bootstrap4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-buttons/3.0.0/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-buttons/3.0.0/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datatables.net-buttons/3.0.0/js/buttons.colVis.min.js"></script>
+
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
 
 <script>
@@ -286,5 +268,7 @@
             <a href="{{ route('impersonate.leave') }}" style="color: white; text-decoration: underline; margin-left: 20px;">Zurück zu meinem Account</a>
         </div>
     @endImpersonating
+
+    @stack('scripts')
 </body>
 </html>
