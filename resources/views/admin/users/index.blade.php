@@ -118,6 +118,8 @@
         "responsive": true, 
         "lengthChange": false, 
         "autoWidth": false,
+        "ordering": true,
+        "paging": true,
         // Spezifische Spalten vom Sortieren/Suchen ausschließen
         "columnDefs": [ {
             "targets": 'no-sort',
