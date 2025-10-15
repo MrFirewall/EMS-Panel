@@ -1,67 +1,66 @@
-EMS Verwaltungssystem
-Ein internes Verwaltungssystem für das Emergency Medical Service (EMS), entwickelt mit dem Laravel Framework. Diese Anwendung dient der Verwaltung von Mitarbeitern, Rollen, Akteneinträgen, Einsatzberichten und internen Formularen.
+Emergency Medical Service Verwaltungssystem: Projektdokumentation
+Das vorliegende Dokument beschreibt das Emergency Medical Service (EMS) Verwaltungssystem, eine mittels des Laravel Frameworks entwickelte Softwareanwendung. Die primäre Funktion dieser Applikation besteht in der systematischen Verwaltung von Personal, zugewiesenen Rollen, Personalakten sowie internen Formularen.
 
-✨ Features
-Dashboard: Zentrale Übersicht über wichtige Informationen und Statistiken.
+Funktionsumfang
+Zentrales Dashboard: Bereitstellung einer konsolidierten Übersicht über systemrelevante Informationen und Statistiken zur Effizienzsteigerung.
 
-Mitarbeiterverwaltung: Anlegen, Bearbeiten und Verwalten von Mitarbeiterprofilen.
+Personalverwaltung: Module zur Erfassung, Modifikation und Verwaltung von Mitarbeiterprofilen.
 
-Dynamisches Berechtigungssystem:
+Hierarchisches Berechtigungssystem:
 
-Rollen & Ränge: Feingranulare Rechtevergabe basierend auf einer klaren Rang-Hierarchie (von Praktikant bis EMS Director).
+Implementierung einer granularen Zugriffskontrolle, die auf einer definierten Ranghierarchie basiert, welche von Praktikanten bis zur Direktionsebene reicht.
 
-Abteilungs-Rollen: Spezielle Rollen für Abteilungen (Rechts-, Ausbildungs- & Personalabteilung) mit eigener Zuweisungslogik.
+Definition spezifischer Rollen für einzelne Abteilungen, einschließlich einer dedizierten Zuweisungslogik zur Wahrung der organisatorischen Integrität.
 
-Super-Admin: Eine unsichtbare Admin-Rolle mit allumfassenden Rechten für die technische Verwaltung.
+Etablierung einer "Super-Admin"-Rolle, die über uneingeschränkte Systemprivilegien verfügt, jedoch in der grafischen Benutzeroberfläche nicht sichtbar oder zuweisbar ist, um die Systemsicherheit zu maximieren.
 
-"Einloggen als"-Funktion (Impersonation): Administratoren können sich als andere Benutzer anmelden, um Probleme zu diagnostizieren.
+Impersonierungsfunktion: Ermöglicht autorisierten Administratoren den temporären Zugriff auf Benutzerkonten zu Diagnose- und Supportzwecken.
 
-Personalakte: Führen von Akteneinträgen (Beförderungen, Vermerke etc.) für jeden Mitarbeiter.
+Digitale Personalaktenführung: Systematische Erfassung und Archivierung von personalrelevanten Vorgängen und Dokumenten für jeden Mitarbeiter.
 
-Formular-System: Einreichung und Verwaltung von Anträgen wie Urlaubsanträgen, Bewertungen etc.
+Digitalisiertes Formularwesen: Abwicklung interner Antragsverfahren, wie Urlaubsanträge oder Mitarbeiterbewertungen, über eine webbasierte Schnittstelle.
 
-Einsatzberichte: Erstellen und Verwalten von Einsatzberichten.
+Einsatzberichterstattung: Modul zur Erstellung und Verwaltung von Einsatzprotokollen.
 
-Aktivitäten-Log: Nachverfolgung aller wichtigen Aktionen im System.
+Aktivitätsprotokollierung: Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der Nachvollziehbarkeit und Revision.
 
-💻 Technologie-Stack
+Technologische Grundlage
 Backend: PHP 8.2+ / Laravel 12+
 
 Frontend: Blade, AdminLTE 3, JavaScript
 
 Datenbank: MySQL
 
-Wichtige Pakete:
+Implementierte Kernbibliotheken:
 
-spatie/laravel-permission: Für das Rollen- und Berechtigungssystem.
+spatie/laravel-permission: Zur Realisierung der Rollen- und Berechtigungslogik.
 
-lab404/laravel-impersonate: Für die "Einloggen als"-Funktionalität.
+lab404/laravel-impersonate: Zur Implementierung der Impersonierungsfunktionalität.
 
-🚀 Installation und Einrichtung
-Folge diesen Schritten, um das Projekt lokal aufzusetzen.
+Installations- und Inbetriebnahme-Anleitung
+Die nachfolgenden Anweisungen beschreiben den Prozess zur Einrichtung einer lokalen Entwicklungsumgebung.
 
-1. Repository klonen
+1. Klonen des Repositories
 
-git clone [https://github.com/DEIN-BENUTZERNAME/DEIN-REPO-NAME.git](https://github.com/DEIN-BENUTZERNAME/DEIN-REPO-NAME.git)
-cd DEIN-REPO-NAME
+git clone [https://github.com/MrFirewall/EMS-Panel.git](https://github.com/MrFirewall/EMS-Panel.git)
+cd EMS-Panel
 
-2. Abhängigkeiten installieren
-Installiere alle PHP- und JavaScript-Abhängigkeiten.
+2. Installation der Projektabhängigkeiten
 
-# PHP-Pakete installieren
+# Installation der PHP-Abhängigkeiten via Composer
 composer install
 
-# JavaScript-Pakete installieren
+# Installation der JavaScript-Abhängigkeiten via NPM
 npm install
 
-3. Umgebungsvariablen-Datei erstellen
-Kopiere die Beispiel-Datei und generiere einen neuen Anwendungsschlüssel.
+3. Konfiguration der Umgebungsvariablen
+Es ist erforderlich, die bereitgestellte Beispiel-Konfigurationsdatei zu duplizieren und einen applikationsspezifischen Sicherheitsschlüssel zu generieren.
 
 cp .env.example .env
 php artisan key:generate
 
-4. .env-Datei konfigurieren
-Öffne die .env-Datei und konfiguriere mindestens die folgenden Variablen, insbesondere deine Datenbank-Zugangsdaten:
+4. Anpassung der Konfigurationsparameter
+Die Datei .env ist zu editieren, um die Konfigurationsparameter, insbesondere die Zugangsdaten für die Datenbankverbindung, zu spezifizieren.
 
 APP_NAME="EMS Verwaltung"
 APP_URL=http://localhost:8000
@@ -73,33 +72,32 @@ DB_DATABASE=deine_datenbank
 DB_USERNAME=dein_benutzername
 DB_PASSWORD=dein_passwort
 
-5. Datenbank migrieren und Seeder ausführen
-Erstelle die Datenbankstruktur und fülle sie mit den notwendigen Start-Daten (Rollen, Berechtigungen etc.).
+5. Datenbankmigration und Initialisierung
+Die Ausführung des nachstehenden Befehls initiiert die Datenbankmigration zur Erstellung der erforderlichen Tabellenstruktur und führt anschließend die Seeder aus, um die Datenbank mit initialen Datensätzen zu befüllen.
 
 php artisan migrate --seed
 
-Dieser Befehl führt alle Migrationen und danach alle Seeder aus, inklusive des PermissionsSeeder.
+Anmerkung: Dieser Prozess umfasst sowohl die Schema-Migration als auch das Seeding mit fundamentalen Daten wie Rollen und Berechtigungen.
 
-6. Frontend-Assets kompilieren
-Kompiliere die CSS- und JS-Dateien.
+6. Kompilierung der Frontend-Assets
+Die Frontend-Assets (CSS und JavaScript) müssen kompiliert werden.
 
 npm run build
 
-7. Storage-Verknüpfung erstellen
+7. Erstellung des Storage-Symlinks
 
 php artisan storage:link
 
-8. Server starten
-Du kannst nun den lokalen Entwicklungsserver starten.
+8. Starten des Entwicklungsservers
 
 php artisan serve
 
-Die Anwendung ist jetzt unter http://localhost:8000 erreichbar.
+Nach erfolgreicher Ausführung der vorgenannten Schritte ist die Applikation unter der Adresse http://localhost:8000 erreichbar.
 
-🔐 Admin-Zugang & Rollen
-Standard-Admin: Nach dem Seeding hat der ems-director Zugriff auf alle administrativen Funktionen.
+Administratorzugang und Rollenkonzept
+Standard-Administrator: Nach der initialen Datenbankinitialisierung (Seeding) wird der Rolle ems-director voller administrativer Zugriff auf alle Systemfunktionen gewährt.
 
-Super-Admin: Die Rolle Super-Admin besitzt ebenfalls alle Rechte, ist aber in der Benutzeroberfläche nicht sichtbar oder zuweisbar. Sie muss manuell über die Konsole (php artisan tinker) einem Entwickler-Account zugewiesen werden.
+Super-Admin-Rolle: Eine zusätzliche Rolle namens Super-Admin existiert, welche äquivalente, allumfassende Berechtigungen besitzt. Diese Rolle ist jedoch innerhalb der Benutzeroberfläche weder sichtbar noch zuweisbar und muss einem Benutzerkonto manuell über die Kommandozeile (php artisan tinker) zugewiesen werden. Sie ist für Entwicklungs- und Wartungszwecke vorgesehen.
 
-Lizenz
-Dieses Projekt steht unter der MIT-Lizenz.
+Lizenzierung
+Die Nutzung dieser Software unterliegt den Bestimmungen der MIT-Lizenz.
