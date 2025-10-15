@@ -125,7 +125,7 @@
         "searching": true,         
         // "Zeige X Einträge" deaktivieren (optional, nach Wunsch)
         "lengthChange": true,
-        "lengthMenu": [10, 25, 50, -1]
+        "lengthMenu": [10, 25, 50, -1],
         // Spezifische Spalten vom Sortieren/Suchen ausschließen
         "columnDefs": [ {
             "targets": 'no-sort',
