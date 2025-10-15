@@ -115,7 +115,7 @@
         "language": {
             "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/German.json"
         },
-        
+        "order": [[1, 'desc']] , // Standardmäßig nach Personalnummer absteigend sortieren
         "responsive": true, 
         "autoWidth": false,
         "paging": true,
@@ -124,8 +124,8 @@
         // WICHTIG: Suche aktivieren
         "searching": true,         
         // "Zeige X Einträge" deaktivieren (optional, nach Wunsch)
-        "lengthChange": false,
-
+        "lengthChange": true,
+        "lengthMenu": [10, 25, 50, -1]
         // Spezifische Spalten vom Sortieren/Suchen ausschließen
         "columnDefs": [ {
             "targets": 'no-sort',
@@ -134,7 +134,14 @@
           {
             "targets": 'no-search',
             "searchable": false
-        }]
+        }],
+        "layout": {
+            bottomEnd: {
+                paging: {
+                    firstLast: false
+                }
+            }
+        }
       });
     });
 </script>
