@@ -1,0 +1,81 @@
+/* public/css/dark_mode.css */
+
+/* Diese Stile gelten nur, wenn das html-Element die Klasse "uk-dark" hat */
+html.uk-dark {
+    color-scheme: dark;
+}
+
+/* Hintergrund */
+html.uk-dark body,
+html.uk-dark .uk-background-muted {
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+}
+
+/* Standard-Karten und Navigationsleiste */
+html.uk-dark .uk-card-default,
+html.uk-dark .uk-navbar-container,
+html.uk-dark .uk-offcanvas-bar,
+html.uk-dark .uk-dropdown,
+html.uk-dark .uk-modal-dialog {
+    background-color: #2b2b2b;
+    color: #f0f0f0;
+    border: 1px solid #444;
+}
+
+/* Überschriften und Links */
+html.uk-dark h1, html.uk-dark h2, html.uk-dark h3, html.uk-dark h4, html.uk-dark h5, html.uk-dark h6,
+html.uk-dark .uk-heading-medium,
+html.uk-dark .uk-logo {
+    color: #fff;
+}
+
+html.uk-dark a {
+    color: #87ceeb; /* Sky Blue für Links */
+}
+
+/* Formulare */
+html.uk-dark .uk-input,
+html.uk-dark .uk-textarea,
+html.uk-dark .uk-select {
+    background-color: #333;
+    color: #f0f0f0;
+    border-color: #555;
+}
+
+html.uk-dark .uk-form-label {
+    color: #ccc;
+}
+
+/* Tabellen */
+html.uk-dark .uk-table th {
+    color: #fff;
+}
+
+html.uk-dark .uk-table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: #333;
+}
+
+html.uk-dark .uk-table caption,
+html.uk-dark .uk-table tfoot {
+    color: #ccc;
+}
+
+/* Buttons */
+html.uk-dark .uk-button-default {
+    background-color: #444;
+    color: #f0f0f0;
+    border-color: #666;
+}
+
+html.uk-dark .uk-button-default:hover {
+    background-color: #555;
+    color: #fff;
+}
+
+/* Sonstiges */
+html.uk-dark hr,
+html.uk-dark .uk-nav-divider,
+html.uk-dark .uk-description-list-divider > dt:not(:first-child) {
+    border-top-color: #444;
+}
