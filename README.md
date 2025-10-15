@@ -143,3 +143,4 @@ Diese Rolle dient ausschließlich Entwicklungs- und Wartungszwecken.
 ## Lizenzierung
 Diese Software wird unter den Bedingungen der **MIT-Lizenz** bereitgestellt.
 
+Test für Discord Webhook
