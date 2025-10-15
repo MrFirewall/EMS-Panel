@@ -115,11 +115,17 @@
         "language": {
             "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/German.json"
         },
+        
         "responsive": true, 
-        "lengthChange": false, 
         "autoWidth": false,
-        "ordering": true,
         "paging": true,
+        "ordering": true,
+        "info": true,        
+        // WICHTIG: Suche aktivieren
+        "searching": true,         
+        // "Zeige X Einträge" deaktivieren (optional, nach Wunsch)
+        "lengthChange": false,
+
         // Spezifische Spalten vom Sortieren/Suchen ausschließen
         "columnDefs": [ {
             "targets": 'no-sort',
@@ -129,7 +135,7 @@
             "targets": 'no-search',
             "searchable": false
         }]
-      }).buttons().container().appendTo('#usersTable_wrapper .col-md-6:eq(0)');
+      });
     });
 </script>
 @endpush
