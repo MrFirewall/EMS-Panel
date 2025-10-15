@@ -36,7 +36,7 @@ class UserController extends Controller
      */
     private $departmentalRoles = [
         'Rechtsabteilung' => [
-            'leitung_role' => 'Rechtsabteilung - leitung',
+            'leitung_role' => 'rechtsabteilung - leitung',
             'min_rank_to_assign_leitung' => 7, // Assistant EMS Director
             'roles' => [
                 'Rechtsabteilung - leitung',
@@ -44,8 +44,8 @@ class UserController extends Controller
             ],
         ],
         'Ausbildungsabteilung' => [
-            'leitung_role' => 'Ausbildungsabteilung - leitung',
-            'min_rank_to_assign_leitung' => 6, // Instructor
+            'leitung_role' => 'ausbildungsabteilung - leitung',
+            'min_rank_to_assign_leitung' => 7, // Assistant EMS Director
             'roles' => [
                 'Ausbildungsabteilung - leitung',
                 'Ausbildungsabteilung - ausbilder',
@@ -53,7 +53,7 @@ class UserController extends Controller
             ],
         ],
         'Personalabteilung' => [
-            'leitung_role' => 'Personalabteilung - leitung',
+            'leitung_role' => 'personalabteilung - leitung',
             'min_rank_to_assign_leitung' => 7, // Assistant EMS Director
             'roles' => [
                 'Personalabteilung - leitung',
