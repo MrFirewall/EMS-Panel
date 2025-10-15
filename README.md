@@ -1,67 +1,78 @@
-Emergency Medical Service Verwaltungssystem: Projektdokumentation
-Das vorliegende Dokument beschreibt das Emergency Medical Service (EMS) Verwaltungssystem, eine mittels des Laravel Frameworks entwickelte Softwareanwendung. Die primäre Funktion dieser Applikation besteht in der systematischen Verwaltung von Personal, zugewiesenen Rollen, Personalakten sowie internen Formularen.
+# Emergency Medical Service Verwaltungssystem
 
-Funktionsumfang
-Zentrales Dashboard: Bereitstellung einer konsolidierten Übersicht über systemrelevante Informationen und Statistiken zur Effizienzsteigerung.
+## Projektdokumentation
+Das vorliegende Dokument beschreibt das **Emergency Medical Service (EMS) Verwaltungssystem**, eine mittels des **Laravel Frameworks** entwickelte Softwareanwendung. Die primäre Funktion dieser Applikation besteht in der systematischen Verwaltung von Personal, zugewiesenen Rollen, Personalakten sowie internen Formularen.
 
-Personalverwaltung: Module zur Erfassung, Modifikation und Verwaltung von Mitarbeiterprofilen.
+---
 
-Hierarchisches Berechtigungssystem:
+## Funktionsumfang
 
-Implementierung einer granularen Zugriffskontrolle, die auf einer definierten Ranghierarchie basiert, welche von Praktikanten bis zur Direktionsebene reicht.
+### Zentrales Dashboard
+Bereitstellung einer konsolidierten Übersicht über systemrelevante Informationen und Statistiken zur Effizienzsteigerung.
 
-Definition spezifischer Rollen für einzelne Abteilungen, einschließlich einer dedizierten Zuweisungslogik zur Wahrung der organisatorischen Integrität.
+### Personalverwaltung
+Module zur Erfassung, Modifikation und Verwaltung von Mitarbeiterprofilen.
 
-Etablierung einer "Super-Admin"-Rolle, die über uneingeschränkte Systemprivilegien verfügt, jedoch in der grafischen Benutzeroberfläche nicht sichtbar oder zuweisbar ist, um die Systemsicherheit zu maximieren.
+### Hierarchisches Berechtigungssystem
+- Implementierung einer granularen Zugriffskontrolle, basierend auf einer definierten Ranghierarchie (von Praktikanten bis zur Direktionsebene).
+- Definition spezifischer Rollen für einzelne Abteilungen mit dedizierter Zuweisungslogik zur Wahrung der organisatorischen Integrität.
+- Etablierung einer **Super-Admin-Rolle**, die über uneingeschränkte Systemprivilegien verfügt, jedoch in der GUI weder sichtbar noch zuweisbar ist, um die Systemsicherheit zu maximieren.
 
-Impersonierungsfunktion: Ermöglicht autorisierten Administratoren den temporären Zugriff auf Benutzerkonten zu Diagnose- und Supportzwecken.
+### Impersonierungsfunktion
+Ermöglicht autorisierten Administratoren den temporären Zugriff auf Benutzerkonten zu Diagnose- und Supportzwecken.
 
-Digitale Personalaktenführung: Systematische Erfassung und Archivierung von personalrelevanten Vorgängen und Dokumenten für jeden Mitarbeiter.
+### Digitale Personalaktenführung
+Systematische Erfassung und Archivierung von personalrelevanten Vorgängen und Dokumenten für jeden Mitarbeiter.
 
-Digitalisiertes Formularwesen: Abwicklung interner Antragsverfahren, wie Urlaubsanträge oder Mitarbeiterbewertungen, über eine webbasierte Schnittstelle.
+### Digitalisiertes Formularwesen
+Abwicklung interner Antragsverfahren (z. B. Urlaubsanträge oder Mitarbeiterbewertungen) über eine webbasierte Schnittstelle.
 
-Einsatzberichterstattung: Modul zur Erstellung und Verwaltung von Einsatzprotokollen.
+### Einsatzberichterstattung
+Modul zur Erstellung und Verwaltung von Einsatzprotokollen.
 
-Aktivitätsprotokollierung: Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der Nachvollziehbarkeit und Revision.
+### Aktivitätsprotokollierung
+Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der Nachvollziehbarkeit und Revision.
 
-Technologische Grundlage
-Backend: PHP 8.2+ / Laravel 12+
+---
 
-Frontend: Blade, AdminLTE 3, JavaScript
+## Technologische Grundlage
 
-Datenbank: MySQL
+**Backend:** PHP 8.2+ / Laravel 12+  
+**Frontend:** Blade, AdminLTE 3, JavaScript  
+**Datenbank:** MySQL
 
-Implementierte Kernbibliotheken:
+### Implementierte Kernbibliotheken
+- **spatie/laravel-permission**: Rollen- und Berechtigungslogik
+- **lab404/laravel-impersonate**: Impersonierungsfunktionalität
 
-spatie/laravel-permission: Zur Realisierung der Rollen- und Berechtigungslogik.
+---
 
-lab404/laravel-impersonate: Zur Implementierung der Impersonierungsfunktionalität.
+## Installations- und Inbetriebnahme-Anleitung
 
-Installations- und Inbetriebnahme-Anleitung
-Die nachfolgenden Anweisungen beschreiben den Prozess zur Einrichtung einer lokalen Entwicklungsumgebung.
-
-1. Klonen des Repositories
-
-git clone [https://github.com/MrFirewall/EMS-Panel.git](https://github.com/MrFirewall/EMS-Panel.git)
+### 1. Klonen des Repositories
+```bash
+git https://github.com/MrFirewall/EMS-Panel.git
 cd EMS-Panel
+```
 
-2. Installation der Projektabhängigkeiten
-
-# Installation der PHP-Abhängigkeiten via Composer
+### 2. Installation der Projektabhängigkeiten
+```bash
+# PHP-Abhängigkeiten installieren
 composer install
 
-# Installation der JavaScript-Abhängigkeiten via NPM
+# JavaScript-Abhängigkeiten installieren
 npm install
+```
 
-3. Konfiguration der Umgebungsvariablen
-Es ist erforderlich, die bereitgestellte Beispiel-Konfigurationsdatei zu duplizieren und einen applikationsspezifischen Sicherheitsschlüssel zu generieren.
-
+### 3. Konfiguration der Umgebungsvariablen
+```bash
 cp .env.example .env
 php artisan key:generate
+```
 
-4. Anpassung der Konfigurationsparameter
-Die Datei .env ist zu editieren, um die Konfigurationsparameter, insbesondere die Zugangsdaten für die Datenbankverbindung, zu spezifizieren.
-
+### 4. Anpassung der Konfigurationsparameter
+Bearbeite die `.env`-Datei und trage deine spezifischen Werte ein:
+```env
 APP_NAME="EMS Verwaltung"
 APP_URL=http://localhost:8000
 
@@ -71,33 +82,44 @@ DB_PORT=3306
 DB_DATABASE=deine_datenbank
 DB_USERNAME=dein_benutzername
 DB_PASSWORD=dein_passwort
+```
 
-5. Datenbankmigration und Initialisierung
-Die Ausführung des nachstehenden Befehls initiiert die Datenbankmigration zur Erstellung der erforderlichen Tabellenstruktur und führt anschließend die Seeder aus, um die Datenbank mit initialen Datensätzen zu befüllen.
-
+### 5. Datenbankmigration und Initialisierung
+```bash
 php artisan migrate --seed
+```
+> Dieser Prozess umfasst sowohl die Schema-Migration als auch das Seeding mit grundlegenden Rollen und Berechtigungen.
 
-Anmerkung: Dieser Prozess umfasst sowohl die Schema-Migration als auch das Seeding mit fundamentalen Daten wie Rollen und Berechtigungen.
-
-6. Kompilierung der Frontend-Assets
-Die Frontend-Assets (CSS und JavaScript) müssen kompiliert werden.
-
+### 6. Kompilierung der Frontend-Assets
+```bash
 npm run build
+```
 
-7. Erstellung des Storage-Symlinks
-
+### 7. Erstellung des Storage-Symlinks
+```bash
 php artisan storage:link
+```
 
-8. Starten des Entwicklungsservers
-
+### 8. Starten des Entwicklungsservers
+```bash
 php artisan serve
+```
+Die Applikation ist anschließend unter **http://localhost:8000** erreichbar.
 
-Nach erfolgreicher Ausführung der vorgenannten Schritte ist die Applikation unter der Adresse http://localhost:8000 erreichbar.
+---
 
-Administratorzugang und Rollenkonzept
-Standard-Administrator: Nach der initialen Datenbankinitialisierung (Seeding) wird der Rolle ems-director voller administrativer Zugriff auf alle Systemfunktionen gewährt.
+## Administratorzugang und Rollenkonzept
 
-Super-Admin-Rolle: Eine zusätzliche Rolle namens Super-Admin existiert, welche äquivalente, allumfassende Berechtigungen besitzt. Diese Rolle ist jedoch innerhalb der Benutzeroberfläche weder sichtbar noch zuweisbar und muss einem Benutzerkonto manuell über die Kommandozeile (php artisan tinker) zugewiesen werden. Sie ist für Entwicklungs- und Wartungszwecke vorgesehen.
+### Standard-Administrator
+Nach dem Seeding-Prozess erhält die Rolle **ems-director** vollen administrativen Zugriff auf alle Systemfunktionen.
 
-Lizenzierung
-Die Nutzung dieser Software unterliegt den Bestimmungen der MIT-Lizenz.
+### Super-Admin-Rolle
+Eine zusätzliche Rolle namens **Super-Admin** existiert mit äquivalenten, umfassenden Berechtigungen. Diese Rolle ist in der Benutzeroberfläche weder sichtbar noch zuweisbar und kann nur über die Kommandozeile (z. B. via `php artisan tinker`) vergeben werden.
+
+Diese Rolle dient ausschließlich Entwicklungs- und Wartungszwecken.
+
+---
+
+## Lizenzierung
+Diese Software wird unter den Bedingungen der **MIT-Lizenz** bereitgestellt.
+
