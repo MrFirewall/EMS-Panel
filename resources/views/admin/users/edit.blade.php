@@ -136,7 +136,7 @@
                     </div>
                 </div>
             </div>
-            @role('ems-director')
+            @role('ems-director|Super-Admin')
             {{-- Spalte für EINZELNE BERECHTIGUNGEN --}}
             <div class="col-md-12">
                 <div class="card card-outline card-warning">
