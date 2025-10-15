@@ -25,7 +25,7 @@ Ermöglicht autorisierten Administratoren den temporären Zugriff auf Benutzerko
 Systematische Erfassung und Archivierung von personalrelevanten Vorgängen und Dokumenten für jeden Mitarbeiter.
 
 ### Digitalisiertes Formularwesen
-Abwicklung interner Antragsverfahren (z. B. Urlaubsanträge oder Mitarbeiterbewertungen) über eine webbasierte Schnittstelle.
+Abwicklung interner Antragsverfahren (z. B. Urlaubsanträge oder Mitarbeiterbewertungen) über eine webbasierte Schnittstelle.
 
 ### Einsatzberichterstattung
 Modul zur Erstellung und Verwaltung von Einsatzprotokollen.
@@ -44,6 +44,7 @@ Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der
 ### Implementierte Kernbibliotheken
 - **spatie/laravel-permission**: Rollen- und Berechtigungslogik
 - **lab404/laravel-impersonate**: Impersonierungsfunktionalität
+- **SocialiteProviders/Cfx.re**: Zur Authentifizierung über das Cfx.re-Netzwerk
 
 ---
 
@@ -51,7 +52,7 @@ Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der
 
 ### 1. Klonen des Repositories
 ```bash
-git https://github.com/MrFirewall/EMS-Panel.git
+git clone https://github.com/MrFirewall/EMS-Panel.git
 cd EMS-Panel
 ```
 
@@ -68,6 +69,7 @@ npm install
 ```bash
 cp .env.example .env
 php artisan key:generate
+php artisan cfx:keys
 ```
 
 ### 4. Anpassung der Konfigurationsparameter
@@ -82,6 +84,11 @@ DB_PORT=3306
 DB_DATABASE=deine_datenbank
 DB_USERNAME=dein_benutzername
 DB_PASSWORD=dein_passwort
+
+CFX_APP_NAME="EMS Verwaltung"
+CFX_REDIRECT_URL="https://DEINE_DOMAIN/login/cfx/callback"
+CFX_PUBLIC_KEY="${APP_KEY_PATH}/cfx-public.key"
+CFX_PRIVATE_KEY="${APP_KEY_PATH}/cfx-private.key"
 ```
 
 ### 5. Datenbankmigration und Initialisierung
@@ -89,6 +96,19 @@ DB_PASSWORD=dein_passwort
 php artisan migrate --seed
 ```
 > Dieser Prozess umfasst sowohl die Schema-Migration als auch das Seeding mit grundlegenden Rollen und Berechtigungen.
+
+#### Hinweis zum `/database/seeders/PermissionsSeeder.php`
+Um dem ersten Benutzer automatisch die **Super-Admin-Rolle** zuzuweisen, kann folgender Codeabschnitt am Ende des Seeders eingefügt werden:
+
+```php
+// Optional: Weise die Super-Admin Rolle einem bestimmten User zu (z.B. User mit ID 1)
+$user = User::find(1);
+if ($user) {
+    $user->assignRole('Super-Admin');
+}
+```
+
+---
 
 ### 6. Kompilierung der Frontend-Assets
 ```bash
@@ -114,7 +134,7 @@ Die Applikation ist anschließend unter **http://localhost:8000** erreichbar.
 Nach dem Seeding-Prozess erhält die Rolle **ems-director** vollen administrativen Zugriff auf alle Systemfunktionen.
 
 ### Super-Admin-Rolle
-Eine zusätzliche Rolle namens **Super-Admin** existiert mit äquivalenten, umfassenden Berechtigungen. Diese Rolle ist in der Benutzeroberfläche weder sichtbar noch zuweisbar und kann nur über die Kommandozeile (z. B. via `php artisan tinker`) vergeben werden.
+Eine zusätzliche Rolle namens **Super-Admin** existiert mit äquivalenten, umfassenden Berechtigungen. Diese Rolle ist in der Benutzeroberfläche weder sichtbar noch zuweisbar und kann nur über die Kommandozeile (z. B. via `php artisan tinker`) vergeben werden.
 
 Diese Rolle dient ausschließlich Entwicklungs- und Wartungszwecken.
 
