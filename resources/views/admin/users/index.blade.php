@@ -128,7 +128,7 @@
                     tableClass: 'table'
                 })
             }
-        }
+        },
         "autoWidth": true,
         "paging": true,
         "ordering": true,
