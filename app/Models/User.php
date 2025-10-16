@@ -145,9 +145,9 @@ class User extends Authenticatable
         $lastReactivationLog = $this->activityLogs()
             ->where('log_type', 'UPDATED')
             ->where(function ($query) {
-                $query->where('details', 'LIKE', '%Status geändert:%-> Aktiv%')
-                      ->orWhere('details', 'LIKE', '%Status geändert:%-> Probezeit%')
-                      ->orWhere('details', 'LIKE', '%Status geändert:%-> Bewerbungsphase%');
+                $query->where('description', 'LIKE', '%Status geändert:%-> Aktiv%')
+                      ->orWhere('description', 'LIKE', '%Status geändert:%-> Probezeit%')
+                      ->orWhere('description', 'LIKE', '%Status geändert:%-> Bewerbungsphase%');
             })
             ->latest('created_at')
             ->first();
