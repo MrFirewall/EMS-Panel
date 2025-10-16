@@ -9,11 +9,13 @@
                 <div class="col-sm-6">
                     <h1 class="m-0">Bürger-Management</h1>
                 </div>
+                @can('citizens.create')
                 <div class="col-sm-6 text-right">
-                    <a href="{{ route('admin.citizens.create') }}" class="btn btn-primary btn-flat">
+                    <a href="{{ route('citizens.create') }}" class="btn btn-primary btn-flat">
                         <i class="fas fa-plus me-1"></i> Neue Akte anlegen
                     </a>
                 </div>
+                @endcan
             </div>
         </div>
     </div>
@@ -23,7 +25,7 @@
             <h3 class="card-title">Bürgerarchiv durchsuchen</h3>
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.citizens.index') }}">
+            <form method="GET" action="{{ route('citizens.index') }}">
                 <div class="input-group">
                     <input type="text" name="search" class="form-control" placeholder="Suche nach Name, Telefonnummer oder Adresse..." value="{{ request('search') }}">
                     <div class="input-group-append">
@@ -55,16 +57,20 @@
                                 <td>{{ $citizen->phone_number ?? 'N/A' }}</td>
                                 <td>{{ $citizen->address ?? 'N/A' }}</td>
                                 <td class="text-right">
-                                    <a href="{{ route('admin.citizens.edit', $citizen) }}" class="btn btn-sm btn-primary btn-flat">
+                                    @can('citizens.edit')
+                                    <a href="{{ route('citizens.edit', $citizen) }}" class="btn btn-sm btn-primary btn-flat">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form action="{{ route('admin.citizens.destroy', $citizen) }}" method="POST" class="d-inline" onsubmit="return confirm('Bist du sicher?')">
+                                    @endcan
+                                    @can('citizens.delete')
+                                    <form action="{{ route('citizens.destroy', $citizen) }}" method="POST" class="d-inline" onsubmit="return confirm('Bist du sicher?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger btn-flat">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
+                                    @endcan
                                 </td>
                             </tr>
                         @empty
