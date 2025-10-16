@@ -222,9 +222,9 @@ class UserController extends Controller
 
         // NEU: Rufe die Stundenberechnung aus dem User-Model auf
         $hourData = $user->calculateDutyHours();
-
+        $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
         // NEU: Übergib die $hourData an die View
-        return view('profile.show', compact('user','serviceRecords','evaluationCounts', 'hourData'));
+        return view('profile.show', compact('user','serviceRecords','evaluationCounts', 'hourData', 'weeklyHours'));
     }
 
     private function calculateEvaluationCounts(User $user): array

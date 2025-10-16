@@ -21,7 +21,40 @@ $rankNames = [
 
 {{-- Box: Aktive Stunden --}}
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-4">
+        <div class="card card-info mb-3">
+            <div class="card-header">
+                <h3 class="card-title">Wochenstunden</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm m-0">
+                        <thead>
+                            <tr>
+                                <th>KW</th>
+                                <th>Stunden</th>
+                                <th>Leitstelle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($weeklyHours as $kw => $hours)
+                                <tr>
+                                    <td>{{ $kw }}</td>
+                                    <td>{{ formatSeconds($hours['normal_seconds']) }} h</td>
+                                    <td>{{ formatSeconds($hours['leitstelle_seconds']) }} h</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Keine wöchentlichen Daten vorhanden.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
         <div class="card card-primary mb-3">
             <div class="card-header">
                 <h3 class="card-title">Stunden (Aktiver Zeitraum)</h3>
@@ -39,7 +72,7 @@ $rankNames = [
     </div>
     {{-- Box: Stundenarchiv nach Rang --}}
 
-    <div class="col-md-6">
+    <div class="col-md-4">
         <div class="card card-secondary">
             <div class="card-header">
                 <h3 class="card-title">Stundenarchiv</h3>

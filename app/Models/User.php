@@ -134,6 +134,72 @@ class User extends Authenticatable
             'archive_by_rank' => $archiveByRank,
         ];
     }
+ /**
+     * NEU: Berechnet die Dienststunden pro KW seit dem letzten (Wieder-)Eintritt.
+     *
+     * @return array
+     */
+    public function calculateWeeklyHoursSinceEntry(): array
+    {
+        // 1. Finde das letzte (Wieder-)Eintrittsdatum
+        $lastReactivationLog = $this->activityLogs()
+            ->where('log_type', 'UPDATED')
+            ->where(function ($query) {
+                $query->where('details', 'LIKE', '%Status geändert:%-> Aktiv%')
+                      ->orWhere('details', 'LIKE', '%Status geändert:%-> Probezeit%')
+                      ->orWhere('details', 'LIKE', '%Status geändert:%-> Bewerbungsphase%');
+            })
+            ->latest('created_at')
+            ->first();
+
+        // Wenn ein Reaktivierungs-Log gefunden wird, nimm dessen Datum, ansonsten das Einstellungsdatum
+        $startDate = $lastReactivationLog ? $lastReactivationLog->created_at : $this->hire_date;
+        $startDate = Carbon::parse($startDate)->startOfDay();
+        $endDate = now()->endOfWeek();
+
+        // 2. Hole alle relevanten Logs seit diesem Datum
+        // Annahme: Es gibt 'LEITSTELLE_START' und 'LEITSTELLE_END' als log_type
+        $logTypes = ['DUTY_START', 'DUTY_END', 'LEITSTELLE_START', 'LEITSTELLE_END'];
+        $logs = $this->activityLogs()
+            ->whereIn('log_type', $logTypes)
+            ->where('created_at', '>=', $startDate)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // 3. Verarbeite die Logs
+        $weeklyData = [];
+        $lastDutyStart = null;
+        $lastLeitstelleStart = null;
+
+        foreach ($logs as $log) {
+            $kw = "KW" . $log->created_at->format('W');
+            if (!isset($weeklyData[$kw])) {
+                $weeklyData[$kw] = ['normal_seconds' => 0, 'leitstelle_seconds' => 0];
+            }
+
+            switch ($log->log_type) {
+                case 'DUTY_START': $lastDutyStart = $log; break;
+                case 'DUTY_END':
+                    if ($lastDutyStart) {
+                        $weeklyData[$kw]['normal_seconds'] += $lastDutyStart->created_at->diffInSeconds($log->created_at);
+                        $lastDutyStart = null;
+                    }
+                    break;
+                case 'LEITSTELLE_START': $lastLeitstelleStart = $log; break;
+                case 'LEITSTELLE_END':
+                    if ($lastLeitstelleStart) {
+                        $weeklyData[$kw]['leitstelle_seconds'] += $lastLeitstelleStart->created_at->diffInSeconds($log->created_at);
+                        $lastLeitstelleStart = null;
+                    }
+                    break;
+            }
+        }
+        
+        // Sortiere das Ergebnis nach Kalenderwoche absteigend
+        krsort($weeklyData);
+
+        return $weeklyData;
+    }
 
     /**
      * Ermittelt den Namen der höchsten Rolle, die der Benutzer hat.
