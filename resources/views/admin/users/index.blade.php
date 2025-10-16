@@ -24,7 +24,7 @@
         {{-- KORREKTUR: card-body hat jetzt ein normales Padding --}}
         <div class="card-body">
             {{-- HINWEIS: table-responsive wird von DataTables nicht mehr benötigt --}}
-            <table id="usersTable" class="table table-bordered table-striped">
+            <table id="usersTable" class="table table-hover">
                 <thead>
                     <tr>
                         <th scope="col">Name</th>
