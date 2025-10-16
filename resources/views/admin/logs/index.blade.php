@@ -35,7 +35,7 @@
                             <tr>
                                 <td>{{ $log->created_at->format('d.m.Y H:i') }}</td>
                                 <td>
-                                    {{ $log->user->name ?? 'System' }} 
+                                    {{ $log->creator_name }} 
                                     <small class="text-muted d-block">ID: {{ $log->user_id }}</small>
                                 </td>
                                 <td><span class="badge bg-secondary">{{ $log->log_type }}</span></td>
