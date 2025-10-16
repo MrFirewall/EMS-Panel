@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Report extends Model
 {
@@ -11,6 +12,7 @@ class Report extends Model
 
     protected $fillable = [
         'user_id',
+        'citizen_id',
         'title',
         'patient_name',
         'incident_description',
@@ -26,7 +28,18 @@ class Report extends Model
     {
         return $this->belongsTo(User::class);
     }
-        public function attendingStaff()
+    /**
+     * Definiert die Beziehung zum Citizen-Model.
+     * Ein Bericht gehört zu einem Bürger.
+     */
+    public function citizen(): BelongsTo
+    {
+        return $this->belongsTo(Citizen::class, 'citizen_id');
+    }
+    /**
+     * Definiert die Many-to-Many-Beziehung zu den Usern (Mitarbeitern), die an dem Bericht beteiligt sind.
+     */
+    public function attendingStaff()
     {
         return $this->belongsToMany(User::class, 'report_user');
     }

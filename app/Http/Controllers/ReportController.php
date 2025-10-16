@@ -76,6 +76,13 @@ class ReportController extends Controller
         ]);
 
         $validatedData['user_id'] = Auth::id();
+        
+        // Versuche, den Bürger anhand des Namens zu finden
+        $citizen = Citizen::where('name', $validatedData['patient_name'])->first();
+        if ($citizen) {
+            $validatedData['citizen_id'] = $citizen->id; // Füge die ID zum Speichern hinzu
+        }
+
         $report = Report::create($validatedData);
         
         if ($request->has('attending_staff')) {
@@ -129,9 +136,13 @@ class ReportController extends Controller
             'attending_staff.*' => 'exists:users,id',
         ]);
 
+        // Versuche, den Bürger anhand des Namens zu finden
+        $citizen = Citizen::where('name', $validatedData['patient_name'])->first();
+        $validatedData['citizen_id'] = $citizen ? $citizen->id : null; // Setze ID oder null
+
         $report->update($validatedData);
         $report->attendingStaff()->sync($request->input('attending_staff', []));
-        
+
         // Logging
         ActivityLog::create([
             'user_id' => Auth::id(),
