@@ -126,6 +126,14 @@
             $('#attending_staff').select2({
                 theme: 'bootstrap4',
                 placeholder: 'Mitarbeiter auswählen',
+                // NEU: Verhindert, dass bereits ausgewählte Mitarbeiter erneut in der Liste erscheinen
+                templateResult: function (data) {
+                    // Wenn die Option bereits ausgewählt ist, nicht in der Liste anzeigen
+                    if ($('#attending_staff').find('option[value="' + data.id + '"]').is(':selected')) {
+                        return null;
+                    }
+                    return data.text;
+                }
             });
         });
     </script>
