@@ -20,7 +20,7 @@ class CitizenPolicy
     /**
      * Prüft, ob der Benutzer eine Bürgerakte sehen darf.
      */
-    public function show(User $user, Citizen $citizen): bool
+    public function view(User $user, Citizen $citizen): bool
     {
         return $user->can('citizens.view');
     }
