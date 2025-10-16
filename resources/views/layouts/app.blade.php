@@ -38,7 +38,7 @@
         }
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
             background-color: #007bff; /* Primärfarbe für bessere Sichtbarkeit */
-            color: #fff;
+            color: #fff !important;
         }
         /* Verbessertes Styling für das "X" zum Entfernen eines Tags */
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
@@ -56,7 +56,7 @@
             margin-left: 3px;
             font-weight: 700;
         }.select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
-            color: #000;
+            color: #fff !important;
             text-shadow: 0 1px 0 #495057;
             font-size: 1.5rem;
             line-height: 1;
