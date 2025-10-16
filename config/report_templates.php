@@ -1,9 +1,9 @@
 <?php
 
 return array (
-  'verkehrsunfall' => 
+  'verkehrsunfall_mit_personenschaden' => 
   array (
-    'name' => 'Verkehrsunfall',
+    'name' => 'Verkehrsunfall mit Personenschaden',
     'title' => 'Verkehrsunfall mit Personenschaden',
     'incident_description' => 'Bei Eintreffen an der Einsatzstelle wurde ein Verkehrsunfall zwischen zwei Fahrzeugen vorgefunden. Beteiligte Fahrzeuge: [FAHRZEUG 1] und [FAHRZEUG 2]. Die Unfallstelle war bereits durch die Polizei abgesichert.
 Folgende Situation wurde vorgefunden:
