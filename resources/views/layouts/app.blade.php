@@ -41,6 +41,16 @@
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
             color: #adb5bd;
             text-shadow: 0 1px 0 #495057;
+            float: right;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+            text-shadow: 0 1px 0 #fff;
+            opacity: .5;
+            background-color: transparent;
+            border: 0;
+            padding: 1rem;
+            margin: -1rem -1rem -1rem auto;
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
