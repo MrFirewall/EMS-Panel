@@ -29,45 +29,22 @@ class ImportReportTemplates extends Command
      */
     public function handle()
     {
-        // --- ERWEITERTES DEBUGGING ---
-        $this->info("--- Starting Advanced Debug Check ---");
-        $absolutePath = storage_path('app/templates/vorlagen.txt');
-        $this->line("1. Laravel expects the file at this absolute path:");
-        $this->comment($absolutePath);
-
-        if (file_exists($absolutePath)) {
-            $this->info("2. PHP Check: SUCCESS! The file was found by PHP directly.");
-        } else {
-            $this->error("2. PHP Check: FAILED! PHP cannot find the file at that path.");
-            $this->error("   This indicates a server-level issue (permissions, open_basedir) or an incorrect path.");
-            return 1;
-        }
-
-        if (is_readable($absolutePath)) {
-            $this->info("3. Permission Check: SUCCESS! The file is readable by the PHP process.");
-        } else {
-            $this->error("3. Permission Check: FAILED! The file was found, but PHP cannot read it.");
-             $this->error("   Please re-run the 'chown' and 'chmod' commands.");
-            return 1;
-        }
-        $this->info("--- Advanced Debug Check Complete ---");
-        // --- ENDE DEBUGGING ---
-
-
         $this->info('Starting report template import...');
 
         // 1. Read the user-friendly text file
-        if (!Storage::exists('templates/vorlagen.txt')) {
-            $this->error('Error: Laravel Storage facade still cannot find storage/app/templates/vorlagen.txt.');
-            $this->error('This confirms the issue is likely within your config/filesystems.php file.');
+        $filePath = 'templates/vorlagen.txt';
+        if (!Storage::exists($filePath)) {
+            $this->error('Error: The source file storage/app/templates/vorlagen.txt was not found.');
             return 1;
         }
-        $content = Storage::get('templates/vorlagen.txt');
+        $content = Storage::get($filePath);
 
         // 2. Parse the content
         $templatesArray = [];
-        $processedHashes = []; 
-        $templateBlocks = explode('[NEUE VORLAGE]', $content);
+        $processedHashes = [];
+        // Split templates by the [NEUE VORLAGE] marker
+        $templateBlocks = preg_split('/\[NEUE VORLAGE\]/', $content, -1, PREG_SPLIT_NO_EMPTY);
+
 
         foreach ($templateBlocks as $block) {
             $block = trim($block);
@@ -75,39 +52,38 @@ class ImportReportTemplates extends Command
                 continue;
             }
 
-            preg_match('/NAME:(.*)/', $block, $nameMatches);
-            preg_match('/TITEL:(.*)/', $block, $titleMatches);
+            // KORRIGIERT: Use a single, robust regular expression to capture all parts
+            $pattern = '/^NAME:\s*(.*?)\s*TITEL:\s*(.*?)\s*---\s*EINSATZHERGANG\s*---\s*(.*?)\s*---\s*MASSNAHMEN\s*---\s*(.*)/s';
             
-            $name = trim($nameMatches[1] ?? '');
-            $title = trim($titleMatches[1] ?? '');
+            if (preg_match($pattern, $block, $matches)) {
+                // $matches[1] = Name, $matches[2] = Title, $matches[3] = Description, $matches[4] = Actions
+                $name = trim($matches[1]);
+                $title = trim($matches[2]);
+                $incidentDescription = trim($matches[3]);
+                $actionsTaken = trim($matches[4]);
 
-            if (empty($name) || empty($title)) {
-                $this->warn("Skipping a template block because Name or Title is missing.");
-                continue;
+                // Duplicate check
+                $contentSignature = $name . $title . $incidentDescription . $actionsTaken;
+                $contentHash = md5($contentSignature);
+
+                if (in_array($contentHash, $processedHashes)) {
+                    $this->warn("Skipping duplicate template content found with name '{$name}'.");
+                    continue;
+                }
+                $processedHashes[] = $contentHash;
+
+                // Build the array structure
+                $templateKey = Str::slug(strtolower($name), '_');
+                $templatesArray[$templateKey] = [
+                    'name' => $name,
+                    'title' => $title,
+                    'incident_description' => $incidentDescription,
+                    'actions_taken' => $actionsTaken,
+                ];
+
+            } else {
+                 $this->warn("Skipping a template block because its structure is incorrect. Please check for all required markers (NAME:, TITEL:, --- EINSATZHERGANG ---, --- MASSNAHMEN ---).");
             }
-
-            $incidentParts = explode('--- EINSATZHERGANG ---', $block);
-            $incidentAndActions = $incidentParts[1] ?? '';
-            $actionParts = explode('--- MASSNAHMEN ---', $incidentAndActions);
-            $incidentDescription = trim($actionParts[0] ?? '');
-            $actionsTaken = trim($actionParts[1] ?? '');
-
-            $contentSignature = $name . $title . $incidentDescription . $actionsTaken;
-            $contentHash = md5($contentSignature);
-
-            if (in_array($contentHash, $processedHashes)) {
-                $this->warn("Skipping duplicate template content found with name '{$name}'.");
-                continue;
-            }
-            $processedHashes[] = $contentHash;
-
-            $templateKey = Str::slug(strtolower($name), '_');
-            $templatesArray[$templateKey] = [
-                'name' => $name,
-                'title' => $title,
-                'incident_description' => $incidentDescription,
-                'actions_taken' => $actionsTaken,
-            ];
         }
 
         // 4. Create the PHP config file content

@@ -1,22 +1,113 @@
 <?php
 
-return [
-    'verkehrsunfall' => [
-        'name' => 'Verkehrsunfall',
-        'title' => 'Verkehrsunfall mit Personenschaden',
-        'incident_description' => "Bei Eintreffen an der Einsatzstelle wurde ein Verkehrsunfall zwischen zwei Fahrzeugen vorgefunden. Beteiligte Fahrzeuge: [FAHRZEUG 1] und [FAHRZEUG 2]. Die Unfallstelle war bereits durch die Polizei abgesichert.\n\nFolgende Situation wurde vorgefunden:\n- Person A (Fahrer Fahrzeug 1): \n- Person B (Fahrer Fahrzeug 2): ",
-        'actions_taken' => "Folgende Maßnahmen wurden durchgeführt:\n\nBei Patient A:\n- Stiffneck angelegt\n- Vitalparameter überprüft (Blutdruck, Puls, SpO2)\n- Zugang gelegt\n\nBei Patient B:\n- Sichtung und Erstversorgung\n\nBeide Patienten wurden nach der Erstversorgung transportfähig gemacht und in das nächstgelegene Krankenhaus transportiert.",
-    ],
-    'sturz_hauslich' => [
-        'name' => 'Häuslicher Sturz',
-        'title' => 'Gestürzte Person im häuslichen Umfeld',
-        'incident_description' => "Nach Eintreffen in der Wohnung wurde eine gestürzte Person (ca. [ALTER] Jahre alt) auf dem Boden liegend vorgefunden. Die Person war ansprechbar und orientiert. Eigenen Angaben zufolge ist sie im Badezimmer ausgerutscht und auf die Hüfte gefallen.\n\nSchmerzangabe auf einer Skala von 1-10: [WERT].",
-        'actions_taken' => "- Immobilisierung des betroffenen Beins\n- Vitalparameter-Check\n- Schmerzmittelgabe nach Rücksprache mit dem Notarzt\n- Umlagerung auf die Vakuummatratze\n- Transport ins Krankenhaus zur weiteren Abklärung (Verdacht auf Oberschenkelhalsfraktur).",
-    ],
-    'atemnot' => [
-        'name' => 'Atemnot',
-        'title' => 'Patient mit akuter Atemnot',
-        'incident_description' => "Patient (ca. [ALTER] Jahre alt) klagte über plötzlich aufgetretene, massive Atemnot. Vorerkrankungen: [VORERKRANKUNGEN, z.B. COPD, Asthma].\n\nSauerstoffsättigung bei Eintreffen: [WERT]%.",
-        'actions_taken' => "- Sauerstoffgabe über eine Maske ([LITER] l/min)\n- Oberkörperhochlagerung\n- Vitalparameter-Monitoring\n- Verneblung mit [MEDIKAMENT] nach ärztlicher Anordnung\n- Zügiger Transport in die Notaufnahme.",
-    ],
-];
+return array (
+  'verkehrsunfall' => 
+  array (
+    'name' => 'Verkehrsunfall',
+    'title' => 'Verkehrsunfall mit Personenschaden',
+    'incident_description' => 'Bei Eintreffen an der Einsatzstelle wurde ein Verkehrsunfall zwischen zwei Fahrzeugen vorgefunden. Beteiligte Fahrzeuge: [FAHRZEUG 1] und [FAHRZEUG 2]. Die Unfallstelle war bereits durch die Polizei abgesichert.
+Folgende Situation wurde vorgefunden:
+Person A (Fahrer Fahrzeug 1):
+Person B (Fahrer Fahrzeug 2):',
+    'actions_taken' => 'Folgende Maßnahmen wurden durchgeführt:
+Bei Patient A:
+Stiffneck angelegt
+Vitalparameter überprüft (Blutdruck, Puls, SpO2)
+Zugang gelegt
+Bei Patient B:
+Sichtung und Erstversorgung
+Beide Patienten wurden nach der Erstversorgung transportfähig gemacht und in das nächstgelegene Krankenhaus transportiert.',
+  ),
+  'hauslicher_sturz' => 
+  array (
+    'name' => 'Häuslicher Sturz',
+    'title' => 'Gestürzte Person im häuslichen Umfeld',
+    'incident_description' => 'Nach Eintreffen in der Wohnung wurde eine gestürzte Person (ca. [ALTER] Jahre alt) auf dem Boden liegend vorgefunden. Die Person war ansprechbar und orientiert. Eigenen Angaben zufolge ist sie im Badezimmer ausgerutscht und auf die Hüfte gefallen.
+Schmerzangabe auf einer Skala von 1-10: [WERT].',
+    'actions_taken' => 'Immobilisierung des betroffenen Beins
+Vitalparameter-Check
+Schmerzmittelgabe nach Rücksprache mit dem Notarzt
+Umlagerung auf die Vakuummatratze
+Transport ins Krankenhaus zur weiteren Abklärung (Verdacht auf Oberschenkelhalsfraktur).',
+  ),
+  'atemnot' => 
+  array (
+    'name' => 'Atemnot',
+    'title' => 'Patient mit akuter Atemnot',
+    'incident_description' => 'Patient (ca. [ALTER] Jahre alt) klagte über plötzlich aufgetretene, massive Atemnot. Vorerkrankungen: [VORERKRANKUNGEN, z.B. COPD, Asthma].
+Sauerstoffsättigung bei Eintreffen: [WERT]%.',
+    'actions_taken' => 'Sauerstoffgabe über eine Maske ([LITER] l/min)
+Oberkörperhochlagerung
+Vitalparameter-Monitoring
+Verneblung mit [MEDIKAMENT] nach ärztlicher Anordnung
+Zügiger Transport in die Notaufnahme.
+Absolut. Hier sind weitere passende Vorlagen im gleichen Stil für verschiedene gängige Notfallsituationen:',
+  ),
+  'reanimation' => 
+  array (
+    'name' => 'Reanimation',
+    'title' => 'Reanimation bei Herz-Kreislauf-Stillstand',
+    'incident_description' => 'Beim Eintreffen wurde eine leblose Person (ca. [ALTER] Jahre alt) vorgefunden. Ersthelfer führten bereits eine Laienreanimation durch. Die Person zeigte keine Atmung und keinen Puls. Umstände des Auffindens: [z.B. von Angehörigen, plötzlicher Zusammenbruch].',
+    'actions_taken' => 'Unverzügliche Übernahme der Herzdruckmassage (Frequenz 100-120/min)
+Beatmung mit Beatmungsbeutel und Sauerstoff
+Frühzeitiger Einsatz des AED/Defibrillators, [ANZAHL] Schocks abgegeben
+Legen eines intravenösen Zugangs
+Medikamentengabe nach Notarztanordnung ([MEDIKAMENT])
+Sicherung der Atemwege mittels [z.B. Larynxtubus, Endotrachealtubus]
+Nach [DAUER] Minuten konnte ein Spontankreislauf (ROSC) erzielt werden.
+Transport unter Reanimationsbereitschaft in die Klinik.',
+  ),
+  'krampfanfall' => 
+  array (
+    'name' => 'Krampfanfall',
+    'title' => 'Patient nach Krampfanfall',
+    'incident_description' => 'Ein Patient (ca. [ALTER] Jahre alt) wurde nach einem generalisierten Krampfanfall angetroffen. Der Anfall dauerte laut Zeugenaussagen ca. [DAUER] Minuten. Bei Eintreffen war der Patient postiktal (in der Nachschlafphase), schwach ansprechbar und desorientiert. Verletzungen während des Anfalls: [z.B. Zungenbiss, Kopfplatzwunde].',
+    'actions_taken' => 'Stabile Seitenlage zur Sicherung der Atemwege
+Schutz vor Auskühlung mit einer Decke
+Vitalparameterüberwachung (SpO2, Puls, Blutdruck, Blutzucker)
+Blutzuckermessung: [WERT] mg/dl
+Sauerstoffgabe über Nasenbrille ([LITER] l/min)
+Untersuchung auf weitere Verletzungen
+Überwachung und Betreuung bis zum vollständigen Erwachen
+Transport zur weiteren Abklärung ins Krankenhaus.',
+  ),
+  'brandverletzung' => 
+  array (
+    'name' => 'Brandverletzung',
+    'title' => 'Patient mit thermischer Verletzung',
+    'incident_description' => 'Einsatz in Zusammenarbeit mit der Feuerwehr. Ein Patient (ca. [ALTER] Jahre alt) hat bei einem [ART DES UNFALLS, z.B. Grillunfall, Wohnungsbrand] Brandverletzungen erlitten. Betroffene Körperregionen: [z.B. beide Unterarme, Gesicht, Brust]. Verbrennungsgrad (geschätzt): [GRAD, z.B. Grad 2a/2b]. Verdacht auf Inhalationstrauma: [JA/NEIN].',
+    'actions_taken' => 'Kühlung der verbrannten Areale mit sterilem, wassergetränktem Tuch für maximal 10 Minuten
+Entfernung von kontaminierter/verbrannter Kleidung, sofern nicht an der Haut haftend
+Sterile Abdeckung der Wunden mit metallisierter Wundauflage
+Hochdosierte Sauerstoffgabe über Maske wegen Verdacht auf Rauchgasintoxikation
+Legen von mindestens einem großlumigen i.v.-Zugang
+Schmerztherapie nach Anordnung des Notarztes mit [MEDIKAMENT]
+Wärmeerhalt während des Transports
+Ankündigung im Zentrum für Schwerbrandverletzte.',
+  ),
+  'allergische_reaktion' => 
+  array (
+    'name' => 'Allergische Reaktion',
+    'title' => 'Anaphylaktische Reaktion',
+    'incident_description' => 'Patient (ca. [ALTER] Jahre alt) mit plötzlich aufgetretener, schwerer allergischer Reaktion nach [AUSLÖSER, z.B. Insektenstich, Nahrungsmitteleinnahme]. Symptome bei Eintreffen: [z.B. generalisierte Urtikaria (Nesselsucht), Atemnot, Schwellung im Gesicht/Halsbereich, Schwindel]. Blutdruck: [WERT] mmHg. Herzfrequenz: [WERT]/min.',
+    'actions_taken' => 'Sofortige Adrenalin-Gabe i.m. in den Oberschenkel
+Oberkörperhochlagerung zur Erleichterung der Atmung / Schocklage bei niedrigem Blutdruck
+Sauerstoffgabe über Maske
+Legen eines i.v.-Zugangs und Gabe von [MEDIKAMENT, z.B. Kortison, Antihistaminika] nach ärztlicher Anordnung
+Kontinuierliches Monitoring der Vitalparameter
+Schneller und schonender Transport in die nächste Klinik mit Notarztbegleitung.',
+  ),
+  'unterzuckerung' => 
+  array (
+    'name' => 'Unterzuckerung',
+    'title' => 'Hypoglykämie bei bekanntem Diabetes mellitus',
+    'incident_description' => 'Patient (ca. [ALTER] Jahre alt) wurde mit Bewusstseinstrübung aufgefunden. Laut Angehörigen bekannter Diabetiker (Typ [TYP]). Letzte Mahlzeit/Insulingabe: [INFORMATION]. Bei Eintreffen war der Patient [ZUSTAND, z.B. stark schwitzend, somnolent, aggressiv].',
+    'actions_taken' => 'Messung des Blutzuckers: [WERT] mg/dl
+Sicherung der Atemwege
+Legen eines i.v.-Zugangs
+Gabe von Glukose ([MENGE] g) intravenös
+Nach Glukosegabe deutliche Besserung des Zustandes, Patient wieder ansprechbar und orientiert
+Gabe von schnell wirksamen Kohlenhydraten oral (z.B. gezuckerter Tee, Traubenzucker)
+Überwachung und Transport zur weiteren Beobachtung.',
+  ),
+);
