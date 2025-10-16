@@ -64,7 +64,7 @@
                                         </a>
                                     @endcan
                                     
-                                    @can('reports.update', $report)
+                                    @can('reports.edit', $report)
                                         <a href="{{ route('reports.edit', $report) }}" class="btn btn-sm btn-primary btn-flat">
                                             <i class="fas fa-edit"></i>
                                         </a>
