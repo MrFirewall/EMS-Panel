@@ -301,7 +301,11 @@ class UserController extends Controller
                     ->withInput();
             }
         }
-        
+        if ($user->hasRole($this->superAdminRole)) {
+            if (!in_array($this->superAdminRole, $submittedRoleNames)) {
+                $submittedRoleNames[] = $this->superAdminRole;
+            }
+        }
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
         $oldRank = $user->rank;
         $oldStatus = $user->status;
