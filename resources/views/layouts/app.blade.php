@@ -31,40 +31,74 @@
             color: #adb5bd !important;
         }
 
-        /* Bestehende Dark Mode Fixes für Select2 */
+                /* Stellt sicher, dass Select2-Felder im Dark Mode den dunklen Hintergrund und die passende Schriftfarbe erhalten */
         .dark-mode .select2-container--bootstrap4 .select2-selection {
             background-color: #343a40;
             border-color: #6c757d;
         }
+        /* Stellt sicher, dass der Text im Auswahlfeld weiß ist */
         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
             color: #fff;
         }
+        /* Färbt den Dropdown-Pfeil weiß */
         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b {
             border-color: #fff transparent transparent transparent;
         }
+        /* Stil für die ausgewählten Tags in der Mehrfachauswahl */
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
-            background-color: #3f6791;
+            background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit */
             color: #fff;
         }
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
-            background-color: #007bff;
+            background-color: #007bff; /* Primärfarbe für bessere Sichtbarkeit */
             color: #fff !important;
         }
+        /* Verbessertes Styling für das "X" zum Entfernen eines Tags */
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
             color: #ffffff;
-        }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            text-shadow: 0 1px 0 #495057;
+            font-size: 1.5rem;
+            line-height: 1;
+            opacity: .5;
+            background-color: transparent;
+            border: 0;
+            float: left;
+            padding-right: 3px;
+            padding-left: 3px;
+            margin-right: 1px;
+            margin-left: 3px;
+            font-weight: 700;
+        }.select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
             color: #fff !important;
+            text-shadow: 0 1px 0 #495057;
+            font-size: 1.5rem;
+            line-height: 1;
+            opacity: .5;
+            background-color: transparent;
+            border: 0;
+            float: left;
+            padding-right: 3px;
+            padding-left: 3px;
+            margin-right: 1px;
+            margin-left: 3px;
+            font-weight: 700;
         }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #fff;
+            text-decoration: none;
+        }
+        /* Stil für das Dropdown-Menü selbst */
         .dark-mode .select2-dropdown {
             background-color: #343a40;
             border-color: #6c757d;
         }
+        /* Stil für das Suchfeld im Dropdown */
         .dark-mode .select2-search--dropdown .select2-search__field {
             background-color: #454d55;
             color: #fff;
         }
-        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
+        /* Stil für die hervorgehobene Option in der Liste */
+         .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
             background-color: #007bff;
             color: #fff;
         }
