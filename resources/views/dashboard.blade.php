@@ -33,7 +33,7 @@
                         @forelse($lastReports as $report)
                             <div class="post">
                                 <a href="{{ route('reports.show', $report) }}">Bericht #{{ $report->id }}</a> 
-                                <span class="text-muted float-right">{{ $report->created_at->format('d.m.Y HH:MM') }}</span>
+                                <span class="text-muted float-right">{{ $report->created_at->format('d.m.Y H:i') }}</span>
                             </div>
                         @empty
                             <p class="text-muted">Noch keine Berichte erstellt.</p>
