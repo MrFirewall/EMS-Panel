@@ -11,7 +11,7 @@
      */
     function formatReportContent($text) {
         $safeText = e($text); // XSS-Schutz
-        $highlightedText = preg_replace('/\[(.*?)\]/', '<span class="badge bg-warning text-dark mx-1 p-1">$0</span>', $safeText);
+        $highlightedText = preg_replace('/\[(.*?)\]/', '<span class="badge bg-warning mx-1 p-1">$0</span>', $safeText);
         return nl2br($highlightedText);
     }
 @endphp

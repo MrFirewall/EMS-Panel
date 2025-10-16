@@ -44,16 +44,36 @@
         .dark-mode .select2-dropdown { background-color: #343a40; border-color: #6c757d; }
         .dark-mode .select2-search--dropdown .select2-search__field { background-color: #454d55; color: #fff; }
         .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted { background-color: #007bff; color: #fff; }
+
+        /* Preloader: Option 3 (EKG-Linie) */
+        .ekg-loader {
+            width: 150px;
+            height: 75px;
+        }
+        .ekg-loader path {
+            stroke: #007bff; /* Linienfarbe (hier primärblau) */
+            stroke-width: 3;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s linear infinite;
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
     </style>
     @stack('styles')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
 <div class="wrapper">
 
-    <div class="preloader flex-column justify-content-center align-items-center">
-        {{-- Ein thematisch passendes Icon anstelle eines Bildes --}}
-        <i class="fas fa-ambulance fa-spin fa-4x text-primary"></i>
-    </div>
+<div class="preloader flex-column justify-content-center align-items-center">
+    <svg class="ekg-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 65">
+        <path fill="none" d="M0,32.5 h20 l5,-20 l5,40 l5,-30 l5,10 h60"/>
+    </svg>
+</div>
 
     <nav class="main-header navbar navbar-expand navbar-white navbar-light" id="mainNavbar">
         <ul class="navbar-nav">
