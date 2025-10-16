@@ -98,7 +98,7 @@
     </li>
     @endcan
     <!-- NEU: Bürger-Management -->
-     @can('citizens.view') {{-- Oder eine spezifischere Permission wie 'citizens.view' --}}
+     @can('citizens.view')
      <li class="nav-item">
         <a href="{{ route('citizens.index') }}" class="nav-link {{ Request::routeIs('citizens.*') ? 'active' : '' }}">
             <i class="nav-icon fas fa-address-book"></i>

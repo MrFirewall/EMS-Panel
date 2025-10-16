@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\Auth;
 
 class CitizenController extends Controller
 {
+     /**
+     * Verknüpft den Controller mit der CitizenPolicy.
+     */
+    public function __construct()
+    {
+        $this->authorizeResource(Citizen::class, 'citizen');
+    }
     public function index(Request $request)
     {
         $query = Citizen::query()->latest();
