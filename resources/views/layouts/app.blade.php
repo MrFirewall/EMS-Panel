@@ -37,12 +37,16 @@
             border-color: #0069d9;
             color: #fff;
         }
-        /* Farbe für das "x" zum Entfernen eines Tags */
+        /* Verbessertes Styling für das "X" zum Entfernen eines Tags */
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: bold;
+            font-size: 110%;
+            margin-left: 6px;
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
+            text-decoration: none;
         }
         /* Stil für das Dropdown-Menü selbst */
         .dark-mode .select2-dropdown {
