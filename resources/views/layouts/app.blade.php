@@ -41,28 +41,12 @@
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
             color: #ffffff;
             text-shadow: 0 1px 0 #495057;
-            float: right;
-            font-size: 1.5rem;
+            float: left;
+            padding-right: 3px;
+            padding-left: 3px;
+            margin-right: 1px;
+            margin-left: 3px;
             font-weight: 700;
-            line-height: 1;
-            opacity: .5;
-            background-color: transparent;
-            border: 0;
-            padding: 1rem 0.5rem 1.0rem 0.3rem;
-            margin: -1rem -1rem -1rem auto;
-        }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
-            color: #000;
-            text-shadow: 0 1px 0 #495057;
-            float: right !important;
-            font-size: 1.5rem;
-            font-weight: 700;
-            line-height: 1;
-            opacity: .5;
-            background-color: transparent;
-            border: 0;
-            padding: 1rem 0.5rem 1.0rem 0.3rem;
-            margin: -1rem -1rem -1rem auto;
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
