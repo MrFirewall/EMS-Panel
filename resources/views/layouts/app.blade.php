@@ -39,10 +39,8 @@
         }
         /* Verbessertes Styling für das "X" zum Entfernen eines Tags */
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
-            color: rgba(255, 255, 255, 0.8);
-            font-weight: bold;
-            font-size: 110%;
-            margin-left: 6px;
+            color: #adb5bd;
+            text-shadow: 0 1px 0 #495057;
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
