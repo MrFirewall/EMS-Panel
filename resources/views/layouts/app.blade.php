@@ -33,17 +33,43 @@
             color: #adb5bd !important;
         }
 
-        /* Deine bestehenden Dark Mode Fixes für Select2 */
-        .dark-mode .select2-container--bootstrap4 .select2-selection { background-color: #343a40; border-color: #6c757d; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered { color: #fff; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b { border-color: #fff transparent transparent transparent; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice { background-color: #3f6791; color: #fff; }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice { background-color: #007bff; color: #fff !important; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove { color: #ffffff; }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove { color: #fff !important; }
-        .dark-mode .select2-dropdown { background-color: #343a40; border-color: #6c757d; }
-        .dark-mode .select2-search--dropdown .select2-search__field { background-color: #454d55; color: #fff; }
-        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted { background-color: #007bff; color: #fff; }
+        /* Bestehende Dark Mode Fixes für Select2 */
+        .dark-mode .select2-container--bootstrap4 .select2-selection {
+            background-color: #343a40;
+            border-color: #6c757d;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+            color: #fff;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b {
+            border-color: #fff transparent transparent transparent;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #3f6791;
+            color: #fff;
+        }
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #007bff;
+            color: #fff !important;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            color: #ffffff;
+        }
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            color: #fff !important;
+        }
+        .dark-mode .select2-dropdown {
+            background-color: #343a40;
+            border-color: #6c757d;
+        }
+        .dark-mode .select2-search--dropdown .select2-search__field {
+            background-color: #454d55;
+            color: #fff;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
+            background-color: #007bff;
+            color: #fff;
+        }
 
         /* Preloader: Option 3 (EKG-Linie) */
         .ekg-loader {
