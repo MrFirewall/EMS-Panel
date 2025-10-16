@@ -82,7 +82,7 @@
 
         $(document).ready(function() {
             $('#patient_name').select2({
-                theme: 'bootstrap-4',
+                theme: 'bootstrap4',
                 placeholder: 'Bürger suchen oder Namen eingeben',
                 tags: true // Erlaubt die Eingabe von neuen Namen, die nicht in der Liste sind
             });
