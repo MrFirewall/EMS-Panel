@@ -4,7 +4,7 @@
 @push('styles')
     <!-- Select2 für durchsuchbare Dropdowns -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css">
 @endpush
 
 @section('content')
@@ -76,15 +76,11 @@
 @endsection
 
 @push('scripts')
-    <!-- Wichtig: jQuery muss VOR Select2 geladen werden -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        // Speichert die Vorlagen-Daten sicher als JSON-Objekt
         const templates = @json($templates);
 
         $(document).ready(function() {
-            // Initialisiert die durchsuchbare Dropdown-Liste für Bürger
             $('#patient_name').select2({
                 theme: 'bootstrap-4',
                 placeholder: 'Bürger suchen oder Namen eingeben',
