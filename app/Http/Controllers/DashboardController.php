@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Announcement;
 use App\Models\Report;
-use App\Models\User; // Sicherstellen, dass das User-Model importiert ist
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon; // Carbon für Datumsberechnungen importieren
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role; // Optional: Wenn du Rollen-Namen übersetzen willst
-use App\Models\ActivityLog;
+
 class DashboardController extends Controller
 {
-    // Definiere die Hierarchie, um die korrekte Sortierung in der Ansicht zu gewährleisten (optional)
     private array $rankHierarchy = [
         'ems-director' => 'Direktor',
         'assistant-ems-director' => 'Co. Direktor',
@@ -19,61 +19,84 @@ class DashboardController extends Controller
         'emergency-doctor' => 'Notarzt',
         'paramedic' => 'Rettungssanitäter',
         'emt' => 'Notfallsanitäter',
-        'emt-trainee' => 'Azubi (EMT)', // Geändert für eine bessere Darstellung
+        'emt-trainee' => 'Azubi (EMT)',
         'praktikant' => 'Praktikant',
     ];
 
     public function index()
     {
-        // 1. Die 5 neusten Ankündigungen holen
+        $user = Auth::user();
+
+        // 1. ANKÜNDIGUNGEN
         $announcements = Announcement::where('is_active', true)->with('user')->latest()->take(5)->get();
 
-        // 2. Die Anzahl der Berichte des eingeloggten Benutzers zählen
-        $reportCount = Report::where('user_id', Auth::id())->count();
-
-        // 3. Rangverteilung ermitteln (Annahme: Ein Benutzer hat maximal EINE Hauptrolle, die seinem Rang entspricht)
-        
-        $users = User::all(); // Alle Benutzer holen
+        // 2. RANGVERTEILUNG (unverändert)
+        $allUsers = User::with('roles')->get();
+        $totalUsers = $allUsers->count();
         $rankDistribution = [];
-        
-        // Gesamtanzahl der Benutzer
-        $totalUsers = $users->count();
 
-        // Rollen zählen und mappen
-        foreach ($users as $user) {
-            // Dies ist ein Platzhalter, da die Methode zur Abfrage der Hauptrolle variieren kann.
-            // Angenommen, du hast eine Methode, die die aktuelle Rolle zurückgibt:
-            $roleNames = $user->getRoleNames(); // Gibt eine Collection oder Array von Rollennamen zurück (spatie/laravel-permission)
-            
-            if ($roleNames->isNotEmpty()) {
-                // Wir nehmen die erste Rolle als Hauptrolle für das Zählen
-                $primaryRoleSlug = $roleNames->first(); 
-                
-                // Rollen-Slug in einen lesbaren Namen umwandeln (wie in der $rankHierarchy definiert)
-                $rankName = $this->rankHierarchy[$primaryRoleSlug] ?? ucwords(str_replace('-', ' ', $primaryRoleSlug));
-                
+        foreach ($allUsers as $u) {
+            $role = $u->getRoleNames()->first();
+            if ($role) {
+                $rankName = $this->rankHierarchy[$role] ?? ucwords(str_replace('-', ' ', $role));
                 $rankDistribution[$rankName] = ($rankDistribution[$rankName] ?? 0) + 1;
             }
         }
         
-        // Optional: Sortiere die Rangverteilung nach der definierten Hierarchie, falls nötig.
-        // Dafür müsste man die Ränge aus $rankHierarchy als Basis nehmen
         $sortedRankDistribution = [];
-        foreach ($this->rankHierarchy as $slug => $name) {
+        $rankHierarchyNames = array_values($this->rankHierarchy);
+        foreach ($rankHierarchyNames as $name) {
              if (isset($rankDistribution[$name])) {
                  $sortedRankDistribution[$name] = $rankDistribution[$name];
-                 unset($rankDistribution[$name]); // Entferne den Rang aus der Unsortierten
+                 unset($rankDistribution[$name]);
              }
         }
-        // Füge alle übrigen (nicht in der Hierarchie definierten) Ränge hinzu.
         $sortedRankDistribution = array_merge($sortedRankDistribution, $rankDistribution);
         
-        // 4. Daten an die View übergeben
+        // 3. PERSÖNLICHE ÜBERSICHT
+        $lastReports = Report::where('user_id', $user->id)->latest()->take(3)->get();
+            
+        // 4. NEU: BERECHNUNG DER WOCHENSTUNDEN
+        $startOfWeek = Carbon::now()->startOfWeek();
+        $endOfWeek = Carbon::now()->endOfWeek();
+        $totalSeconds = 0;
+
+        // Hole alle relevanten Logs für den User in der aktuellen Woche
+        $dutyLogs = ActivityLog::where('user_id', $user->id)
+            ->whereIn('log_type', ['DUTY_START', 'DUTY_END'])
+            ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $lastStartLog = null;
+
+        foreach ($dutyLogs as $log) {
+            if ($log->log_type === 'DUTY_START') {
+                // Speichere den Start-Log
+                $lastStartLog = $log;
+            } elseif ($log->log_type === 'DUTY_END' && $lastStartLog) {
+                // Wenn ein End-Log gefunden wird und ein Start-Log existiert, berechne die Differenz
+                $totalSeconds += $lastStartLog->created_at->diffInSeconds($log->created_at);
+                // Setze den Start-Log zurück, um Paare zu bilden
+                $lastStartLog = null; 
+            }
+        }
+
+        // Sonderfall: User ist aktuell im Dienst (letzter Log war DUTY_START)
+        if ($lastStartLog) {
+            $totalSeconds += $lastStartLog->created_at->diffInSeconds(Carbon::now());
+        }
+
+        // Formatiere die Gesamtsekunden in ein lesbares Format (HH:MM:SS)
+        $weeklyHours = gmdate("H:i:s", $totalSeconds);
+
+        // 5. DATEN AN DIE VIEW ÜBERGEBEN
         return view('dashboard', [
             'announcements' => $announcements,
-            'reportCount' => $reportCount,
-            'rankDistribution' => $sortedRankDistribution, // Die sortierte Verteilung
+            'rankDistribution' => $sortedRankDistribution,
             'totalUsers' => $totalUsers,
+            'lastReports' => $lastReports,
+            'weeklyHours' => $weeklyHours, // Hier wird die berechnete Zeit übergeben
         ]);
     }
 }
