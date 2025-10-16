@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\UserController;
 use Lab404\Impersonate\Controllers\ImpersonateController;
+use App\Http\Controllers\DutyStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,7 +59,8 @@ Route::middleware('auth.cfx')->group(function () {
 
     // Standard-Ressourcen für eingeloggte Benutzer
     Route::resource('reports', ReportController::class);
-
+    // Dienststatus umschalten
+    Route::post('/duty-status/toggle', [DutyStatusController::class, 'toggle'])->name('duty.toggle');
     // Mitarbeiter-Aktionen für Urlaub
     Route::get('vacations/request', [VacationController::class, 'create'])->name('vacations.create');
     Route::post('vacations', [VacationController::class, 'store'])->name('vacations.store');
