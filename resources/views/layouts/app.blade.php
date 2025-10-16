@@ -33,8 +33,11 @@
         }
         /* Stil für die ausgewählten Tags in der Mehrfachauswahl */
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit */
+            color: #fff;
+        }
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
             background-color: #007bff; /* Primärfarbe für bessere Sichtbarkeit */
-            border-color: #0069d9;
             color: #fff;
         }
         /* Verbessertes Styling für das "X" zum Entfernen eines Tags */
