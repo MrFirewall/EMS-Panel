@@ -49,7 +49,7 @@ class CitizenController extends Controller
             'description' => "Bürgerakte für '{$citizen->name}' erstellt.",
         ]);
 
-        return redirect()->route('admin.citizens.index')->with('success', 'Bürgerakte erfolgreich erstellt.');
+        return redirect()->route('citizens.index')->with('success', 'Bürgerakte erfolgreich erstellt.');
     }
     
     public function edit(Citizen $citizen)
@@ -77,7 +77,7 @@ class CitizenController extends Controller
             'description' => "Bürgerakte für '{$citizen->name}' aktualisiert.",
         ]);
 
-        return redirect()->route('admin.citizens.index')->with('success', 'Bürgerakte erfolgreich aktualisiert.');
+        return redirect()->route('citizens.index')->with('success', 'Bürgerakte erfolgreich aktualisiert.');
     }
 
     public function destroy(Citizen $citizen)
@@ -94,6 +94,6 @@ class CitizenController extends Controller
             'description' => "Bürgerakte für '{$citizenName}' ({$citizenId}) gelöscht.",
         ]);
 
-        return redirect()->route('admin.citizens.index')->with('success', 'Bürgerakte gelöscht.');
+        return redirect()->route('citizens.index')->with('success', 'Bürgerakte gelöscht.');
     }
 }
