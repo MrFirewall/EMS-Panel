@@ -14,12 +14,10 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
     
     <style>
-        /* ✨ NEU: Preloader Styling */
         .preloader {
             background-color: #343a40; /* Dunkler Hintergrund für den Preloader, verhindert "Aufblitzen" */
         }
         
-        /* 🎨 NEU: Dark Mode Fixes für List-Group (graue Links) */
         .dark-mode .list-group-item {
             background-color: #343a40;
             border-color: #454d55;
