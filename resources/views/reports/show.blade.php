@@ -2,6 +2,20 @@
 
 @section('title', 'Einsatzbericht #'.$report->id)
 
+@php
+    /**
+     * Diese Helferfunktion formatiert den Berichtstext für die Anzeige.
+     * 1. Sie wandelt Zeilenumbrüche in HTML <br>-Tags um.
+     * 2. Sie hebt alle Platzhalter wie [TEXT] mit einem Warn-Badge hervor.
+     * 3. Sie schützt vor XSS-Angriffen durch das Escapen von HTML.
+     */
+    function formatReportContent($text) {
+        $safeText = e($text); // XSS-Schutz
+        $highlightedText = preg_replace('/\[(.*?)\]/', '<span class="badge bg-warning text-dark mx-1 p-1">$0</span>', $safeText);
+        return nl2br($highlightedText);
+    }
+@endphp
+
 @section('content')
     <div class="content-header">
         <div class="container-fluid">
@@ -13,43 +27,71 @@
                     <a href="{{ route('reports.index') }}" class="btn btn-default btn-flat me-2">
                         <i class="fas fa-arrow-left"></i> Zurück zur Übersicht
                     </a>
-                    <a href="{{ route('reports.edit', $report) }}" class="btn btn-primary btn-flat">
-                        <i class="fas fa-edit"></i> Bearbeiten
-                    </a>
+                    @can('update', $report)
+                        <a href="{{ route('reports.edit', $report) }}" class="btn btn-primary btn-flat">
+                            <i class="fas fa-edit"></i> Bearbeiten
+                        </a>
+                    @endcan
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header border-0">
-            <h3 class="card-title">{{ $report->title }}</h3>
-            <div class="card-tools">
-                <small class="text-muted">Erstellt am {{ $report->created_at->format('d.m.Y H:i') }} Uhr</small>
+    <div class="row">
+        <!-- Linke Spalte: Stammdaten -->
+        <div class="col-md-4">
+            <div class="card card-primary card-outline">
+                <div class="card-body box-profile">
+                    <h3 class="profile-username text-center">{{ $report->patient_name }}</h3>
+                    <p class="text-muted text-center">Patient</p>
+
+                    <ul class="list-group list-group-unbordered mb-3">
+                        <li class="list-group-item">
+                            <b>Einsatzort</b> <a class="float-right">{{ $report->location }}</a>
+                        </li>
+                        <li class="list-group-item">
+                            <b>Erstellt von</b> <a class="float-right">{{ $report->user->name }}</a>
+                        </li>
+                        <li class="list-group-item">
+                            <b>Datum</b> <a class="float-right">{{ $report->created_at->format('d.m.Y H:i') }}</a>
+                        </li>
+                    </ul>
+                    @if($report->attendingStaff->isNotEmpty())
+                        <hr>
+                        <strong><i class="fas fa-users mr-1"></i> Beteiligte Mitarbeiter</strong>
+                        <p class="text-muted">
+                            @foreach($report->attendingStaff as $staff)
+                                <span class="badge bg-secondary">{{ $staff->name }}</span>
+                            @endforeach
+                        </p>
+                    @endif
+                </div>
             </div>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <h6 class="text-muted">Patient</h6>
-                    <p class="text-lg">{{ $report->patient_name }}</p>
+
+        <!-- Rechte Spalte: Berichtsdetails -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-file-alt mr-1"></i>
+                        {{ $report->title }}
+                    </h3>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <h6 class="text-muted">Einsatzort</h6>
-                    <p class="text-lg">{{ $report->location }}</p>
+                <div class="card-body">
+                    <dl>
+                        <dt>Einsatzhergang</dt>
+                        <dd class="callout callout-info" style="white-space: pre-line;">
+                            {!! formatReportContent($report->incident_description) !!}
+                        </dd>
+
+                        <dt>Durchgeführte Maßnahmen</dt>
+                        <dd class="callout callout-success" style="white-space: pre-line;">
+                            {!! formatReportContent($report->actions_taken) !!}
+                        </dd>
+                    </dl>
                 </div>
             </div>
-
-            <hr>
-
-            <h5 class="text-muted">Einsatzhergang</h5>
-            <p class="callout callout-info">{{ $report->incident_description }}</p>
-
-            <h5 class="text-muted">Durchgeführte Maßnahmen</h5>
-            <p class="callout callout-success">{{ $report->actions_taken }}</p>
-        </div>
-        <div class="card-footer">
-            Erstellt von <strong>{{ $report->user->name }}</strong>
         </div>
     </div>
 @endsection

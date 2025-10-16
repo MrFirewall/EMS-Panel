@@ -66,7 +66,19 @@
                     <label for="location">Einsatzort</label>
                     <input type="text" class="form-control" id="location" name="location" value="{{ old('location', $report->location) }}" required>
                 </div>
-
+                <div class="form-group">
+                    <label for="attending_staff">Beteiligte Mitarbeiter (optional)</label>
+                    <select class="form-control select2" id="attending_staff" name="attending_staff[]" multiple="multiple">
+                        @php
+                            $selectedStaffIds = $report->attendingStaff->pluck('id')->toArray();
+                        @endphp
+                        @foreach($allStaff as $staff)
+                            <option value="{{ $staff->id }}" {{ in_array($staff->id, $selectedStaffIds) ? 'selected' : '' }}>
+                                {{ $staff->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="form-group">
                     <label for="incident_description">Einsatzhergang</label>
                     <textarea class="form-control" id="incident_description" name="incident_description" rows="5" required>{{ old('incident_description', $report->incident_description) }}</textarea>
@@ -110,6 +122,10 @@
                     $('#incident_description').val(template.incident_description);
                     $('#actions_taken').val(template.actions_taken);
                 }
+            });
+            $('#attending_staff').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Mitarbeiter auswählen',
             });
         });
     </script>

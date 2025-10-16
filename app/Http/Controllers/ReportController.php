@@ -55,8 +55,9 @@ class ReportController extends Controller
     {
         $templates = config('report_templates', []);
         $citizens = Citizen::orderBy('name')->get(); // Bürgerliste laden
+        $allStaff = User::orderBy('name')->get(); // Alle Mitarbeiter laden
 
-        return view('reports.create', compact('templates', 'citizens'));
+        return view('reports.create', compact('templates', 'citizens', 'allStaff'));
     }
 
     /**
@@ -70,11 +71,16 @@ class ReportController extends Controller
             'location' => 'required|string|max:255',
             'incident_description' => 'required|string',
             'actions_taken' => 'required|string',
+            'attending_staff' => 'nullable|array',
+            'attending_staff.*' => 'exists:users,id',
         ]);
 
         $validatedData['user_id'] = Auth::id();
         $report = Report::create($validatedData);
-
+        
+        if ($request->has('attending_staff')) {
+            $report->attendingStaff()->attach($request->input('attending_staff'));
+        }
         // Logging
         ActivityLog::create([
             'user_id' => Auth::id(),
@@ -102,8 +108,10 @@ class ReportController extends Controller
     {
         $templates = config('report_templates', []);
         $citizens = Citizen::orderBy('name')->get(); // Bürgerliste laden
-        
-        return view('reports.edit', compact('report', 'templates', 'citizens'));
+        $allStaff = User::orderBy('name')->get(); // Alle Mitarbeiter laden
+        $report->load('attendingStaff'); // Lade die zugehörigen Mitarbeiter
+
+        return view('reports.edit', compact('report', 'templates', 'citizens', 'allStaff'));
     }
 
     /**
@@ -117,9 +125,12 @@ class ReportController extends Controller
             'location' => 'required|string|max:255',
             'incident_description' => 'required|string',
             'actions_taken' => 'required|string',
+            'attending_staff' => 'nullable|array',
+            'attending_staff.*' => 'exists:users,id',
         ]);
 
         $report->update($validatedData);
+        $report->attendingStaff()->sync($request->input('attending_staff', []));
         
         // Logging
         ActivityLog::create([

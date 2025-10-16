@@ -106,4 +106,8 @@ class User extends Authenticatable
         // ANGEPASST: Director und Super-Admin können nicht imitiert werden
         return !$this->hasAnyRole('ems-director', 'Super-Admin');
     }
+    public function attendedReports()
+    {
+        return $this->belongsToMany(Report::class, 'report_user');
+    }
 }
