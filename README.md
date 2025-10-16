@@ -142,3 +142,13 @@ Diese Rolle dient ausschließlich Entwicklungs- und Wartungszwecken.
 
 ## Lizenzierung
 Diese Software wird unter den Bedingungen der **MIT-Lizenz** bereitgestellt.
+
+## Vorlagen für Berichte erstellen
+
+# Ort der Vorlagen /storage/app/templates/vorlagen.txt
+
+# 1. Das Skript ausführen, um die Konfigurationsdatei neu zu schreiben
+php artisan import:report-templates
+
+# 2. Den Konfigurations-Cache von Laravel leeren, damit die Änderungen live gehen
+php artisan config:clear
