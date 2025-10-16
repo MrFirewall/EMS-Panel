@@ -36,7 +36,7 @@ class ProfileController extends Controller
 
         // Die neue Stundenberechnung aus dem User-Model aufrufen
         $hourData = $user->calculateDutyHours();
-    $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
+        $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
         return view('profile.show', compact(
             'user', 
             'serviceRecords', 

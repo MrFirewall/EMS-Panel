@@ -286,7 +286,6 @@ class UserController extends Controller
             'employee_id' => 'nullable|string', 'email' => 'nullable|email',
             'birthday' => 'nullable|date', 'discord_name' => 'nullable|string',
             'forum_name' => 'nullable|string', 'special_functions' => 'nullable|string',
-            'hire_date' => 'nullable|date',
         ]);
 
         $managableRoleNames = $this->getManagableRoles()->pluck('name')->toArray();
@@ -306,7 +305,15 @@ class UserController extends Controller
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
         $oldRank = $user->rank;
         $oldStatus = $user->status;
+        $newStatus = $validatedData['status'];
 
+        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert']; // Status, die als "nicht aktiv" gelten
+        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase'];   // Status, die eine (Wieder-)Einstellung bedeuten
+
+        if (in_array($oldStatus, $inactiveStatuses) && in_array($newStatus, $activeStatuses)) {
+            // Wenn der User reaktiviert wird, setze das Einstellungsdatum auf den heutigen Tag.
+            $validatedData['hire_date'] = now();
+        }
         $newRank = 'praktikant';
         $highestLevel = 0;
         foreach ($submittedRoleNames as $roleName) {

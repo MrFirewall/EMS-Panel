@@ -51,7 +51,9 @@ class User extends Authenticatable
         'emt-trainee' => 2,
         'praktikant' => 1,
     ];
-
+    protected $casts = [
+        'hire_date' => 'datetime',
+    ];
     /**
      * NEU: Accessor, der "System" zurückgibt, wenn kein Bearbeiter gesetzt ist.
      */
@@ -134,31 +136,18 @@ class User extends Authenticatable
             'archive_by_rank' => $archiveByRank,
         ];
     }
- /**
-     * NEU: Berechnet die Dienststunden pro KW seit dem letzten (Wieder-)Eintritt.
-     *
-     * @return array
-     */
+
     public function calculateWeeklyHoursSinceEntry(): array
     {
-        // 1. Finde das letzte (Wieder-)Eintrittsdatum
-        $lastReactivationLog = $this->activityLogs()
-            ->where('log_type', 'UPDATED')
-            ->where(function ($query) {
-                $query->where('description', 'LIKE', '%Status geändert:%-> Aktiv%')
-                      ->orWhere('description', 'LIKE', '%Status geändert:%-> Probezeit%')
-                      ->orWhere('description', 'LIKE', '%Status geändert:%-> Bewerbungsphase%');
-            })
-            ->latest('created_at')
-            ->first();
+        // 1. Prüfen, ob ein Einstellungsdatum vorhanden ist. Wenn nicht, leeres Array zurückgeben.
+        if (!$this->hire_date) {
+            return [];
+        }
 
-        // Wenn ein Reaktivierungs-Log gefunden wird, nimm dessen Datum, ansonsten das Einstellungsdatum
-        $startDate = $lastReactivationLog ? $lastReactivationLog->created_at : $this->hire_date;
-        $startDate = Carbon::parse($startDate)->startOfDay();
-        $endDate = now()->endOfWeek();
+        // 2. Das Startdatum ist jetzt einfach das `hire_date`.
+        $startDate = $this->hire_date->copy()->startOfDay();
 
-        // 2. Hole alle relevanten Logs seit diesem Datum
-        // Annahme: Es gibt 'LEITSTELLE_START' und 'LEITSTELLE_END' als log_type
+        // 3. Hole alle relevanten Logs seit diesem Datum
         $logTypes = ['DUTY_START', 'DUTY_END', 'LEITSTELLE_START', 'LEITSTELLE_END'];
         $logs = $this->activityLogs()
             ->whereIn('log_type', $logTypes)
@@ -166,7 +155,7 @@ class User extends Authenticatable
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // 3. Verarbeite die Logs
+        // 4. Verarbeite die Logs (Logik bleibt gleich)
         $weeklyData = [];
         $lastDutyStart = null;
         $lastLeitstelleStart = null;
@@ -176,7 +165,6 @@ class User extends Authenticatable
             if (!isset($weeklyData[$kw])) {
                 $weeklyData[$kw] = ['normal_seconds' => 0, 'leitstelle_seconds' => 0];
             }
-
             switch ($log->log_type) {
                 case 'DUTY_START': $lastDutyStart = $log; break;
                 case 'DUTY_END':
@@ -195,9 +183,7 @@ class User extends Authenticatable
             }
         }
         
-        // Sortiere das Ergebnis nach Kalenderwoche absteigend
         krsort($weeklyData);
-
         return $weeklyData;
     }
 
