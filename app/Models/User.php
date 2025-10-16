@@ -7,6 +7,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Lab404\Impersonate\Models\Impersonate;
+use Illuminate\Database\Eloquent\Casts\Attribute; // Wichtig für den Accessor
+use Illuminate\Support\Carbon; // Wichtig für Datumsberechnungen
 
 class User extends Authenticatable
 {
@@ -33,7 +35,6 @@ class User extends Authenticatable
         'hire_date',
         'last_edited_at',
         'last_edited_by',
-        'rank' // WICHTIG: 'rank' sollte hier sein, wenn es in store/update verwendet wird
     ];
 
     /**
@@ -50,6 +51,89 @@ class User extends Authenticatable
         'emt-trainee' => 2,
         'praktikant' => 1,
     ];
+
+    /**
+     * NEU: Accessor, der "System" zurückgibt, wenn kein Bearbeiter gesetzt ist.
+     */
+    protected function lastEditor(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->last_edited_by ?? 'System',
+        );
+    }
+
+    /**
+     * NEU: Berechnet die Dienststunden basierend auf den ActivityLogs.
+     *
+     * @return array ['active_total_seconds' => int, 'archive_by_rank' => array]
+     */
+    public function calculateDutyHours(): array
+    {
+        // 1. Hole alle relevanten Logs für den User, chronologisch sortiert
+        $logs = $this->activityLogs()
+                     ->whereIn('log_type', ['DUTY_START', 'DUTY_END', 'UPDATED'])
+                     ->orderBy('created_at', 'asc')
+                     ->get();
+
+        $archiveByRank = [];
+        $activeTotalSeconds = 0;
+        $lastStartLog = null;
+        
+        // Finde den initialen Rang des Benutzers zum Zeitpunkt der Einstellung
+        $currentRank = $this->rank; 
+
+        // 2. Durchlaufe alle Logs, um Stunden und Statusänderungen zu verarbeiten
+        foreach ($logs as $log) {
+            
+            // Logik für Status- und Rangänderungen
+            if ($log->log_type === 'UPDATED' && !empty($log->details)) {
+                // A) Prüfen, ob der User inaktiv gesetzt wurde. Wenn ja, aktive Stunden zurücksetzen.
+                if (str_contains($log->details, 'Status geändert:') && str_contains($log->details, '-> inaktiv')) {
+                    $activeTotalSeconds = 0; // Stunden für die "aktive Zeit" werden zurückgesetzt
+                }
+
+                // B) Rangänderung aus dem Log-Text extrahieren
+                if (preg_match('/Rang geändert:.*?-> ([\w-]+)/', $log->details, $matches)) {
+                    $currentRank = $matches[1];
+                }
+            }
+
+            // Logik zur Stundenberechnung
+            if ($log->log_type === 'DUTY_START') {
+                $lastStartLog = $log;
+            } 
+            elseif ($log->log_type === 'DUTY_END' && $lastStartLog) {
+                $duration = $lastStartLog->created_at->diffInSeconds($log->created_at);
+                
+                // Zum Archiv für den aktuellen Rang hinzufügen
+                if (!isset($archiveByRank[$currentRank])) {
+                    $archiveByRank[$currentRank] = 0;
+                }
+                $archiveByRank[$currentRank] += $duration;
+
+                // Zu den aktiven Stunden hinzufügen
+                $activeTotalSeconds += $duration;
+                
+                $lastStartLog = null;
+            }
+        }
+
+        // 3. Sonderfall: User ist aktuell noch im Dienst
+        if ($lastStartLog) {
+            $duration = $lastStartLog->created_at->diffInSeconds(Carbon::now());
+            
+            if (!isset($archiveByRank[$currentRank])) {
+                $archiveByRank[$currentRank] = 0;
+            }
+            $archiveByRank[$currentRank] += $duration;
+            $activeTotalSeconds += $duration;
+        }
+
+        return [
+            'active_total_seconds' => $activeTotalSeconds,
+            'archive_by_rank' => $archiveByRank,
+        ];
+    }
 
     /**
      * Ermittelt den Namen der höchsten Rolle, die der Benutzer hat.
@@ -82,19 +166,21 @@ class User extends Authenticatable
         return $highestLevel;
     }
 
+    // --- Relationen ---
+    public function activityLogs() { return $this->hasMany(ActivityLog::class); }
     public function receivedEvaluations() { return $this->hasMany(Evaluation::class, 'user_id'); }
     public function serviceRecords() { return $this->hasMany(ServiceRecord::class); }
     public function reports() { return $this->hasMany(Report::class); }
     public function examinations() { return $this->hasMany(Examination::class); }
     public function trainingModules() { return $this->hasMany(TrainingModule::class); }
     public function vacations() { return $this->hasMany(Vacation::class); }
-    
+    public function attendedReports() { return $this->belongsToMany(Report::class, 'report_user'); }
+
     /**
      * Determines if this user can impersonate others.
      */
     public function canImpersonate(): bool
     {
-        // ANGEPASST: Director und Super-Admin dürfen imitieren
         return $this->hasAnyRole('ems-director', 'Super-Admin');
     }
 
@@ -103,11 +189,6 @@ class User extends Authenticatable
      */
     public function canBeImpersonated(): bool
     {
-        // ANGEPASST: Director und Super-Admin können nicht imitiert werden
         return !$this->hasAnyRole('ems-director', 'Super-Admin');
-    }
-    public function attendedReports()
-    {
-        return $this->belongsToMany(Report::class, 'report_user');
     }
 }

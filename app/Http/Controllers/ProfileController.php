@@ -4,24 +4,26 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User; // Muss importiert werden, falls es nicht schon global ist
-use App\Models\Evaluation; // Muss importiert werden
-use App\Models\ActivityLog;
+use App\Models\User;
+use App\Models\Evaluation;
 
 class ProfileController extends Controller
 {
     public function __construct()
     {
-        // Schützt die Profilseite. Nur wer 'profile.view' hat, darf sie sehen.
-        $this->middleware('can:profile.view')->only('show');
+        // Stellt sicher, dass nur eingeloggte Benutzer Zugriff haben
+        $this->middleware('auth');
     }
+
     /**
-     * Zeigt das Profil des eingeloggten Benutzers an.
+     * Zeigt das Profil des aktuell eingeloggten Benutzers an.
+     * Es wird kein User-Objekt mehr aus der Route erwartet.
      */
-    public function show(User $user)
+    public function show()
     {
+        // Hole den eingeloggten Benutzer direkt
         $user = Auth::user();
-        // Lade alle Relationen außer den Akteneinträgen
+
         $user->load([
             'examinations', 
             'trainingModules', 
@@ -30,27 +32,29 @@ class ProfileController extends Controller
         ]);
         
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
-
-        // Diese Logik kann im ProfileController bleiben, da sie nur für das eigene Profil relevant ist.
         $evaluationCounts = $this->calculateEvaluationCounts($user);
 
-        return view('profile.show', compact('user', 'serviceRecords', 'evaluationCounts'));
+        // Die neue Stundenberechnung aus dem User-Model aufrufen
+        $hourData = $user->calculateDutyHours();
+
+        return view('profile.show', compact(
+            'user', 
+            'serviceRecords', 
+            'evaluationCounts',
+            'hourData'
+        ));
     }
 
     /**
-     * Berechnet die Anzahl der erhaltenen und verfassten Bewertungen pro Kategorie
-     * für den übergebenen Benutzer.
-     *
-     * @param User $user
-     * @return array
+     * Berechnet die Anzahl der Bewertungen.
+     * Diese Logik ist privat und nur für diesen Controller relevant.
      */
     private function calculateEvaluationCounts(User $user): array
     {
         $currentUserId = $user->id;
-        $evaluatorId = Auth::id(); // Der aktuell eingeloggte Benutzer (für 'Verfasst')
+        $evaluatorId = Auth::id();
 
-        // Initialisierung der Zähler
-        $counts = ['verfasst' => [], 'erhalten' => [], 'gesamt' => []];
+        $counts = ['verfasst' => [], 'erhalten' => []];
         $typeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle'];
         
         foreach ($typeLabels as $type) {
@@ -58,22 +62,19 @@ class ProfileController extends Controller
             $counts['erhalten'][$type] = 0;
         }
         
-        // Alle relevanten Bewertungen laden
-        $allEvaluations = Evaluation::where('user_id', $currentUserId) // Erhalten
-                                    ->orWhere('evaluator_id', $evaluatorId) // Verfasst
-                                    ->get();
+        $allEvaluations = Evaluation::where('user_id', $currentUserId)
+                                      ->orWhere('evaluator_id', $evaluatorId)
+                                      ->get();
 
         foreach ($allEvaluations as $evaluation) {
             $type = $evaluation->evaluation_type;
 
-            if (!isset($counts['verfasst'][$type])) continue; // Ignoriert unbekannte Typen
+            if (!isset($counts['verfasst'][$type])) continue;
 
-            // 1. Erhaltene Bewertungen zählen (durch den Profilinhaber)
             if ($evaluation->user_id === $currentUserId) {
                 $counts['erhalten'][$type]++;
             }
 
-            // 2. Verfasste Bewertungen zählen (durch den eingeloggten Admin/User)
             if ($evaluation->evaluator_id === $evaluatorId) {
                 $counts['verfasst'][$type]++;
             }

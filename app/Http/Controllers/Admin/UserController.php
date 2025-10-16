@@ -20,14 +20,14 @@ class UserController extends Controller
      * @var array
      */
     private $rankHierarchy = [
-        'ems-director'             => 8,
-        'assistant-ems-director'   => 7,
-        'instructor'               => 6,
-        'emergency-doctor'         => 5,
-        'paramedic'                => 4,
-        'emt'                      => 3,
-        'emt-trainee'              => 2,
-        'praktikant'               => 1,
+        'ems-director'            => 8,
+        'assistant-ems-director'  => 7,
+        'instructor'              => 6,
+        'emergency-doctor'        => 5,
+        'paramedic'               => 4,
+        'emt'                     => 3,
+        'emt-trainee'             => 2,
+        'praktikant'              => 1,
     ];
 
     /**
@@ -211,16 +211,22 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load([
-            'serviceRecords' => fn($q) => $q->with('author')->latest(), 
             'examinations', 
             'trainingModules', 
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
         ]);
-        $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();       
+        
+        $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
         $evaluationCounts = $this->calculateEvaluationCounts($user);
-        return view('profile.show', compact('user','serviceRecords','evaluationCounts'));
+
+        // NEU: Rufe die Stundenberechnung aus dem User-Model auf
+        $hourData = $user->calculateDutyHours();
+
+        // NEU: Übergib die $hourData an die View
+        return view('profile.show', compact('user','serviceRecords','evaluationCounts', 'hourData'));
     }
+
     private function calculateEvaluationCounts(User $user): array
     {
         $currentUserId = $user->id;
@@ -235,8 +241,8 @@ class UserController extends Controller
         }
         
         $allEvaluations = Evaluation::where('user_id', $currentUserId)
-                                      ->orWhere('evaluator_id', $evaluatorId)
-                                      ->get();
+                                        ->orWhere('evaluator_id', $evaluatorId)
+                                        ->get();
 
         foreach ($allEvaluations as $evaluation) {
             $type = $evaluation->evaluation_type;
@@ -254,6 +260,7 @@ class UserController extends Controller
         
         return $counts;
     }
+
     public function edit(User $user)
     {
         $statuses = [
@@ -358,4 +365,3 @@ class UserController extends Controller
         return redirect()->route('admin.users.show', $user)->with('success', 'Eintrag zur Personalakte hinzugefügt.');
     }
 }
-

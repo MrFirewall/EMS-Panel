@@ -62,6 +62,7 @@
 
                         {{-- TAB 1: Übersicht (für alle) --}}
                         <div class="tab-pane active" id="overview">
+                            @include('profile.partials.hours', ['hourData' => $hourData])
                             <div class="row">
                                 <div class="col-md-6">
                                     @include('profile.partials.examinations', ['examinations' => $user->examinations])

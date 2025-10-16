@@ -8,7 +8,8 @@
                 <b>Letzte Änderung</b> <span class="float-right">{{ $user->last_edited_at ? \Carbon\Carbon::parse($user->last_edited_at)->format('d.m.Y - H:i') : '-' }}</span>
             </li>
             <li class="list-group-item">
-                <b>Bearbeiter</b> <span class="float-right">{{ $user->last_edited_by ?? '-' }}</span>
+                <b>Letzter Aktenbearbeiter</b> 
+                <a class="float-right">{{ $user->last_editor }}</a>
             </li>
         </ul>
     </div>
