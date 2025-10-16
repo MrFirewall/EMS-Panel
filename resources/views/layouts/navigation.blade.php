@@ -117,6 +117,17 @@
             </a>
         </li>
         @endcan
+        
+        <!-- NEU: Bürger-Management -->
+        @can('admin.access') {{-- Oder eine spezifischere Permission wie 'citizens.view' --}}
+        <li class="nav-item">
+            <a href="{{ route('admin.citizens.index') }}" class="nav-link {{ Request::routeIs('admin.citizens.*') ? 'active' : '' }}">
+                <i class="nav-icon fas fa-address-book"></i>
+                <p>Bürger-Management</p>
+            </a>
+        </li>
+        @endcan
+        
         @can('roles.view')
         <li class="nav-item">
             <a href="{{ route('admin.roles.index') }}" class="nav-link {{ Request::routeIs('admin.roles.*') ? 'active' : '' }}">
