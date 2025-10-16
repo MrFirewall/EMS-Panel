@@ -165,7 +165,6 @@
                         </p>
                     </li>
                     <li class="user-footer">
-                        <a href="{{ route('profile.show') }}" class="btn btn-default btn-flat">Profil</a>
                         <a href="#" class="btn btn-default btn-flat float-right"
                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                             Abmelden

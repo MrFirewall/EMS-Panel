@@ -33,7 +33,7 @@
                         @forelse($lastReports as $report)
                             <div class="post">
                                 <a href="{{ route('reports.show', $report) }}">Bericht #{{ $report->id }}</a> 
-                                <span class="text-muted float-right">{{ $report->created_at->format('d.m.Y') }}</span>
+                                <span class="text-muted float-right">{{ $report->created_at->format('d.m.Y HH:MM') }}</span>
                             </div>
                         @empty
                             <p class="text-muted">Noch keine Berichte erstellt.</p>
@@ -69,7 +69,7 @@
                     </div>
                     <div class="card-body d-flex justify-content-around">
                         <a href="{{ route('reports.create') }}" class="btn btn-app bg-success">
-                            <i class="fas fa-file-alt"></i> Neuer Bericht
+                            <i class="fas fa-file-alt"></i> Neuer Einsatzbericht
                         </a>
                     </div>
                 </div>
