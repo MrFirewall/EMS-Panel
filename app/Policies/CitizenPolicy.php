@@ -11,7 +11,7 @@ class CitizenPolicy
     /**
      * Prüft, ob der Benutzer die Bürgerliste ansehen darf.
      */
-    public function index(User $user): bool
+    public function viewAny(User $user): bool
     {
         // Erlaubt die Aktion, wenn der Benutzer die Berechtigung 'citizens.view' hat.
         return $user->can('citizens.view');
