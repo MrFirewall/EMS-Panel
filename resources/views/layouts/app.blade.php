@@ -52,6 +52,20 @@
             margin-right: 1px;
             margin-left: 3px;
             font-weight: 700;
+        }.select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            color: #000;
+            text-shadow: 0 1px 0 #495057;
+            font-size: 1.5rem;
+            line-height: 1;
+            opacity: .5;
+            background-color: transparent;
+            border: 0;
+            float: left;
+            padding-right: 3px;
+            padding-left: 3px;
+            margin-right: 1px;
+            margin-left: 3px;
+            font-weight: 700;
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
