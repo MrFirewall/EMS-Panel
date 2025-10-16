@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Citizen extends Model
 {
@@ -16,4 +17,14 @@ class Citizen extends Model
         'address',
         'notes',
     ];
+    /**
+     * Definiert die "hasMany"-Beziehung zu den Berichten (Reports).
+     * Ein Bürger kann viele Berichte haben.
+     */
+    public function reports(): HasMany
+    {
+        // Annahme: Dein Berichts-Model heißt 'Report'
+        // Laravel erwartet eine 'citizen_id' Spalte in deiner 'reports' Tabelle.
+        return $this->hasMany(Report::class);
+    }
 }

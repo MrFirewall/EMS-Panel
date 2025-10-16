@@ -57,6 +57,11 @@
                                 <td>{{ $citizen->phone_number ?? 'N/A' }}</td>
                                 <td>{{ $citizen->address ?? 'N/A' }}</td>
                                 <td class="text-right">
+                                    @can('citizens.view')
+                                    <a href="{{ route('citizens.show', $citizen) }}" class="btn btn-sm btn-info btn-flat">
+                                        <i class="fas fa-file-medical"></i>
+                                    </a>
+                                    @endcan
                                     @can('citizens.edit')
                                     <a href="{{ route('citizens.edit', $citizen) }}" class="btn btn-sm btn-primary btn-flat">
                                         <i class="fas fa-edit"></i>

@@ -59,6 +59,20 @@ class CitizenController extends Controller
         return redirect()->route('citizens.index')->with('success', 'Bürgerakte erfolgreich erstellt.');
     }
     
+    /**
+     * Zeigt die Detailseite für einen bestimmten Bürger an.
+     *
+     * @param  \App\Models\Citizen  $citizen
+     * @return \Illuminate\View\View
+     */
+    public function show(Citizen $citizen)
+    {
+        // Lade die zugehörigen Berichte, um N+1 Query Probleme zu vermeiden (Eager Loading)
+        $citizen->load('reports');
+
+        // Gib die View zurück und übergebe die Bürgerdaten
+        return view('citizens.show', compact('citizen'));
+    }
     public function edit(Citizen $citizen)
     {
         return view('citizens.edit', compact('citizen'));

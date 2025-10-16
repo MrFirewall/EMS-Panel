@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\UserController;
 use Lab404\Impersonate\Controllers\ImpersonateController;
 use App\Http\Controllers\DutyStatusController;
+use App\Http\Controllers\CitizenController;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,7 +67,7 @@ Route::middleware('auth.cfx')->group(function () {
     Route::post('vacations', [VacationController::class, 'store'])->name('vacations.store');
 
     // Bürgerakten verwalten
-    Route::resource('citizens', \App\Http\Controllers\CitizenController::class)->except(['show']);
+    Route::resource('citizens', CitizenController::class);
 
     // Mitarbeiter-Aktionen für Bewertungen
     Route::prefix('forms/evaluations')->name('forms.evaluations.')->group(function () {
