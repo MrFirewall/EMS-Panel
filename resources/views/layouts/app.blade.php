@@ -18,8 +18,24 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
     <!-- Optionales Dark Mode Styling -->
     <style>
-        .dark-mode .main-header.navbar { border-bottom: none; }
-        .nav-icon { font-size: 1.1rem; }
+        /* Stellt sicher, dass Select2-Felder im Dark Mode den dunklen Hintergrund und die passende Schriftfarbe erhalten */
+        .dark-mode .select2-container--bootstrap4 .select2-selection {
+            background-color: #343a40;
+            border-color: #6c757d;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #454d55;
+            color: #fff;
+            border-color: #6c757d;
+        }
+        .dark-mode .select2-dropdown {
+            background-color: #343a40;
+            border-color: #6c757d;
+        }
+        .dark-mode .select2-search--dropdown .select2-search__field {
+            background-color: #454d55;
+            color: #fff;
+        }
     </style>
     @stack('styles')
 </head>
