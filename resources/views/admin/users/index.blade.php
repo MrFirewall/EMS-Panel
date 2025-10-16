@@ -117,7 +117,7 @@
         },
         "order": [[1, 'desc']] , // Standardmäßig nach Personalnummer absteigend sortieren
         "responsive": true, 
-        "autoWidth": false,
+        "autoWidth": true,
         "paging": true,
         "ordering": true,
         "info": true,        
