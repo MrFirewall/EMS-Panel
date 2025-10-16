@@ -65,6 +65,9 @@ Route::middleware('auth.cfx')->group(function () {
     Route::get('vacations/request', [VacationController::class, 'create'])->name('vacations.create');
     Route::post('vacations', [VacationController::class, 'store'])->name('vacations.store');
 
+    // Bürgerakten verwalten
+    Route::resource('citizens', \App\Http\Controllers\CitizenController::class)->except(['show']);
+
     // Mitarbeiter-Aktionen für Bewertungen
     Route::prefix('forms/evaluations')->name('forms.evaluations.')->group(function () {
         Route::get('/', [EvaluationController::class, 'index'])->name('index');

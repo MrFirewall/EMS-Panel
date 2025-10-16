@@ -32,7 +32,7 @@
                         <strong>Letzte Berichte:</strong>
                         @forelse($lastReports as $report)
                             <div class="post">
-                                <a href="#">Bericht #{{ $report->id }}</a> 
+                                <a href="{{ route('reports.show', $report) }}">Bericht #{{ $report->id }}</a> 
                                 <span class="text-muted float-right">{{ $report->created_at->format('d.m.Y') }}</span>
                             </div>
                         @empty
@@ -68,14 +68,8 @@
                         <h3 class="card-title">Schnellzugriff</h3>
                     </div>
                     <div class="card-body d-flex justify-content-around">
-                        <a href="{{-- route('reports.create') --}}" class="btn btn-app bg-success">
+                        <a href="{{ route('reports.create') }}" class="btn btn-app bg-success">
                             <i class="fas fa-file-alt"></i> Neuer Bericht
-                        </a>
-                        <a href="#" class="btn btn-app bg-info">
-                            <i class="fas fa-users"></i> Akten einsehen
-                        </a>
-                        <a href="#" class="btn btn-app bg-warning">
-                            <i class="fas fa-exclamation-triangle"></i> Vorfall melden
                         </a>
                     </div>
                 </div>
