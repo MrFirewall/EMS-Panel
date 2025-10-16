@@ -22,7 +22,7 @@ class CitizenPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('citizens.manage');
+        return $user->can('citizens.create');
     }
 
     /**
@@ -30,7 +30,7 @@ class CitizenPolicy
      */
     public function update(User $user, Citizen $citizen): bool
     {
-        return $user->can('citizens.manage');
+        return $user->can('citizens.edit');
     }
 
     /**
@@ -38,6 +38,6 @@ class CitizenPolicy
      */
     public function delete(User $user, Citizen $citizen): bool
     {
-        return $user->can('citizens.manage');
+        return $user->can('citizens.delete');
     }
 }
