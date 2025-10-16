@@ -116,7 +116,19 @@
             "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/German.json"
         },
         "order": [[1, 'desc']] , // Standardmäßig nach Personalnummer absteigend sortieren
-        "responsive": true, 
+        "responsive": {
+            details: {
+                display: DataTable.Responsive.display.modal({
+                    header: function (row) {
+                        var data = row.data();
+                        return 'Details für ' + data[0] + ' ' + data[1];
+                    }
+                }),
+                renderer: DataTable.Responsive.renderer.tableAll({
+                    tableClass: 'table'
+                })
+            }
+        }
         "autoWidth": true,
         "paging": true,
         "ordering": true,
