@@ -54,7 +54,7 @@
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
             color: #000;
             text-shadow: 0 1px 0 #495057;
-            float: right;
+            float: right !important;
             font-size: 1.5rem;
             font-weight: 700;
             line-height: 1;
