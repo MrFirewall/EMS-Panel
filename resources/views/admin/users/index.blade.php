@@ -90,7 +90,7 @@
                                 </a>
                             @endcan
                             @canImpersonate
-                                @if($user->canBeImpersonated())
+                                @if(auth()->user()->canBeImpersonated($user))
                                     <a href="{{ route('impersonate', $user->id) }}" class="btn btn-sm btn-secondary btn-flat" title="Als {{ $user->name }} einloggen">
                                         <i class="fas fa-user-secret"></i>
                                     </a>
