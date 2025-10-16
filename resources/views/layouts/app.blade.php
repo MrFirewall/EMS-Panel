@@ -23,17 +23,40 @@
             background-color: #343a40;
             border-color: #6c757d;
         }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
-            background-color: #454d55;
+        /* Stellt sicher, dass der Text im Auswahlfeld weiß ist */
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
             color: #fff;
-            border-color: #6c757d;
         }
+        /* Färbt den Dropdown-Pfeil weiß */
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b {
+            border-color: #fff transparent transparent transparent;
+        }
+        /* Stil für die ausgewählten Tags in der Mehrfachauswahl */
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #007bff; /* Primärfarbe für bessere Sichtbarkeit */
+            border-color: #0069d9;
+            color: #fff;
+        }
+        /* Farbe für das "x" zum Entfernen eines Tags */
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #fff;
+        }
+        /* Stil für das Dropdown-Menü selbst */
         .dark-mode .select2-dropdown {
             background-color: #343a40;
             border-color: #6c757d;
         }
+        /* Stil für das Suchfeld im Dropdown */
         .dark-mode .select2-search--dropdown .select2-search__field {
             background-color: #454d55;
+            color: #fff;
+        }
+        /* Stil für die hervorgehobene Option in der Liste */
+         .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
+            background-color: #007bff;
             color: #fff;
         }
     </style>

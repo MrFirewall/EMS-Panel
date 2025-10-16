@@ -81,12 +81,12 @@
                 </div>
                 <div class="form-group">
                     <label for="incident_description">Einsatzhergang</label>
-                    <textarea class="form-control" id="incident_description" name="incident_description" rows="5" required>{{ old('incident_description', $report->incident_description) }}</textarea>
+                    <textarea class="form-control" id="incident_description" name="incident_description" rows="15" required>{{ old('incident_description', $report->incident_description) }}</textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="actions_taken">Durchgeführte Maßnahmen</label>
-                    <textarea class="form-control" id="actions_taken" name="actions_taken" rows="5" required>{{ old('actions_taken', $report->actions_taken) }}</textarea>
+                    <textarea class="form-control" id="actions_taken" name="actions_taken" rows="15" required>{{ old('actions_taken', $report->actions_taken) }}</textarea>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-flat">
