@@ -36,6 +36,10 @@
             background-color: #454d55;
             color: #fff;
         }
+        /* NEU: Versteckt bereits ausgewählte Optionen in der Dropdown-Liste für eine bessere Übersicht */
+        .select2-results__option[aria-selected=true] {
+            display: none;
+        }
     </style>
     @stack('styles')
 </head>
