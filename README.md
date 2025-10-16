@@ -1,79 +1,97 @@
-# Emergency Medical Service Verwaltungssystem
+# 🚑 Emergency Medical Service Verwaltungssystem
 
-## Projektdokumentation
-Das vorliegende Dokument beschreibt das **Emergency Medical Service (EMS) Verwaltungssystem**, eine mittels des **Laravel Frameworks** entwickelte Softwareanwendung. Die primäre Funktion dieser Applikation besteht in der systematischen Verwaltung von Personal, zugewiesenen Rollen, Personalakten sowie internen Formularen.
+## 📘 Projektdokumentation
+
+Das **Emergency Medical Service (EMS) Verwaltungssystem** ist eine mit dem **Laravel Framework** entwickelte Softwareanwendung zur systematischen Verwaltung von Personal, Bürgerakten (Krankenakten), Rollen und internen Formularen.
 
 ---
 
-## Funktionsumfang
+## ⚙️ Funktionsumfang
 
-### Zentrales Dashboard
+### 🧭 Zentrales Dashboard
 Bereitstellung einer konsolidierten Übersicht über systemrelevante Informationen und Statistiken zur Effizienzsteigerung.
 
-### Personalverwaltung
+### 👨‍⚕️ Personalverwaltung
 Module zur Erfassung, Modifikation und Verwaltung von Mitarbeiterprofilen.
 
-### Hierarchisches Berechtigungssystem
-- Implementierung einer granularen Zugriffskontrolle, basierend auf einer definierten Ranghierarchie (von Praktikanten bis zur Direktionsebene).
-- Definition spezifischer Rollen für einzelne Abteilungen mit dedizierter Zuweisungslogik zur Wahrung der organisatorischen Integrität.
-- Etablierung einer **Super-Admin-Rolle**, die über uneingeschränkte Systemprivilegien verfügt, jedoch in der GUI weder sichtbar noch zuweisbar ist, um die Systemsicherheit zu maximieren.
+### 🩺 Bürgerakten-Verwaltung (Krankenakten)
+System zur Erfassung und Verwaltung von Bürgerdaten inklusive Suchfunktion.  
+Zentrale Detailansicht ("Krankenakte") pro Bürger, die eine chronologische Übersicht aller zugeordneten Einsatzberichte darstellt.
 
-### Impersonierungsfunktion
+### 🚨 Einsatzberichterstattung mit Vorlagen
+Modul zur Erstellung und Verwaltung von Einsatzprotokollen. Um die Konsistenz und Geschwindigkeit bei der Berichterstellung zu erhöhen, können Administratoren Text-Vorlagen definieren. Diese Vorlagen stehen den Benutzern beim Ausfüllen eines Berichts zur Verfügung und können per Klick eingefügt werden.
+
+### 🧩 Hierarchisches Berechtigungssystem
+Implementierung einer granularen Zugriffskontrolle, basierend auf einer definierten Ranghierarchie.  
+Definition spezifischer Rollen für einzelne Abteilungen mit dedizierter Zuweisungslogik.  
+Etablierung einer Super-Admin-Rolle, die über uneingeschränkte Systemprivilegien verfügt, jedoch in der GUI weder sichtbar noch zuweisbar ist.
+
+### 🕵️‍♂️ Impersonierungsfunktion
 Ermöglicht autorisierten Administratoren den temporären Zugriff auf Benutzerkonten zu Diagnose- und Supportzwecken.
 
-### Digitale Personalaktenführung
+### 📂 Digitale Personalaktenführung
 Systematische Erfassung und Archivierung von personalrelevanten Vorgängen und Dokumenten für jeden Mitarbeiter.
 
-### Digitalisiertes Formularwesen
+### 🧾 Digitalisiertes Formularwesen
 Abwicklung interner Antragsverfahren (z. B. Urlaubsanträge oder Mitarbeiterbewertungen) über eine webbasierte Schnittstelle.
 
-### Einsatzberichterstattung
-Modul zur Erstellung und Verwaltung von Einsatzprotokollen.
-
-### Aktivitätsprotokollierung
+### 🧠 Aktivitätsprotokollierung
 Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der Nachvollziehbarkeit und Revision.
 
 ---
 
-## Technologische Grundlage
+## 🧑‍💻 Technologische Grundlage
 
-**Backend:** PHP 8.2+ / Laravel 12+  
-**Frontend:** Blade, AdminLTE 3, JavaScript  
-**Datenbank:** MySQL
-
-### Implementierte Kernbibliotheken
-- **spatie/laravel-permission**: Rollen- und Berechtigungslogik
-- **lab404/laravel-impersonate**: Impersonierungsfunktionalität
-- **SocialiteProviders/Cfx.re**: Zur Authentifizierung über das Cfx.re-Netzwerk
+- **Backend:** PHP 8.2+ / Laravel 12+
+- **Frontend:** Blade, AdminLTE 3 (inkl. Dark Mode & Preloader), JavaScript
+- **Datenbank:** MySQL
 
 ---
 
-## Installations- und Inbetriebnahme-Anleitung
+## 🧱 Implementierte Kernbibliotheken
 
-### 1. Klonen des Repositories
+- **spatie/laravel-permission:** Rollen- und Berechtigungslogik  
+- **lab404/laravel-impersonate:** Impersonierungsfunktionalität  
+- **SocialiteProviders/Cfx.re:** Authentifizierung über das Cfx.re-Netzwerk  
+
+---
+
+## 🌟 Highlights & Besondere Features
+
+### 🎨 Dynamisches Frontend
+- **Dark Mode:** Nutzerpräferenz wird im `localStorage` gespeichert.
+- **Preloader:** Animierte EKG-Linie als Ladeanimation für professionelles Erscheinungsbild.
+
+### 🩺 Bürgerakten als "Krankenakte"
+Das System ermöglicht die Führung einer digitalen Akte für jeden Bürger. Die Detailansicht aggregiert automatisch alle Einsatzberichte, in denen der Bürger als Patient erfasst wurde. Dies schafft eine chronologische "Krankenakte" zur Nachverfolgung der medizinischen Vorgeschichte.
+
+---
+
+## 🧩 Installations- und Inbetriebnahme-Anleitung
+
+### 1️⃣ Repository klonen
 ```bash
 git clone https://github.com/MrFirewall/EMS-Panel.git
 cd EMS-Panel
 ```
 
-### 2. Installation der Projektabhängigkeiten
+### 2️⃣ Abhängigkeiten installieren
 ```bash
-# PHP-Abhängigkeiten installieren
+# PHP-Abhängigkeiten
 composer install
 
-# JavaScript-Abhängigkeiten installieren
-npm install
+# JavaScript-Abhängigkeiten (optional)
+# npm install
 ```
 
-### 3. Konfiguration der Umgebungsvariablen
+### 3️⃣ Umgebungsvariablen konfigurieren
 ```bash
 cp .env.example .env
 php artisan key:generate
 php artisan cfx:keys
 ```
 
-### 4. Anpassung der Konfigurationsparameter
-Bearbeite die `.env`-Datei und trage deine spezifischen Werte ein:
+### 4️⃣ Konfiguration anpassen
 ```env
 APP_NAME="EMS Verwaltung"
 APP_URL=http://localhost:8000
@@ -91,64 +109,68 @@ CFX_PUBLIC_KEY="${APP_KEY_PATH}/cfx-public.key"
 CFX_PRIVATE_KEY="${APP_KEY_PATH}/cfx-private.key"
 ```
 
-### 5. Datenbankmigration und Initialisierung
+### 5️⃣ Datenbankmigration & Seeding
 ```bash
 php artisan migrate --seed
 ```
-> Dieser Prozess umfasst sowohl die Schema-Migration als auch das Seeding mit grundlegenden Rollen und Berechtigungen.
 
-#### Hinweis zum `/database/seeders/PermissionsSeeder.php`
-Um dem ersten Benutzer automatisch die **Super-Admin-Rolle** zuzuweisen, kann folgender Codeabschnitt am Ende des Seeders eingefügt werden:
+**Hinweis:** Um dem ersten Benutzer automatisch die Super-Admin-Rolle zuzuweisen, kann folgender Code in `/database/seeders/PermissionsSeeder.php` ergänzt werden:
 
 ```php
 // Optional: Weise die Super-Admin Rolle einem bestimmten User zu (z.B. User mit ID 1)
-$user = User::find(1);
+$user = \App\Models\User::find(1);
 if ($user) {
     $user->assignRole('Super-Admin');
 }
 ```
 
----
-
-### 6. Kompilierung der Frontend-Assets
+### 6️⃣ Frontend-Assets kompilieren (optional)
 ```bash
 npm run build
 ```
 
-### 7. Erstellung des Storage-Symlinks
+### 7️⃣ Storage-Symlink erstellen
 ```bash
 php artisan storage:link
 ```
 
-### 8. Starten des Entwicklungsservers
+### 8️⃣ Entwicklungsserver starten
 ```bash
 php artisan serve
 ```
-Die Applikation ist anschließend unter **http://localhost:8000** erreichbar.
+Die Applikation ist anschließend unter [http://localhost:8000](http://localhost:8000) erreichbar.
 
 ---
 
-## Administratorzugang und Rollenkonzept
+## 🔐 Administratorzugang & Rollenkonzept
 
-### Standard-Administrator
-Nach dem Seeding-Prozess erhält die Rolle **ems-director** vollen administrativen Zugriff auf alle Systemfunktionen.
+### 👨‍💼 Standard-Administrator
+Nach dem Seeding-Prozess erhält die Rolle `ems-director` vollen administrativen Zugriff.
 
-### Super-Admin-Rolle
-Eine zusätzliche Rolle namens **Super-Admin** existiert mit äquivalenten, umfassenden Berechtigungen. Diese Rolle ist in der Benutzeroberfläche weder sichtbar noch zuweisbar und kann nur über die Kommandozeile (z. B. via `php artisan tinker`) vergeben werden.
-
-Diese Rolle dient ausschließlich Entwicklungs- und Wartungszwecken.
+### 🛡️ Super-Admin-Rolle
+Eine zusätzliche Rolle namens `Super-Admin` existiert mit umfassenden Berechtigungen. Diese Rolle ist in der Benutzeroberfläche weder sichtbar noch zuweisbar und kann nur über die Kommandozeile (z. B. `php artisan tinker`) vergeben werden.  
+Dient ausschließlich Entwicklungs- und Wartungszwecken.
 
 ---
 
-## Lizenzierung
+## 🧾 Vorlagen für Berichte erstellen
+
+1️⃣ **Vorlagendatei erstellen/bearbeiten:**  
+`/storage/app/templates/vorlagen.txt`
+
+2️⃣ **Vorlagen importieren:**
+```bash
+php artisan import:report-templates
+```
+
+3️⃣ **Cache leeren:**
+```bash
+php artisan config:clear
+```
+
+---
+
+## 📜 Lizenzierung
+
 Diese Software wird unter den Bedingungen der **MIT-Lizenz** bereitgestellt.
 
-## Vorlagen für Berichte erstellen
-
-# Ort der Vorlagen /storage/app/templates/vorlagen.txt
-
-# 1. Das Skript ausführen, um die Konfigurationsdatei neu zu schreiben
-php artisan import:report-templates
-
-# 2. Den Konfigurations-Cache von Laravel leeren, damit die Änderungen live gehen
-php artisan config:clear
