@@ -17,29 +17,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- ======================= DEBUG BLOCK START ======================= -->
-    <div class="callout callout-warning">
-        <h5><i class="icon fas fa-info"></i> Debugging-Informationen</h5>
-        <p>Dieser Block hilft bei der Fehlersuche. Bitte prüfe die Ausgabe unten:</p>
-        
-        @if(isset($templates) && !empty($templates))
-            <p class="text-success"><strong>Status:</strong> Die Variable <code>$templates</code> wurde gefunden und enthält Daten.</p>
-            <pre style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;"><code>{{ print_r($templates) }}</code></pre>
-            <small>Wenn hier deine Vorlagen korrekt angezeigt werden, liegt das Problem wahrscheinlich im HTML-Code der Select-Box weiter unten.</small>
-        @else
-            <p class="text-danger"><strong>Status:</strong> Die Variable <code>$templates</code> ist entweder leer oder nicht vorhanden.</p>
-            <small><strong>Mögliche Ursachen:</strong>
-                <ul>
-                    <li>Die Konfigurationsdatei <code>config/report_templates.php</code> existiert nicht oder ist am falschen Ort.</li>
-                    <li>Die Konfigurationsdatei gibt kein Array zurück (Tippfehler?).</li>
-                    <li>Der <code>ReportController</code> lädt die Konfiguration nicht korrekt.</li>
-                </ul>
-            </small>
-        @endif
-    </div>
-    <!-- ======================= DEBUG BLOCK END ======================= -->
-
     <div class="card card-outline card-primary">
         <div class="card-body">
             <form method="POST" action="{{ route('reports.store') }}">
