@@ -15,13 +15,13 @@
     
     <div class="card card-outline card-primary">
         <div class="card-body">
-            <form method="POST" action="{{ route('admin.citizens.store') }}">
+            <form method="POST" action="{{ route('citizens.store') }}">
                 @csrf
                 @include('citizens._form')
                 <button type="submit" class="btn btn-primary btn-flat">
                     <i class="fas fa-save me-1"></i> Akte anlegen
                 </button>
-                <a href="{{ route('admin.citizens.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
+                <a href="{{ route('citizens.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
             </form>
         </div>
     </div>

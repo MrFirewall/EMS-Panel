@@ -15,14 +15,14 @@
     
     <div class="card card-outline card-primary">
         <div class="card-body">
-            <form method="POST" action="{{ route('admin.citizens.update', $citizen) }}">
+            <form method="POST" action="{{ route('citizens.update', $citizen) }}">
                 @csrf
                 @method('PUT')
                 @include('citizens._form')
                 <button type="submit" class="btn btn-primary btn-flat">
                     <i class="fas fa-save me-1"></i> Änderungen speichern
                 </button>
-                <a href="{{ route('admin.citizens.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
+                <a href="{{ route('citizens.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
             </form>
         </div>
     </div>
