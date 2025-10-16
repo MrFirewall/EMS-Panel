@@ -19,46 +19,40 @@ $rankNames = [
 ];
 @endphp
 
-<div class="row">
-    {{-- Linke Box: Aktive Stunden --}}
-    <div class="col-md-6">
-        <div class="card card-primary">
-            <div class="card-header">
-                <h3 class="card-title">Stunden (Aktiver Zeitraum)</h3>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Dienstzeit gesamt
-                        <span class="badge bg-primary rounded-pill">{{ formatSeconds($hourData['active_total_seconds']) }} h</span>
-                    </li>
-                    {{-- Hier könnten später Leitstellenstunden etc. hinzukommen --}}
-                </ul>
-            </div>
-        </div>
+{{-- Box: Aktive Stunden --}}
+<div class="card card-primary mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Stunden (Aktiver Zeitraum)</h3>
     </div>
+    <div class="card-body">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Dienstzeit gesamt
+                <span class="badge bg-primary rounded-pill">{{ formatSeconds($hourData['active_total_seconds']) }} h</span>
+            </li>
+            {{-- Hier könnten später Leitstellenstunden etc. hinzukommen --}}
+        </ul>
+    </div>
+</div>
 
-    {{-- Rechte Box: Stundenarchiv nach Rang --}}
-    <div class="col-md-6">
-        <div class="card card-secondary">
-            <div class="card-header">
-                <h3 class="card-title">Stundenarchiv</h3>
-            </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    @forelse ($hourData['archive_by_rank'] as $rank => $seconds)
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{-- Zeigt den lesbaren Namen oder den Slug an --}}
-                            {{ $rankNames[$rank] ?? ucfirst($rank) }} 
-                            <span class="badge bg-secondary rounded-pill">{{ formatSeconds($seconds) }} h</span>
-                        </li>
-                    @empty
-                        <li class="list-group-item text-muted">
-                            Keine archivierten Stunden vorhanden.
-                        </li>
-                    @endforelse
-                </ul>
-            </div>
-        </div>
+{{-- Box: Stundenarchiv nach Rang --}}
+<div class="card card-secondary">
+    <div class="card-header">
+        <h3 class="card-title">Stundenarchiv</h3>
+    </div>
+    <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+            @forelse ($hourData['archive_by_rank'] as $rank => $seconds)
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{-- Zeigt den lesbaren Namen oder den Slug an --}}
+                    {{ $rankNames[$rank] ?? ucfirst($rank) }} 
+                    <span class="badge bg-secondary rounded-pill">{{ formatSeconds($seconds) }} h</span>
+                </li>
+            @empty
+                <li class="list-group-item text-muted">
+                    Keine archivierten Stunden vorhanden.
+                </li>
+            @endforelse
+        </ul>
     </div>
 </div>
