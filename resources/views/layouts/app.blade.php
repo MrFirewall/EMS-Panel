@@ -47,12 +47,16 @@
 
         /* Preloader: Option 3 (EKG-Linie) */
         .ekg-loader {
-            width: 150px;
-            height: 75px;
+            width: 20vw;      /* Breite ist 20% der Bildschirmbreite */
+            height: 10vw;     /* Höhe ist die Hälfte der Breite (2:1 Verhältnis) */
+            max-width: 300px; /* Wird nie breiter als 300px */
+            max-height: 150px;/* Wird nie höher als 150px */
+            min-width: 120px; /* Wird nie schmaler als 120px */
+            min-height: 60px; /* Wird nie kleiner als 60px */
         }
         .ekg-loader path {
-            stroke: #007bff; /* Linienfarbe (hier primärblau) */
-            stroke-width: 3;
+            stroke: #007bff;
+            stroke-width: 4;
             stroke-dasharray: 1000;
             stroke-dashoffset: 1000;
             animation: draw 2s linear infinite;
