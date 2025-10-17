@@ -1,0 +1,19 @@
+[NEUE VORLAGE]
+NAME: Ibuprofen 600mg
+DOSIERUNG: 1-1-1
+HINWEISE: Einnahme nach den Mahlzeiten mit reichlich Flüssigkeit.
+
+[NEUE VORLAGE]
+NAME: Amoxicillin 1000mg
+DOSIERUNG: 1-0-1 (für 7 Tage)
+HINWEISE: Antibiotikum, Einnahmezyklus unbedingt beenden, auch wenn die Symptome früher abklingen.
+
+[NEUE VORLAGE]
+NAME: Novalgin Tropfen
+DOSIERUNG: Bei Bedarf 20-40 Tropfen (max. 4x täglich)
+HINWEISE: Starkes Schmerzmittel. Nicht mit Alkohol einnehmen. Vorsicht bei niedrigem Blutdruck.
+
+[NEUE VORLAGE]
+NAME: Salbutamol Spray
+DOSIERUNG: Bei akuter Atemnot 1-2 Hübe
+HINWEISE: Notfallspray für Asthmatiker.
