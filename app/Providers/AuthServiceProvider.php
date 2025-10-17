@@ -13,6 +13,9 @@ use App\Policies\CitizenPolicy;
 use App\Models\Prescription;
 use App\Policies\PrescriptionPolicy;
 
+use Spatie\Permission\Models\Permission;
+use App\Policies\PermissionPolicy;
+
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
@@ -27,6 +30,7 @@ class AuthServiceProvider extends ServiceProvider
         Report::class => ReportPolicy::class,
         Citizen::class => CitizenPolicy::class,
         Prescription::class => PrescriptionPolicy::class,
+        Permission::class => PermissionPolicy::class,
     ];
 
     /**

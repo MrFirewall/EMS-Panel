@@ -10,21 +10,13 @@ use Spatie\Permission\Models\Role;
 class PermissionController extends Controller
 {
     /**
-     * Setzt die Middleware für den Controller.
-     * Jede Methode wird durch eine spezifische 'can'-Middleware geschützt.
-     */
-    public function __construct()
-    {
-        $this->middleware('can:permissions.view')->only('index');
-        $this->middleware('can:permissions.create')->only(['create', 'store']);
-        $this->middleware('can:permissions.edit')->only(['edit', 'update']);
-        $this->middleware('can:permissions.delete')->only('destroy');
-    }
-    /**
      * Zeigt eine Liste aller Berechtigungen an.
      */
     public function index()
     {
+        // Prüft die 'viewAny'-Methode in der PermissionPolicy
+        $this->authorize('viewAny', Permission::class);
+
         $permissions = Permission::latest()->get();
         return view('admin.permissions.index', compact('permissions'));
     }
@@ -34,6 +26,9 @@ class PermissionController extends Controller
      */
     public function create()
     {
+        // Prüft die 'create'-Methode in der PermissionPolicy
+        $this->authorize('create', Permission::class);
+
         return view('admin.permissions.create');
     }
 
@@ -42,20 +37,22 @@ class PermissionController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Permission::class);
+
         $validated = $request->validate([
             'name' => 'required|string|unique:permissions,name',
-            'description' => 'nullable|string|max:255', // NEU
+            'description' => 'nullable|string|max:255',
         ]);
 
-        Permission::create($validated); // Funktioniert dank Mass Assignment
-        // NEU: Berechtigung automatisch den Hauptrollen zuweisen
+        $permission = Permission::create($validated);
+
         $superAdminRole = Role::findByName('super-admin');
         $directorRole = Role::findByName('ems-director');
-
         $superAdminRole->givePermissionTo($permission);
         $directorRole->givePermissionTo($permission);
+
         return redirect()->route('admin.permissions.index')
-                         ->with('success', 'Berechtigung erfolgreich erstellt.');
+                         ->with('success', 'Berechtigung erfolgreich erstellt und zugewiesen.');
     }
 
     /**
@@ -63,6 +60,9 @@ class PermissionController extends Controller
      */
     public function edit(Permission $permission)
     {
+        // Prüft die 'update'-Methode und übergibt die konkrete Berechtigung
+        $this->authorize('update', $permission);
+
         return view('admin.permissions.edit', compact('permission'));
     }
 
@@ -71,20 +71,20 @@ class PermissionController extends Controller
      */
     public function update(Request $request, Permission $permission)
     {
+        $this->authorize('update', $permission);
+
         $validated = $request->validate([
             'name' => 'required|string|unique:permissions,name,' . $permission->id,
-            'description' => 'nullable|string|max:255', // NEU
+            'description' => 'nullable|string|max:255',
         ]);
 
         $permission->update($validated);
-        /**        
-         * Berechtigung automatisch den Hauptrollen zuweisen   
-        */
-        $superAdminRole = Role::findByName('super-admin');
-        $directorRole = Role::findByName('ems-director');
         
+        $superAdminRole = Role::findByName('Super-Admin');
+        $directorRole = Role::findByName('ems-director');
         $superAdminRole->givePermissionTo($permission);
         $directorRole->givePermissionTo($permission);
+
         return redirect()->route('admin.permissions.index')
                          ->with('success', 'Berechtigung erfolgreich aktualisiert.');
     }
@@ -94,6 +94,9 @@ class PermissionController extends Controller
      */
     public function destroy(Permission $permission)
     {
+        // Prüft die 'delete'-Methode
+        $this->authorize('delete', $permission);
+        
         $permission->delete();
 
         return redirect()->route('admin.permissions.index')
