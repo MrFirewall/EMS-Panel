@@ -32,4 +32,8 @@ class Citizen extends Model
         // Laravel erwartet eine 'citizen_id' Spalte in deiner 'reports' Tabelle.
         return $this->hasMany(Report::class);
     }
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class)->latest(); // Sortiert die Rezepte, das Neuste zuerst
+    }
 }

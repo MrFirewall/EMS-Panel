@@ -68,7 +68,7 @@ class CitizenController extends Controller
         // Lade alle relevanten medizinischen Daten per Eager Loading
         $citizen->load(['reports' => function ($query) {
             $query->latest();
-        }]);
+        }, 'prescriptions.user']);
 
         return view('citizens.show', compact('citizen'));
     }

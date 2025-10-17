@@ -243,4 +243,8 @@ class User extends Authenticatable
     {
         return !$this->hasAnyRole('ems-director', 'Super-Admin');
     }
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
 }

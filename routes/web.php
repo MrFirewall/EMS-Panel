@@ -68,7 +68,8 @@ Route::middleware('auth.cfx')->group(function () {
 
     // Bürgerakten verwalten
     Route::resource('citizens', CitizenController::class);
-
+    Route::get('citizens/{citizen}/prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create');
+    Route::post('citizens/{citizen}/prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store');
     // Mitarbeiter-Aktionen für Bewertungen
     Route::prefix('forms/evaluations')->name('forms.evaluations.')->group(function () {
         Route::get('/', [EvaluationController::class, 'index'])->name('index');

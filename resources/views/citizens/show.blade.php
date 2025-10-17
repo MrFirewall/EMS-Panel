@@ -108,8 +108,40 @@
 
                  {{-- TAB 3: REZEPTE (Platzhalter) --}}
                 <div class="tab-pane fade" id="tab-prescriptions" role="tabpanel" aria-labelledby="tab-prescriptions-tab">
-                    <p class="text-center text-muted">Hier werden zukünftig alle ausgestellten Rezepte angezeigt.</p>
-                    {{-- Hier kommt die Logik für Rezepte rein --}}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title">Ausgestellte Rezepte</h5>
+                        {{-- Button, um ein neues Rezept zu erstellen --}}
+                        <a href="{{ route('prescriptions.create', $citizen) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Neues Rezept
+                        </a>
+                    </div>
+
+                    @if($citizen->prescriptions->isEmpty())
+                        <p class="text-center text-muted">Für diesen Patienten sind noch keine Rezepte vorhanden.</p>
+                    @else
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Ausgestellt am</th>
+                                    <th>Medikament</th>
+                                    <th>Dosierung</th>
+                                    <th>Hinweise</th>
+                                    <th>Ausgestellt von</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($citizen->prescriptions as $prescription)
+                                    <tr>
+                                        <td>{{ $prescription->created_at->format('d.m.Y') }}</td>
+                                        <td><strong>{{ $prescription->medication }}</strong></td>
+                                        <td>{{ $prescription->dosage }}</td>
+                                        <td>{{ $prescription->notes ?? '-' }}</td>
+                                        <td>{{ $prescription->user->name ?? 'Unbekannt' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
                 </div>
                 
                  {{-- TAB 4: OPERATIONEN (Platzhalter) --}}
