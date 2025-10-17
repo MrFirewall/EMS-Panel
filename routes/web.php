@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\UserController;
 use Lab404\Impersonate\Controllers\ImpersonateController;
 use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
+use App\Http\Controllers\PrescriptionController;
 
 /*
 |--------------------------------------------------------------------------
