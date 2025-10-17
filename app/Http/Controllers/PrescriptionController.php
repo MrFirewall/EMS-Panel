@@ -17,8 +17,9 @@ class PrescriptionController extends Controller
     {
         // Throws a 403 error if the user does not meet the 'create' method of the PrescriptionPolicy.
         $this->authorize('create', Prescription::class);
-        
-        return view('prescriptions.create', compact('citizen'));
+        $templates = config('prescription_templates', []);
+    
+        return view('prescriptions.create', compact('citizen', 'templates'));
     }
 
     /**
