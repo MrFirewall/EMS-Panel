@@ -37,9 +37,20 @@
 <h5 class="mt-4 mb-3">Medizinische Stammdaten</h5>
 <div class="row">
     <div class="col-md-4">
+        {{-- NEU: Dropdown für Blutgruppe --}}
         <div class="form-group">
             <label for="blood_type">Blutgruppe</label>
-            <input type="text" class="form-control @error('blood_type') is-invalid @enderror" id="blood_type" name="blood_type" value="{{ old('blood_type', $citizen->blood_type ?? '') }}">
+            <select class="form-control @error('blood_type') is-invalid @enderror" id="blood_type" name="blood_type">
+                <option value="" {{ old('blood_type', $citizen->blood_type ?? '') == '' ? 'selected' : '' }}>Nicht bekannt</option>
+                <option value="A+" {{ old('blood_type', $citizen->blood_type ?? '') == 'A+' ? 'selected' : '' }}>A+</option>
+                <option value="A-" {{ old('blood_type', $citizen->blood_type ?? '') == 'A-' ? 'selected' : '' }}>A-</option>
+                <option value="B+" {{ old('blood_type', $citizen->blood_type ?? '') == 'B+' ? 'selected' : '' }}>B+</option>
+                <option value="B-" {{ old('blood_type', $citizen->blood_type ?? '') == 'B-' ? 'selected' : '' }}>B-</option>
+                <option value="AB+" {{ old('blood_type', $citizen->blood_type ?? '') == 'AB+' ? 'selected' : '' }}>AB+</option>
+                <option value="AB-" {{ old('blood_type', $citizen->blood_type ?? '') == 'AB-' ? 'selected' : '' }}>AB-</option>
+                <option value="0+" {{ old('blood_type', $citizen->blood_type ?? '') == '0+' ? 'selected' : '' }}>0+</option>
+                <option value="0-" {{ old('blood_type', $citizen->blood_type ?? '') == '0-' ? 'selected' : '' }}>0-</option>
+            </select>
             @error('blood_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
     </div>

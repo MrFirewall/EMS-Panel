@@ -26,3 +26,47 @@
         </div>
     </div>
 @endsection
+@push('scripts')
+<script>
+    // Funktion zum Hinzufügen von Text zu einer Textarea
+    function appendToTextarea(textareaId, selectedItems) {
+        if (selectedItems.length === 0) return;
+
+        const textarea = $('#' + textareaId);
+        let existingText = textarea.val();
+        let newText = selectedItems.join(', ');
+
+        // Füge ein Komma hinzu, wenn bereits Text vorhanden ist
+        if (existingText.length > 0 && !existingText.endsWith(' ') && !existingText.endsWith(',')) {
+            existingText += ', ';
+        }
+
+        textarea.val(existingText + newText);
+    }
+
+    // Event-Handler für Allergien-Modal
+    $('#selectAllergiesBtn').on('click', function() {
+        let selected = [];
+        $('#allergiesModal .form-check-input:checked').each(function() {
+            selected.push($(this).val());
+        });
+        appendToTextarea('allergies', selected);
+        $('#allergiesModal').modal('hide');
+    });
+
+    // Event-Handler für Vorerkrankungen-Modal
+    $('#selectConditionsBtn').on('click', function() {
+        let selected = [];
+        $('#conditionsModal .form-check-input:checked').each(function() {
+            selected.push($(this).val());
+        });
+        appendToTextarea('preexisting_conditions', selected);
+        $('#conditionsModal').modal('hide');
+    });
+
+    // Setzt die Checkboxen zurück, wenn ein Modal geschlossen wird
+    $('.modal').on('hidden.bs.modal', function () {
+        $(this).find('.form-check-input').prop('checked', false);
+    });
+</script>
+@endpush
