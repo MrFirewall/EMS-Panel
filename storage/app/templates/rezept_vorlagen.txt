@@ -36,22 +36,10 @@ DOSIERUNG: 2mg−5mg intravenös (IV)
 HINWEISE: Zur Behandlung starker Schmerzen. Überwachung der Atemfrequenz und des Blutdrucks. Bei Atemdepression steht ein Antagonist (Naloxon) zur Verfügung (falls nicht im Inventar, ist es dennoch ein wichtiger Hinweis).
 
 [NEUE VORLAGE]
-NAME (DE): Novalgin Tropfen
-NAME (EN): Novalgin Drops
-DOSIERUNG: Bei Bedarf 20-40 Tropfen (max. 4x täglich)
-HINWEISE: Starkes Schmerzmittel. Nicht mit Alkohol einnehmen. Vorsicht bei niedrigem Blutdruck.
-
-[NEUE VORLAGE]
 NAME (DE): Propofol (Einleitung/Sedierung)
 NAME (EN): Propofol (Induction/Sedation)
 DOSIERUNG: Variabel, typischerweise 1.5mg/kg bis 2.5mg/kg IV (Einleitung)
 HINWEISE: Nur durch geschultes Personal. Kontinuierliche Überwachung von Atmung und Kreislauf erforderlich. Starke kardiovaskuläre und respiratorische Depression möglich. (Beachten Sie: Bestand im Inventar ist 0.)
-
-[NEUE VORLAGE]
-NAME (DE): Salbutamol Spray
-NAME (EN): Salbutamol Spray
-DOSIERUNG: Bei akuter Atemnot 1-2 Hübe
-HINWEISE: Notfallspray für Asthmatiker.
 
 [NEUE VORLAGE]
 NAME (DE): Saline 250ml Infusion (Pädiatrisch/Klein)
