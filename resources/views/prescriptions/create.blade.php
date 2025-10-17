@@ -23,10 +23,16 @@
                                     <option value="">Bitte eine Vorlage auswählen...</option>
                                     @foreach ($templates as $key => $template)
                                         <option value="{{ $key }}"
-                                                data-medication="{{ $template['name'] }}"
+                                                {{-- ANGEPASST: Verwenden von name_de für das Medikamentenfeld --}}
+                                                data-medication="{{ $template['name_de'] }}"
                                                 data-dosage="{{ $template['dosage'] }}"
                                                 data-notes="{{ $template['notes'] }}">
-                                            {{ $template['name'] }} | {{ $template['dosage'] }}
+                                            {{-- ANGEPASST: Anzeige von DE und ggf. EN im Dropdown --}}
+                                            {{ $template['name_de'] }} 
+                                            @if (!empty($template['name_en']))
+                                                / {{ $template['name_en'] }}
+                                            @endif
+                                            | {{ $template['dosage'] }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -36,6 +42,7 @@
 
                         <div class="form-group">
                             <label for="medication">Medikament</label>
+                            {{-- Das Feld wird weiterhin 'medication' genannt --}}
                             <input type="text" class="form-control @error('medication') is-invalid @enderror" id="medication" name="medication" value="{{ old('medication') }}" required>
                             @error('medication')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
@@ -64,7 +71,7 @@
 </div>
 @endsection
 
-{{-- NEU: JAVASCRIPT ZUM AUSFÜLLEN DER FELDER --}}
+{{-- JAVASCRIPT BLEIBT UNVERÄNDERT, DA data-medication VERWENDET WIRD --}}
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -79,7 +86,7 @@
                     document.getElementById('notes').value = '';
                     return;
                 }
-                // Populate fields from data attributes
+                // Populate fields from data attributes (data-medication is now the DE name)
                 document.getElementById('medication').value = selectedOption.dataset.medication;
                 document.getElementById('dosage').value = selectedOption.dataset.dosage;
                 document.getElementById('notes').value = selectedOption.dataset.notes;

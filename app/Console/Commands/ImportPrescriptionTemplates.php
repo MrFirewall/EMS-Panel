@@ -43,22 +43,62 @@ class ImportPrescriptionTemplates extends Command
             $block = trim($block);
             if (empty($block)) continue;
 
-            // Simple pattern to capture Name, Dosage, and Notes
-            $pattern = '/^NAME:\s*(.*?)\s*DOSIERUNG:\s*(.*?)\s*(?:HINWEISE:\s*(.*))?$/s';
+            // NEU: Muster, um NAME (DE), NAME (EN), DOSIERUNG und HINWEISE zu erfassen
+            $name_de = '';
+            $name_en = '';
+            $dosage = '';
+            $notes = '';
 
-            if (preg_match($pattern, $block, $matches)) {
-                $name = trim($matches[1]);
-                $dosage = trim($matches[2]);
-                $notes = isset($matches[3]) ? trim($matches[3]) : ''; // Notes are optional
+            // Zeilenweise Verarbeitung, um die neuen Tags zu erfassen
+            $lines = explode("\n", $block);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (Str::startsWith($line, 'NAME (DE):')) {
+                    $name_de = trim(Str::after($line, 'NAME (DE):'));
+                } elseif (Str::startsWith($line, 'NAME (EN):')) {
+                    $name_en = trim(Str::after($line, 'NAME (EN):'));
+                } elseif (Str::startsWith($line, 'DOSIERUNG:')) {
+                    $dosage = trim(Str::after($line, 'DOSIERUNG:'));
+                } elseif (Str::startsWith($line, 'HINWEISE:')) {
+                    // Erfassen von Hinweisen, die über mehrere Zeilen gehen könnten
+                    $notes = trim(Str::after($line, 'HINWEISE:'));
+                }
+            }
+            
+            // Logik zur Erfassung mehrzeiliger HINWEISE (fügt nachfolgende Zeilen hinzu)
+            if (empty($notes) && !empty($lines)) {
+                 $in_notes = false;
+                 $temp_notes = [];
+                 foreach ($lines as $line) {
+                     $line = trim($line);
+                     if (Str::startsWith($line, 'HINWEISE:')) {
+                         $in_notes = true;
+                         $temp_notes[] = trim(Str::after($line, 'HINWEISE:'));
+                         continue;
+                     }
+                     if ($in_notes) {
+                         if (Str::startsWith($line, 'NAME (') || Str::startsWith($line, 'DOSIERUNG:')) {
+                             $in_notes = false; // Stop at the next field
+                         } else {
+                             $temp_notes[] = $line;
+                         }
+                     }
+                 }
+                 $notes = trim(implode("\n", $temp_notes));
+            }
 
-                $templateKey = Str::slug(strtolower($name), '_');
+
+            // Validierung, dass zumindest der DE-Name und die Dosierung vorhanden sind
+            if (!empty($name_de) && !empty($dosage)) {
+                $templateKey = Str::slug(strtolower($name_de), '_');
                 $templatesArray[$templateKey] = [
-                    'name' => $name,
+                    'name_de' => $name_de, // NEU
+                    'name_en' => $name_en, // NEU
                     'dosage' => $dosage,
                     'notes' => $notes,
                 ];
             } else {
-                $this->warn("Skipping a template block due to incorrect format. Required: NAME:, DOSIERUNG:. Optional: HINWEISE:");
+                $this->warn("Skipping a template block due to incorrect format. Missing NAME (DE) or DOSIERUNG. Block started with: " . Str::limit($block, 50));
             }
         }
 
