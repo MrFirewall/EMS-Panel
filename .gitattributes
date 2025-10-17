@@ -1,11 +1,19 @@
-* text=auto eol=lf
+# Behandle alle Dateien automatisch, damit Git Binär- von Textdateien unterscheiden kann.
+# Dies verhindert, dass Binärdateien durch Zeilenende-Konvertierung beschädigt werden.
+* text=auto
 
-*.blade.php diff=html
-*.css diff=css
-*.html diff=html
-*.md diff=markdown
-*.php diff=php
-
-/.github export-ignore
-CHANGELOG.md export-ignore
-.styleci.yml export-ignore
+# Erzwinge für alle gängigen Textdateitypen explizit LF (Linux)-Zeilenenden.
+# Dies ist die wichtigste Regel, um die CRLF-Warnungen zu beheben.
+*.php eol=lf
+*.js eol=lf
+*.css eol=lf
+*.html eol=lf
+*.blade.php eol=lf
+*.json eol=lf
+*.xml eol=lf
+*.yml eol=lf
+*.md eol=lf
+*.txt eol=lf
+.env.* eol=lf
+.gitattributes eol=lf
+.gitignore eol=lf
