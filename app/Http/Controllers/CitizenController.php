@@ -9,13 +9,11 @@ use Illuminate\Support\Facades\Auth;
 
 class CitizenController extends Controller
 {
-     /**
-     * Verknüpft den Controller mit der CitizenPolicy.
-     */
     public function __construct()
     {
         $this->authorizeResource(Citizen::class, 'citizen');
     }
+
     public function index(Request $request)
     {
         $query = Citizen::query()->latest();
@@ -44,6 +42,12 @@ class CitizenController extends Controller
             'phone_number' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            // --- VALIDIERUNG FÜR NEUE FELDER ---
+            'blood_type' => 'nullable|string|max:10',
+            'allergies' => 'nullable|string',
+            'preexisting_conditions' => 'nullable|string',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:50',
         ]);
 
         $citizen = Citizen::create($validated);
@@ -53,26 +57,22 @@ class CitizenController extends Controller
             'log_type' => 'CITIZEN',
             'action' => 'CREATED',
             'target_id' => $citizen->id,
-            'description' => "Bürgerakte für '{$citizen->name}' erstellt.",
+            'description' => "Patientenakte für '{$citizen->name}' erstellt.",
         ]);
 
-        return redirect()->route('citizens.index')->with('success', 'Bürgerakte erfolgreich erstellt.');
+        return redirect()->route('citizens.show', $citizen)->with('success', 'Patientenakte erfolgreich erstellt.');
     }
-    
-    /**
-     * Zeigt die Detailseite für einen bestimmten Bürger an.
-     *
-     * @param  \App\Models\Citizen  $citizen
-     * @return \Illuminate\View\View
-     */
+
     public function show(Citizen $citizen)
     {
-        // Lade die zugehörigen Berichte, um N+1 Query Probleme zu vermeiden (Eager Loading)
-        $citizen->load('reports');
+        // Lade alle relevanten medizinischen Daten per Eager Loading
+        $citizen->load(['reports' => function ($query) {
+            $query->latest();
+        }]);
 
-        // Gib die View zurück und übergebe die Bürgerdaten
         return view('citizens.show', compact('citizen'));
     }
+
     public function edit(Citizen $citizen)
     {
         return view('citizens.edit', compact('citizen'));
@@ -86,6 +86,12 @@ class CitizenController extends Controller
             'phone_number' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            // --- VALIDIERUNG FÜR NEUE FELDER ---
+            'blood_type' => 'nullable|string|max:10',
+            'allergies' => 'nullable|string',
+            'preexisting_conditions' => 'nullable|string',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:50',
         ]);
 
         $citizen->update($validated);
@@ -95,10 +101,10 @@ class CitizenController extends Controller
             'log_type' => 'CITIZEN',
             'action' => 'UPDATED',
             'target_id' => $citizen->id,
-            'description' => "Bürgerakte für '{$citizen->name}' aktualisiert.",
+            'description' => "Patientenakte für '{$citizen->name}' aktualisiert.",
         ]);
 
-        return redirect()->route('citizens.index')->with('success', 'Bürgerakte erfolgreich aktualisiert.');
+        return redirect()->route('citizens.show', $citizen)->with('success', 'Patientenakte erfolgreich aktualisiert.');
     }
 
     public function destroy(Citizen $citizen)
@@ -112,9 +118,9 @@ class CitizenController extends Controller
             'log_type' => 'CITIZEN',
             'action' => 'DELETED',
             'target_id' => $citizenId,
-            'description' => "Bürgerakte für '{$citizenName}' ({$citizenId}) gelöscht.",
+            'description' => "Patientenakte für '{$citizenName}' ({$citizenId}) gelöscht.",
         ]);
 
-        return redirect()->route('citizens.index')->with('success', 'Bürgerakte gelöscht.');
+        return redirect()->route('citizens.index')->with('success', 'Patientenakte gelöscht.');
     }
 }

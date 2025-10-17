@@ -1,3 +1,5 @@
+{{-- Persönliche Daten --}}
+<h5 class="mt-4 mb-3">Persönliche Daten</h5>
 <div class="row">
     <div class="col-md-6">
         <div class="form-group">
@@ -14,7 +16,6 @@
         </div>
     </div>
 </div>
-
 <div class="row">
     <div class="col-md-6">
         <div class="form-group">
@@ -32,8 +33,43 @@
     </div>
 </div>
 
+{{-- Medizinische Daten --}}
+<h5 class="mt-4 mb-3">Medizinische Stammdaten</h5>
+<div class="row">
+    <div class="col-md-4">
+        <div class="form-group">
+            <label for="blood_type">Blutgruppe</label>
+            <input type="text" class="form-control @error('blood_type') is-invalid @enderror" id="blood_type" name="blood_type" value="{{ old('blood_type', $citizen->blood_type ?? '') }}">
+            @error('blood_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            <label for="emergency_contact_name">Notfallkontakt (Name)</label>
+            <input type="text" class="form-control @error('emergency_contact_name') is-invalid @enderror" id="emergency_contact_name" name="emergency_contact_name" value="{{ old('emergency_contact_name', $citizen->emergency_contact_name ?? '') }}">
+            @error('emergency_contact_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+    </div>
+     <div class="col-md-4">
+        <div class="form-group">
+            <label for="emergency_contact_phone">Notfallkontakt (Telefon)</label>
+            <input type="text" class="form-control @error('emergency_contact_phone') is-invalid @enderror" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ old('emergency_contact_phone', $citizen->emergency_contact_phone ?? '') }}">
+            @error('emergency_contact_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
+    </div>
+</div>
 <div class="form-group">
-    <label for="notes">Notizen / Medizinische Vorgeschichte</label>
+    <label for="allergies">Allergien & Unverträglichkeiten</label>
+    <textarea class="form-control @error('allergies') is-invalid @enderror" id="allergies" name="allergies" rows="3">{{ old('allergies', $citizen->allergies ?? '') }}</textarea>
+    @error('allergies')<div class="invalid-feedback">{{ $message }}</div>@enderror
+</div>
+<div class="form-group">
+    <label for="preexisting_conditions">Vorerkrankungen</label>
+    <textarea class="form-control @error('preexisting_conditions') is-invalid @enderror" id="preexisting_conditions" name="preexisting_conditions" rows="3">{{ old('preexisting_conditions', $citizen->preexisting_conditions ?? '') }}</textarea>
+    @error('preexisting_conditions')<div class="invalid-feedback">{{ $message }}</div>@enderror
+</div>
+<div class="form-group">
+    <label for="notes">Allgemeine Notizen</label>
     <textarea class="form-control @error('notes') is-invalid @enderror" id="notes" name="notes" rows="4">{{ old('notes', $citizen->notes ?? '') }}</textarea>
     @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
 </div>

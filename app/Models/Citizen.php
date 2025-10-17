@@ -16,6 +16,11 @@ class Citizen extends Model
         'phone_number',
         'address',
         'notes',
+        'blood_type',
+        'allergies',
+        'preexisting_conditions',
+        'emergency_contact_name',
+        'emergency_contact_phone',
     ];
     /**
      * Definiert die "hasMany"-Beziehung zu den Berichten (Reports).
