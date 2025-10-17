@@ -28,10 +28,10 @@
                                                 data-dosage="{{ $template['dosage'] }}"
                                                 data-notes="{{ $template['notes'] }}">
                                             {{-- ANGEPASST: Anzeige von DE und ggf. EN im Dropdown --}}
-                                            {{ $template['name_de'] }} 
-                                            @if (!empty($template['name_en']))
+                                            {{ $template['name_en'] }} 
+                                            <!-- @if (!empty($template['name_en']))
                                                 / {{ $template['name_en'] }}
-                                            @endif
+                                            @endif -->
                                             | {{ $template['dosage'] }}
                                         </option>
                                     @endforeach
