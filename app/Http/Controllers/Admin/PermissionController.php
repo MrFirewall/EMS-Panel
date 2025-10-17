@@ -46,7 +46,7 @@ class PermissionController extends Controller
 
         $permission = Permission::create($validated);
 
-        $superAdminRole = Role::findByName('super-admin');
+        $superAdminRole = Role::findByName('Super-Admin');
         $directorRole = Role::findByName('ems-director');
         $superAdminRole->givePermissionTo($permission);
         $directorRole->givePermissionTo($permission);
