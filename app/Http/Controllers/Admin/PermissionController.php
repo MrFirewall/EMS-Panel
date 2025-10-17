@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class PermissionController extends Controller
 {
@@ -47,7 +48,12 @@ class PermissionController extends Controller
         ]);
 
         Permission::create($validated); // Funktioniert dank Mass Assignment
+        // NEU: Berechtigung automatisch den Hauptrollen zuweisen
+        $superAdminRole = Role::findByName('super-admin');
+        $directorRole = Role::findByName('ems-director');
 
+        $superAdminRole->givePermissionTo($permission);
+        $directorRole->givePermissionTo($permission);
         return redirect()->route('admin.permissions.index')
                          ->with('success', 'Berechtigung erfolgreich erstellt.');
     }
@@ -71,7 +77,14 @@ class PermissionController extends Controller
         ]);
 
         $permission->update($validated);
-
+        /**        
+         * Berechtigung automatisch den Hauptrollen zuweisen   
+        */
+        $superAdminRole = Role::findByName('super-admin');
+        $directorRole = Role::findByName('ems-director');
+        
+        $superAdminRole->givePermissionTo($permission);
+        $directorRole->givePermissionTo($permission);
         return redirect()->route('admin.permissions.index')
                          ->with('success', 'Berechtigung erfolgreich aktualisiert.');
     }
