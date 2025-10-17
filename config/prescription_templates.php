@@ -43,26 +43,12 @@ return array (
     'dosage' => '2mg−5mg intravenös (IV)',
     'notes' => 'Zur Behandlung starker Schmerzen. Überwachung der Atemfrequenz und des Blutdrucks. Bei Atemdepression steht ein Antagonist (Naloxon) zur Verfügung (falls nicht im Inventar, ist es dennoch ein wichtiger Hinweis).',
   ),
-  'novalgin_tropfen' => 
-  array (
-    'name_de' => 'Novalgin Tropfen',
-    'name_en' => 'Novalgin Drops',
-    'dosage' => 'Bei Bedarf 20-40 Tropfen (max. 4x täglich)',
-    'notes' => 'Starkes Schmerzmittel. Nicht mit Alkohol einnehmen. Vorsicht bei niedrigem Blutdruck.',
-  ),
   'propofol_einleitungsedierung' => 
   array (
     'name_de' => 'Propofol (Einleitung/Sedierung)',
     'name_en' => 'Propofol (Induction/Sedation)',
     'dosage' => 'Variabel, typischerweise 1.5mg/kg bis 2.5mg/kg IV (Einleitung)',
     'notes' => 'Nur durch geschultes Personal. Kontinuierliche Überwachung von Atmung und Kreislauf erforderlich. Starke kardiovaskuläre und respiratorische Depression möglich. (Beachten Sie: Bestand im Inventar ist 0.)',
-  ),
-  'salbutamol_spray' => 
-  array (
-    'name_de' => 'Salbutamol Spray',
-    'name_en' => 'Salbutamol Spray',
-    'dosage' => 'Bei akuter Atemnot 1-2 Hübe',
-    'notes' => 'Notfallspray für Asthmatiker.',
   ),
   'saline_250ml_infusion_padiatrischklein' => 
   array (
