@@ -2,30 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog; // Add this
 use App\Models\Citizen;
 use App\Models\Prescription;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth; // Add this
 
 class PrescriptionController extends Controller
 {
     /**
-     * Zeigt das Formular zum Erstellen eines neuen Rezepts für einen Bürger an.
+     * Shows the form for creating a new prescription for a citizen.
      */
     public function create(Citizen $citizen)
     {
-        // Wirft einen 403-Fehler, wenn der User die 'create' Methode der PrescriptionPolicy nicht erfüllt.
+        // Throws a 403 error if the user does not meet the 'create' method of the PrescriptionPolicy.
         $this->authorize('create', Prescription::class);
         
         return view('prescriptions.create', compact('citizen'));
     }
 
     /**
-     * Speichert ein neues Rezept für einen Bürger.
+     * Stores a new prescription for a citizen.
      */
     public function store(Request $request, Citizen $citizen)
     {
-        // Wirft einen 403-Fehler, wenn der User die 'create' Methode der PrescriptionPolicy nicht erfüllt.
+        // Throws a 403 error if the user does not meet the 'create' method of the PrescriptionPolicy.
         $this->authorize('create', Prescription::class);
 
         $validated = $request->validate([
@@ -34,26 +35,50 @@ class PrescriptionController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $citizen->prescriptions()->create([
+        // Assign the new prescription to a variable to get its ID
+        $prescription = $citizen->prescriptions()->create([
             'user_id' => Auth::id(),
             'medication' => $validated['medication'],
             'dosage' => $validated['dosage'],
             'notes' => $validated['notes'],
         ]);
 
-        return redirect()->route('citizens.show', [$citizen, 'tab' => 'prescriptions'])->with('success', 'Rezept erfolgreich ausgestellt.');
+        // Create the ActivityLog entry
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'log_type' => 'PRESCRIPTION',
+            'action' => 'CREATED',
+            'target_id' => $prescription->id,
+            'description' => "Prescription for '{$prescription->medication}' issued to patient '{$citizen->name}'.",
+        ]);
+
+        return redirect()->route('citizens.show', [$citizen, 'tab' => 'prescriptions'])->with('success', 'Prescription successfully issued.');
     }
 
     /**
-     * Löscht (storniert) ein Rezept.
+     * Deletes (cancels) a prescription.
      */
     public function destroy(Prescription $prescription)
     {
-        // Wirft einen 403-Fehler, wenn der User die 'delete' Methode nicht erfüllt.
+        // Throws a 403 error if the user does not meet the 'delete' method.
         $this->authorize('delete', $prescription);
+
+        // Store details for the log before deleting
+        $citizenName = $prescription->citizen->name;
+        $medication = $prescription->medication;
+        $prescriptionId = $prescription->id;
 
         $prescription->delete();
 
-        return back()->with('success', 'Rezept wurde storniert.');
+        // Create the ActivityLog entry
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'log_type' => 'PRESCRIPTION',
+            'action' => 'DELETED',
+            'target_id' => $prescriptionId,
+            'description' => "Prescription for '{$medication}' for patient '{$citizenName}' was canceled.",
+        ]);
+
+        return back()->with('success', 'Prescription was canceled.');
     }
 }
