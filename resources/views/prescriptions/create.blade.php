@@ -26,7 +26,7 @@
                                                 data-medication="{{ $template['name'] }}"
                                                 data-dosage="{{ $template['dosage'] }}"
                                                 data-notes="{{ $template['notes'] }}">
-                                            {{ $template['name'] }} - {{ $template['dosage'] }}
+                                            {{ $template['name'] }} | {{ $template['dosage'] }}
                                         </option>
                                     @endforeach
                                 </select>
