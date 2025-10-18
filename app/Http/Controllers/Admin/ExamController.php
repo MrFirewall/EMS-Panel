@@ -191,7 +191,6 @@ class ExamController extends Controller
     private function validateExamRequest(Request $request, ?Exam $exam = null): array
     {
         $moduleIdRule = 'required|exists:training_modules,id';
-        // Erlaube das Speichern mit dem eigenen Modul, aber blockiere andere belegte Module
         $moduleIdRule .= $exam ? '|unique:exams,training_module_id,' . $exam->id : '|unique:exams,training_module_id';
 
         $baseRules = [
@@ -200,39 +199,45 @@ class ExamController extends Controller
             'pass_mark' => 'required|integer|min:1|max:100',
             'description' => 'nullable|string',
             'questions' => 'required|array|min:1',
-            'questions.*.id' => 'nullable|integer|exists:questions,id', // ID für updateOrCreate
+            'questions.*.id' => 'nullable|integer|exists:questions,id',
             'questions.*.question_text' => 'required|string',
             'questions.*.type' => 'required|in:single_choice,multiple_choice,text_field',
+            
+            // --- KORREKTUR: DIESE ZEILEN HINZUFÜGEN ---
+            // Erlaube diese Felder, damit sie 'validate()' passieren.
+            // Die 'after()'-Methode prüft dann die Details.
+            'questions.*.options' => 'nullable|array',
+            'questions.*.options.*.id' => 'nullable',
+            'questions.*.options.*.option_text' => 'nullable',
+            'questions.*.options.*.is_correct' => 'nullable',
+            'questions.*.correct_option' => 'nullable',
+            // --- ENDE DER KORREKTUR ---
         ];
 
         $validator = Validator::make($request->all(), $baseRules);
 
-        // Zusätzliche Validierung für Optionen basierend auf dem Fragetyp
         $validator->after(function ($validator) use ($request) {
             foreach ($request->input('questions', []) as $key => $question) {
                 $type = $question['type'] ?? 'single_choice';
-                if ($type === 'text_field') continue; // Textfelder brauchen keine Optionen
+                if ($type === 'text_field') continue;
 
-                // Prüfe, ob 'options'-Array existiert und mind. 2 Einträge hat
                 if (!isset($question['options']) || !is_array($question['options']) || count($question['options']) < 2) {
                     $validator->errors()->add("questions.{$key}.options", "Für eine Auswahlfrage werden mindestens 2 Antwortmöglichkeiten benötigt.");
-                    continue; // Springe zur nächsten Frage, da weitere Options-Prüfungen fehlschlagen würden
+                    continue;
                 }
-
-                // Prüfe, ob der Optionstext ausgefüllt ist
+                
+                // (Der Rest Ihrer 'after'-Logik ist korrekt)
                 foreach($question['options'] as $optKey => $option) {
                     if(empty($option['option_text'])) {
                         $validator->errors()->add("questions.{$key}.options.{$optKey}.option_text", "Der Antworttext darf nicht leer sein.");
                     }
                 }
 
-                // Prüfe auf korrekte Antworten
                 if ($type === 'single_choice') {
                     if (!isset($question['correct_option'])) {
                         $validator->errors()->add("questions.{$key}.correct_option", "Für eine Einzelantwort-Frage muss eine korrekte Antwort markiert sein.");
                     }
                 } elseif ($type === 'multiple_choice') {
-                    // Prüfe, ob mindestens ein 'is_correct' Haken gesetzt ist
                     $hasCorrect = collect($question['options'])->contains(fn ($opt) => isset($opt['is_correct']) && $opt['is_correct'] == '1');
                     if (!$hasCorrect) {
                         $validator->errors()->add("questions.{$key}.options", "Für eine Mehrfachantwort-Frage muss mindestens eine korrekte Antwort markiert sein.");
