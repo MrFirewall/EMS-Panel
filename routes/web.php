@@ -88,7 +88,8 @@ Route::middleware('auth.cfx')->group(function () {
     Route::get('/exams/take/{uuid}', [ExamController::class, 'take'])->name('exams.take');
     Route::post('/exams/submit/{uuid}', [ExamController::class, 'submit'])->name('exams.submit');
     Route::get('/exams/result/{uuid}', [ExamController::class, 'result'])->name('exams.result');
-
+    Route::post('/exams/flag/{attempt:uuid}', [ExamController::class, 'flagAttempt'])->name('exams.flag');
+    
     // NEU: API-Routen für Frontend-Interaktionen
     Route::prefix('api')->name('api.')->group(function () {
         Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])->name('exams.flag');
