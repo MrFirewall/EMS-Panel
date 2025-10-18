@@ -33,4 +33,13 @@ class ExamAttempt extends Model
     public function exam() { return $this->belongsTo(Exam::class); }
     public function user() { return $this->belongsTo(User::class); }
     public function answers() { return $this->hasMany(ExamAnswer::class); }
+    /**
+     * Holt den Routen-Schlüssel für das Model.
+     *
+     * @return string
+     */
+    public function getRouteKeyName()
+    {
+        return 'uuid'; // Sagt Laravel, dass es immer die 'uuid'-Spalte für Routen verwenden soll
+    }
 }
