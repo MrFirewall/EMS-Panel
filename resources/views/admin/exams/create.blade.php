@@ -11,7 +11,8 @@
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('modules.index') }}">Module</a></li>
+                    {{-- Korrigierter Breadcrumb-Link, falls 'modules.index' nicht existiert --}}
+                    <li class="breadcrumb-item"><a href="{{ route('admin.exams.index') }}">Prüfungen</a></li>
                     <li class="breadcrumb-item active">Prüfung erstellen</li>
                 </ol>
             </div>
@@ -74,7 +75,7 @@
                             @endif
                         </div>
                         <div class="card-footer">
-                            <a href="{{ route('modules.index') }}" class="btn btn-secondary">Abbrechen</a>
+                            <a href="{{ route('admin.exams.index') }}" class="btn btn-secondary">Abbrechen</a>
                             <button type="submit" class="btn btn-success float-right"><i class="fas fa-save"></i> Prüfung speichern</button>
                         </div>
                     </div>
@@ -148,15 +149,18 @@ document.addEventListener('DOMContentLoaded', function() {
             ? `questions[${qIndex}][correct_option]` 
             : `questions[${qIndex}][options][${optionIndex}][is_correct]`;
         const inputValue = type === 'single_choice' ? optionIndex : '1';
-        const required = type === 'single_choice' ? 'required' : '';
+        // 'required' für Radio-Buttons (single_choice)
+        const inputRequired = type === 'single_choice' ? 'required' : '';
+        // 'required' für das Textfeld (immer)
+        const textRequired = true;
 
         const optionHtml = `
             <div class="input-group mt-2">
                 <input type="hidden" name="questions[${qIndex}][options][${optionIndex}][id]" value="">
                 <div class="input-group-prepend">
-                    <div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${required}></div>
+                    <div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${inputRequired}></div>
                 </div>
-                <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" required>
+                <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" ${textRequired ? 'required' : ''}>
                 <div class="input-group-append"><button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button></div>
             </div>`;
         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
@@ -192,6 +196,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    /**
+     * KORRIGIERTER EVENT LISTENER
+     * Fügt Logik hinzu, um 'required' Attribute zu entfernen/hinzuzufügen,
+     * wenn der Fragetyp geändert wird.
+     */
     container.addEventListener('change', function(e) {
         if(e.target.classList.contains('question-type-select')) {
             const questionBlock = e.target.closest('.question-block');
@@ -199,10 +208,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const optionsContainer = optionsWrapper.querySelector('.options-container');
             const newType = e.target.value;
 
+            // Alle relevanten Inputs in den Optionen finden
+            const optionTextInputs = optionsContainer.querySelectorAll('input[type="text"]');
+            const optionRadioInputs = optionsContainer.querySelectorAll('input[type="radio"]');
+
             if (newType === 'text_field') {
                 optionsWrapper.style.display = 'none';
+                // 'required' von allen versteckten Feldern entfernen, um Validierungsfehler zu vermeiden
+                optionTextInputs.forEach(input => input.required = false);
+                optionRadioInputs.forEach(input => input.required = false);
+
             } else {
                 optionsWrapper.style.display = 'block';
+                // 'required' für die Textfelder wiederherstellen
+                optionTextInputs.forEach(input => input.required = true);
+
+                // Logik zum Umwandeln der Input-Typen (Radio/Checkbox)
                 const options = optionsContainer.querySelectorAll('.input-group');
                 
                 options.forEach((optionGroup, oIndex) => {
@@ -214,13 +235,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         radioOrCheckbox.type = 'radio';
                         radioOrCheckbox.name = `questions[${qIndex}][correct_option]`;
                         radioOrCheckbox.value = oIndex;
-                        radioOrCheckbox.required = true;
+                        radioOrCheckbox.required = true; // 'required' für Radios wiederherstellen
                         radioOrCheckbox.checked = (oIndex === 0);
                     } else { // multiple_choice
                         radioOrCheckbox.type = 'checkbox';
                         radioOrCheckbox.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
                         radioOrCheckbox.value = '1';
-                        radioOrCheckbox.required = false;
+                        radioOrCheckbox.required = false; // Checkboxen sind nie 'required'
                     }
                 });
             }
@@ -239,12 +260,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const typeSelect = currentBlock.querySelector('select[name*="type"]');
             typeSelect.value = questionData.type;
 
+            // Event manuell auslösen, um die 'required'-Logik und Anzeige zu steuern
+            typeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
             const optionsWrapper = currentBlock.querySelector('.options-wrapper');
             const optionsContainer = optionsWrapper.querySelector('.options-container');
-            optionsContainer.innerHTML = ''; 
+            optionsContainer.innerHTML = ''; // Standard-Optionen von addQuestion() entfernen
 
             if (questionData.type !== 'text_field') {
-                optionsWrapper.style.display = 'block';
+                // optionsWrapper.style.display = 'block'; // Wird bereits durch 'change' Event gesteuert
                 (questionData.options || []).forEach((optionData, oIdx) => {
                     addOption(restoredQuestionIndex, optionsContainer, questionData.type);
                     const currentOptionGroup = optionsContainer.children[oIdx];
@@ -257,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             } else {
-                optionsWrapper.style.display = 'none';
+                // optionsWrapper.style.display = 'none'; // Wird bereits durch 'change' Event gesteuert
             }
             restoredQuestionIndex++;
         });
@@ -266,4 +290,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
