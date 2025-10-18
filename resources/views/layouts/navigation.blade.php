@@ -134,7 +134,7 @@
         {{-- NEU: LINK ZUR MODULVERWALTUNG --}}
         @can('training.view')
         <li class="nav-item">
-            <a href="{{ route('admin.modules.index') }}" class="nav-link {{ Request::routeIs('admin.modules.*') ? 'active' : '' }}">
+            <a href="{{ route('modules.index') }}" class="nav-link {{ Request::routeIs('modules.*') ? 'active' : '' }}">
                 <i class="nav-icon fas fa-graduation-cap"></i>
                 <p>Ausbildungsmodule</p>
             </a>
