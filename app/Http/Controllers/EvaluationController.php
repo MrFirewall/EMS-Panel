@@ -41,7 +41,7 @@ class EvaluationController extends Controller
     {
         $this->authorize('viewAny', Evaluation::class); // Nutzt die Policy
 
-        $canViewAll = Auth::user()->can('view all evaluations'); // Bessere Berechtigungsprüfung
+        $canViewAll = Auth::user()->can('evaluations.view.all'); // Bessere Berechtigungsprüfung
 
         if ($canViewAll) {
             $evaluations = Evaluation::with(['user', 'evaluator'])->latest()->paginate(20);
