@@ -69,7 +69,6 @@
                             </div>
                         </div>
                         <div class="card-body" id="questions-container">
-                            {{-- Fragen werden hier dynamisch per JS eingefügt --}}
                             @if(!old('questions'))
                                 <p class="text-muted text-center">Fügen Sie die erste Frage hinzu.</p>
                             @endif
@@ -95,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function addQuestion() {
         if (questionIndex === 0 && !container.querySelector('.question-block')) {
-            container.innerHTML = ''; // Leere die "Keine Fragen"-Nachricht
+            container.innerHTML = '';
         }
 
         const questionId = `q${questionIndex}`;
@@ -103,9 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="question-block card card-outline card-secondary mb-3" id="${questionId}">
                 <div class="card-header">
                     <h3 class="card-title">Neue Frage ${questionIndex + 1}</h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-sm btn-danger remove-question-btn" data-target="${questionId}"><i class="fas fa-trash"></i></button>
-                    </div>
+                    <div class="card-tools"><button type="button" class="btn btn-sm btn-danger remove-question-btn"><i class="fas fa-trash"></i></button></div>
                 </div>
                 <div class="card-body">
                     <input type="hidden" name="questions[${questionIndex}][id]" value="">
@@ -122,12 +119,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <select name="questions[${questionIndex}][type]" class="form-control question-type-select">
                                     <option value="single_choice" selected>Einzelantwort</option>
                                     <option value="multiple_choice">Mehrfachantwort</option>
+                                    <option value="text_field">Textfeld</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     <div class="options-wrapper">
-                        <label>Antwortmöglichkeiten (Markieren Sie die korrekte Auswahl)</label>
+                        <label>Antwortmöglichkeiten</label>
                         <div class="options-container"></div>
                         <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-btn" data-qindex="${questionIndex}">Antwort hinzufügen</button>
                     </div>
@@ -156,14 +154,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="input-group mt-2">
                 <input type="hidden" name="questions[${qIndex}][options][${optionIndex}][id]" value="">
                 <div class="input-group-prepend">
-                    <div class="input-group-text">
-                        <input type="${inputType}" name="${inputName}" value="${inputValue}" ${required}>
-                    </div>
+                    <div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${required}></div>
                 </div>
                 <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" required>
-                <div class="input-group-append">
-                    <button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button>
-                </div>
+                <div class="input-group-append"><button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button></div>
             </div>`;
         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
         
@@ -179,9 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const addOptionBtn = e.target.closest('.add-option-btn');
         const removeOptionBtn = e.target.closest('.remove-option-btn');
 
-        if (removeQuestionBtn) {
-            removeQuestionBtn.closest('.question-block').remove();
-        }
+        if (removeQuestionBtn) removeQuestionBtn.closest('.question-block').remove();
+        
         if (addOptionBtn) {
             const qIndex = addOptionBtn.dataset.qindex;
             const questionBlock = addOptionBtn.closest('.question-block');
@@ -190,45 +183,57 @@ document.addEventListener('DOMContentLoaded', function() {
             addOption(qIndex, optionsContainer, type);
         }
         if (removeOptionBtn) {
-            removeOptionBtn.closest('.input-group').remove();
+            const optionsContainer = removeOptionBtn.closest('.options-container');
+            if (optionsContainer.children.length > 2) {
+                removeOptionBtn.closest('.input-group').remove();
+            } else {
+                alert('Eine Auswahlfrage muss mindestens zwei Antwortmöglichkeiten haben.');
+            }
         }
     });
 
     container.addEventListener('change', function(e) {
         if(e.target.classList.contains('question-type-select')) {
             const questionBlock = e.target.closest('.question-block');
-            const optionsContainer = questionBlock.querySelector('.options-container');
+            const optionsWrapper = questionBlock.querySelector('.options-wrapper');
+            const optionsContainer = optionsWrapper.querySelector('.options-container');
             const newType = e.target.value;
 
-            const options = optionsContainer.querySelectorAll('.input-group');
-            
-            options.forEach((optionGroup, oIndex) => {
-                const radioOrCheckbox = optionGroup.querySelector('input[type="radio"], input[type="checkbox"]');
-                const nameParts = radioOrCheckbox.name.split('[');
-                const qIndex = nameParts[1].replace(']', '');
+            if (newType === 'text_field') {
+                optionsWrapper.style.display = 'none';
+            } else {
+                optionsWrapper.style.display = 'block';
+                const options = optionsContainer.querySelectorAll('.input-group');
+                
+                options.forEach((optionGroup, oIndex) => {
+                    const radioOrCheckbox = optionGroup.querySelector('input[type="radio"], input[type="checkbox"]');
+                    const nameParts = radioOrCheckbox.name.split('[');
+                    const qIndex = nameParts[1].replace(']', '');
 
-                if(newType === 'single_choice') {
-                    radioOrCheckbox.type = 'radio';
-                    radioOrCheckbox.name = `questions[${qIndex}][correct_option]`;
-                    radioOrCheckbox.value = oIndex;
-                    radioOrCheckbox.required = true;
-                    radioOrCheckbox.checked = (oIndex === 0);
-                } else { // multiple_choice
-                    radioOrCheckbox.type = 'checkbox';
-                    radioOrCheckbox.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
-                    radioOrCheckbox.value = '1';
-                    radioOrCheckbox.required = false;
-                }
-            });
+                    if(newType === 'single_choice') {
+                        radioOrCheckbox.type = 'radio';
+                        radioOrCheckbox.name = `questions[${qIndex}][correct_option]`;
+                        radioOrCheckbox.value = oIndex;
+                        radioOrCheckbox.required = true;
+                        radioOrCheckbox.checked = (oIndex === 0);
+                    } else { // multiple_choice
+                        radioOrCheckbox.type = 'checkbox';
+                        radioOrCheckbox.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
+                        radioOrCheckbox.value = '1';
+                        radioOrCheckbox.required = false;
+                    }
+                });
+            }
         }
     });
 
     // Wiederherstellen des Formulars bei Validierungsfehlern
     @if(old('questions'))
+        let restoredQuestionIndex = 0;
         const oldQuestions = @json(old('questions'));
         oldQuestions.forEach((questionData, qIdx) => {
             addQuestion();
-            const currentBlock = document.getElementById(`q${qIdx}`);
+            const currentBlock = document.getElementById(`q${restoredQuestionIndex}`);
             
             currentBlock.querySelector('textarea[name*="question_text"]').value = questionData.question_text;
             const typeSelect = currentBlock.querySelector('select[name*="type"]');
@@ -236,29 +241,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const optionsWrapper = currentBlock.querySelector('.options-wrapper');
             const optionsContainer = optionsWrapper.querySelector('.options-container');
-            optionsContainer.innerHTML = ''; // Leere die Standard-Optionen
+            optionsContainer.innerHTML = ''; 
 
             if (questionData.type !== 'text_field') {
                 optionsWrapper.style.display = 'block';
                 (questionData.options || []).forEach((optionData, oIdx) => {
-                    addOption(qIdx, optionsContainer, questionData.type);
+                    addOption(restoredQuestionIndex, optionsContainer, questionData.type);
                     const currentOptionGroup = optionsContainer.children[oIdx];
                     currentOptionGroup.querySelector('input[type=text]').value = optionData.option_text;
                     
-                    if (questionData.type === 'single_choice') {
-                        if (questionData.correct_option == oIdx) {
-                            currentOptionGroup.querySelector('input[type=radio]').checked = true;
-                        }
-                    } else if (questionData.type === 'multiple_choice') {
-                        if (optionData.is_correct) {
-                            currentOptionGroup.querySelector('input[type=checkbox]').checked = true;
-                        }
+                    if (questionData.type === 'single_choice' && questionData.correct_option == oIdx) {
+                        currentOptionGroup.querySelector('input[type=radio]').checked = true;
+                    } else if (questionData.type === 'multiple_choice' && (optionData.is_correct ?? false)) {
+                        currentOptionGroup.querySelector('input[type=checkbox]').checked = true;
                     }
                 });
             } else {
                 optionsWrapper.style.display = 'none';
             }
+            restoredQuestionIndex++;
         });
+        questionIndex = restoredQuestionIndex;
     @endif
 });
 </script>

@@ -1,142 +1,133 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Exam;
-use App\Models\Evaluation;
-use App\Models\ExamAttempt;
-use App\Models\Option;
 use App\Models\TrainingModule;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Illuminate\Support\Str;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class ExamController extends Controller
 {
-    /**
-     * Generiert einen neuen, einmaligen Prüfungsversuch und einen sicheren Link dazu.
-     * Nur für Ausbilder/Admins.
-     */
-    public function generateLink(Request $request)
+    public function __construct()
     {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'module_id' => 'required|exists:training_modules,id',
-            'evaluation_id' => 'required|exists:evaluations,id',
-        ]);
+        $this->authorizeResource(Exam::class, 'exam');
+    }
 
-        $module = TrainingModule::find($validated['module_id']);
-        $user = User::find($validated['user_id']);
-        $evaluation = Evaluation::find($validated['evaluation_id']);
-
-        if (!$module->exam) {
-            return back()->with('error', 'Für dieses Modul ist keine Prüfung hinterlegt.');
-        }
-
-        $this->authorize('generateExamLink', ExamAttempt::class);
-
-        // Erstelle einen neuen Prüfungsversuch
-        $attempt = ExamAttempt::create([
-            'exam_id' => $module->exam->id,
-            'user_id' => $user->id,
-            'started_at' => now(),
-            'status' => 'in_progress',
-        ]);
-
-        // Markiere den Antrag als "erledigt"
-        $evaluation->update(['status' => 'processed']);
-
-        // Generiere die sichere URL
-        $secureUrl = route('exams.take', ['uuid' => $attempt->uuid]);
-
-        // Optional: Sende Benachrichtigung an den Prüfer/Admin
-        // Notification::send(Auth::user(), new ExamLinkGeneratedNotification($user, $secureUrl));
-
-        return back()->with('success', 'Prüfungslink erfolgreich generiert! Senden Sie diesen Link an den Prüfling:')
-                     ->with('secure_url', $secureUrl);
+    public function create()
+    {
+        $modules = TrainingModule::doesntHave('exam')->orderBy('name')->get();
+        return view('admin.exams.create', compact('modules'));
     }
 
     /**
-     * Zeigt die Prüfungsseite an, die über die sichere UUID aufgerufen wird.
+     * Speichert eine neue Prüfung mit dynamischer Validierung für alle Fragetypen.
      */
-    public function take(string $uuid)
+    public function store(Request $request)
     {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        
-        // Stellt sicher, dass nur der zugewiesene User den Test machen kann.
-        if (Auth::id() !== $attempt->user_id) {
-            abort(403, 'Sie sind nicht berechtigt, diese Prüfung abzulegen.');
-        }
-        
-        if ($attempt->status !== 'in_progress') {
-             return redirect()->route('exams.result', $attempt->uuid)->with('info', 'Diese Prüfung wurde bereits abgeschlossen.');
-        }
+        $validated = $this->validateExamRequest($request);
 
-        $attempt->load('exam.questions.options');
-        return view('exams.take', compact('attempt'));
-    }
+        $exam = DB::transaction(function () use ($validated) {
+            $exam = Exam::create([
+                'training_module_id' => $validated['training_module_id'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'pass_mark' => $validated['pass_mark'],
+            ]);
 
-    /**
-     * Nimmt die Prüfungsantworten entgegen und wertet sie aus.
-     */
-    public function submit(Request $request, string $uuid)
-    {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        $this->authorize('submit', $attempt);
-
-        $validated = $request->validate(['answers' => 'required|array']);
-        $answers = $validated['answers'];
-        $totalQuestions = $attempt->exam->questions()->count();
-        $correctAnswers = 0;
-
-        DB::transaction(function () use ($answers, $attempt, &$correctAnswers, $totalQuestions) {
-            foreach ($answers as $questionId => $optionId) {
-                $option = Option::find($optionId);
-                $isCorrect = $option && $option->is_correct;
-                if ($isCorrect) $correctAnswers++;
-
-                $attempt->answers()->create([
-                    'question_id' => $questionId, 'option_id' => $optionId, 'is_correct_at_time_of_answer' => $isCorrect,
+            foreach ($validated['questions'] as $qIndex => $questionData) {
+                $question = $exam->questions()->create([
+                    'question_text' => $questionData['question_text'],
+                    'type' => $questionData['type'],
                 ]);
+
+                if ($questionData['type'] !== 'text_field') {
+                    foreach ($questionData['options'] as $oIndex => $optionData) {
+                        $isCorrect = false;
+                        if ($questionData['type'] === 'single_choice') {
+                            $isCorrect = (isset($questionData['correct_option']) && $oIndex == $questionData['correct_option']);
+                        } elseif ($questionData['type'] === 'multiple_choice') {
+                            $isCorrect = isset($optionData['is_correct']) && $optionData['is_correct'] == '1';
+                        }
+
+                        $question->options()->create([
+                            'option_text' => $optionData['option_text'],
+                            'is_correct' => $isCorrect,
+                        ]);
+                    }
+                }
             }
-
-            $score = ($totalQuestions > 0) ? round(($correctAnswers / $totalQuestions) * 100) : 0;
-            $attempt->update(['completed_at' => now(), 'status' => 'submitted', 'score' => $score]);
+            return $exam;
         });
-
-        return redirect()->route('exams.result', $attempt->uuid);
-    }
-
-    /**
-     * Zeigt die Ergebnisseite nach Abschluss an.
-     */
-    public function result(string $uuid)
-    {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        $this->authorize('viewResult', $attempt);
-        return view('exams.result', compact('attempt'));
-    }
-
-    /**
-     * API-Endpunkt für die Anti-Betrugs-Funktion.
-     */
-    public function flag(Request $request, string $uuid)
-    {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        // Leichte Autorisierung: Nur der User selbst kann seine Prüfung flaggen
-        if (Auth::id() !== $attempt->user_id || $attempt->status !== 'in_progress') {
-            return response()->json(['status' => 'error'], 403);
-        }
-
-        $flags = $attempt->flags ?? [];
-        $flags[] = ['timestamp' => now()->toDateTimeString(), 'event' => 'User lost focus on the page'];
-        $attempt->update(['flags' => $flags]);
         
-        // Hier könnte man eine Echtzeit-Benachrichtigung an einen Prüfer auslösen
+        ActivityLog::create([
+            'user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'CREATED', 'target_id' => $exam->id,
+            'description' => "Prüfung '{$exam->title}' wurde erstellt.",
+        ]);
 
-        return response()->json(['status' => 'flagged']);
+        return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich erstellt!');
+    }
+
+    /**
+     * Private Hilfsfunktion zur Validierung von Prüfungsanfragen.
+     */
+    private function validateExamRequest(Request $request, ?Exam $exam = null): array
+    {
+        $moduleIdRule = 'required|exists:training_modules,id';
+        // Beim Erstellen muss die ID einzigartig sein, beim Update muss sie auf die aktuelle Prüfung beschränkt sein
+        $moduleIdRule .= $exam ? '|unique:exams,training_module_id,' . $exam->id : '|unique:exams,training_module_id';
+
+        $baseRules = [
+            'training_module_id' => $moduleIdRule,
+            'title' => 'required|string|max:255',
+            'pass_mark' => 'required|integer|min:1|max:100',
+            'description' => 'nullable|string',
+            'questions' => 'required|array|min:1',
+            'questions.*.id' => 'nullable|integer|exists:questions,id',
+            'questions.*.question_text' => 'required|string',
+            'questions.*.type' => 'required|in:single_choice,multiple_choice,text_field',
+            // 'options' ist nicht mehr global erforderlich
+        ];
+
+        $validator = Validator::make($request->all(), $baseRules);
+
+        $validator->after(function ($validator) use ($request) {
+            foreach ($request->input('questions', []) as $key => $question) {
+                $type = $question['type'] ?? 'single_choice';
+
+                if ($type === 'text_field') {
+                    continue; // Für Textfelder keine weiteren Prüfungen nötig
+                }
+
+                if (!isset($question['options']) || !is_array($question['options']) || count($question['options']) < 2) {
+                    $validator->errors()->add("questions.{$key}.options", "Für eine Auswahlfrage werden mindestens 2 Antwortmöglichkeiten benötigt.");
+                    continue;
+                }
+
+                foreach($question['options'] as $optKey => $option) {
+                    if(empty($option['option_text'])) {
+                        $validator->errors()->add("questions.{$key}.options.{$optKey}.option_text", "Der Antworttext darf nicht leer sein.");
+                    }
+                }
+
+                if ($type === 'single_choice') {
+                    if (!isset($question['correct_option'])) {
+                        $validator->errors()->add("questions.{$key}.correct_option", "Für eine Einzelantwort-Frage muss eine korrekte Antwort markiert sein.");
+                    }
+                } elseif ($type === 'multiple_choice') {
+                    $hasCorrect = collect($question['options'])->contains(fn ($opt) => isset($opt['is_correct']) && $opt['is_correct'] == '1');
+                    if (!$hasCorrect) {
+                        $validator->errors()->add("questions.{$key}.options", "Für eine Mehrfachantwort-Frage muss mindestens eine korrekte Antwort markiert sein.");
+                    }
+                }
+            }
+        });
+        
+        return $validator->validate();
     }
 }
+
