@@ -29,7 +29,7 @@
 </div>
 <!-- /.card-body -->
 <div class="card-footer">
-    <a href="{{ route('admin.modules.index') }}" class="btn btn-secondary">
+    <a href="{{ route('modules.index') }}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Abbrechen
     </a>
     <button type="submit" class="btn btn-primary float-right">

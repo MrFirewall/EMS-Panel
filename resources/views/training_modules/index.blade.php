@@ -22,7 +22,7 @@
             <h3 class="card-title">Alle verfügbaren Module</h3>
             <div class="card-tools">
                 @can('training.create')
-                    <a href="{{ route('admin.modules.create') }}" class="btn btn-primary btn-sm">
+                    <a href="{{ route('modules.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus"></i> Neues Modul erstellen
                     </a>
                 @endcan
@@ -53,9 +53,9 @@
                             <td>{{ $module->category ?? 'Allgemein' }}</td>
                             <td>{{ Str::limit($module->description, 70) }}</td>
                             <td>
-                                <form action="{{ route('admin.modules.destroy', $module) }}" method="POST">
+                                <form action="{{ route('modules.destroy', $module) }}" method="POST">
                                     @can('training.edit')
-                                        <a href="{{ route('admin.modules.edit', $module) }}" class="btn btn-warning btn-xs"><i class="fas fa-edit"></i></a>
+                                        <a href="{{ route('modules.edit', $module) }}" class="btn btn-warning btn-xs"><i class="fas fa-edit"></i></a>
                                     @endcan
                                     @can('training.delete')
                                         @csrf
