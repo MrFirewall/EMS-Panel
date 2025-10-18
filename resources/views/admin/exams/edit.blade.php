@@ -93,8 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
 
-    // KORRIGIERT: Alte array() Syntax wird verwendet, um Blade Parsing-Fehler zu vermeiden
-    const initialData = @json(old('questions') ?? $exam->questions->map(function ($q) {
+    // KORRIGIERT: @json wurde durch {!! json_encode(...) !!} ersetzt, um den Blade Parse-Fehler zu beheben
+    const initialData = {!! json_encode(old('questions') ?? $exam->questions->map(function ($q) {
         $data = array(
             'id' => $q->id,
             'question_text' => $q->question_text,
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
             $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
         }
         return $data;
-    })->all());
+    })->all()) !!};
 
     function addQuestion(questionData = null) {
         const qIndex = questionIndex;
@@ -264,4 +264,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
