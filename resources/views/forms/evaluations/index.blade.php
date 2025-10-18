@@ -115,7 +115,7 @@
                                 </thead>
                                 <tbody>
                                     {{-- $processedEvaluations muss vom Controller übergeben werden --}}
-                                    @forelse($processedEvaluations as $evaluation)
+                                    @forelse($evaluations as $evaluation)
                                         <tr>
                                             <td>
                                                 <span class="badge bg-secondary">

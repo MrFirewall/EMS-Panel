@@ -27,7 +27,7 @@ class EvaluationController extends Controller
 
     /**
      * Zeigt die Übersichtsseite für alle Formulare/Bewertungen an.
-     * KORRIGIERT: Liefert jetzt getrennte Listen für offene Anträge und bearbeitete Formulare.
+     * ÜBERARBEITET: Trennt jetzt logisch zwischen Anträgen und Bewertungen.
      */
     public function index()
     {
@@ -35,31 +35,39 @@ class EvaluationController extends Controller
 
         $canViewAll = Auth::user()->can('evaluations.view.all');
 
-        // 1. Lade alle offenen Anträge (Modul- & Prüfungsanmeldungen)
+        // Definiere klar, was Anträge und was Bewertungen sind
+        $applicationTypes = ['modul_anmeldung', 'pruefung_anmeldung'];
+        $evaluationTypes = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung'];
+
+        // 1. Lade NUR offene Anträge, die eine Aktion erfordern
         $offeneAntraegeQuery = Evaluation::where('status', 'pending')
-                                    ->whereIn('evaluation_type', ['modul_anmeldung', 'pruefung_anmeldung']);
+                                    ->whereIn('evaluation_type', $applicationTypes);
         
-        // 2. Lade alle anderen (bearbeiteten) Formulare und Bewertungen
-        $processedEvaluationsQuery = Evaluation::where('status', '!=', 'pending');
+        // 2. Lade NUR reguläre Bewertungen, unabhängig von ihrem Status
+        $evaluationsQuery = Evaluation::whereIn('evaluation_type', $evaluationTypes);
 
 
         // Wenn der User kein Admin ist, nur die eigenen relevanten Einträge anzeigen
         if (!$canViewAll) {
             $userId = Auth::id();
+            // Benutzer sehen nur ihre eigenen offenen Anträge
             $offeneAntraegeQuery->where('user_id', $userId);
-            $processedEvaluationsQuery->where(function ($query) use ($userId) {
+            
+            // Benutzer sehen Bewertungen, die sie erhalten ODER erstellt haben
+            $evaluationsQuery->where(function ($query) use ($userId) {
                 $query->where('user_id', $userId)
                       ->orWhere('evaluator_id', $userId);
             });
         }
         
         $offeneAntraege = $offeneAntraegeQuery->with('user')->latest()->get();
-        $processedEvaluations = $processedEvaluationsQuery->with(['user', 'evaluator'])->latest()->paginate(10);
+        // WICHTIG: Die Variable heißt jetzt '$evaluations'
+        $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->latest()->paginate(10);
         
         $counts = $this->getEvaluationCounts();
 
-        // Übergibt die neuen, korrekten Variablen an die View
-        return view('forms.evaluations.index', compact('offeneAntraege', 'processedEvaluations', 'counts', 'canViewAll'));
+        // Übergibt die neuen, klar benannten Variablen an die View
+        return view('forms.evaluations.index', compact('offeneAntraege', 'evaluations', 'counts', 'canViewAll'));
     }
     
     /**
