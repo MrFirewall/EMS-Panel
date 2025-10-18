@@ -181,19 +181,36 @@ class ExamController extends Controller
     /**
      * API-Endpunkt für die Anti-Betrugs-Funktion.
      */
-    public function flag(Request $request, string $uuid)
+public function flag(Request $request, string $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        // Leichte Autorisierung: Nur der User selbst kann seine Prüfung flaggen
-        if (Auth::id() !== $attempt->user_id || $attempt->status !== 'in_progress') {
-            return response()->json(['status' => 'error'], 403);
+        
+        // Stellt sicher, dass die Anti-Cheat-Logik nicht crasht, wenn der User schon fertig ist.
+        if (Auth::id() !== $attempt->user_id) {
+            return response()->json(['status' => 'error', 'message' => 'User mismatch'], 403);
+        }
+        
+        if ($attempt->status !== 'in_progress' && $attempt->status !== 'submitted') {
+            // Wenn der Test bereits bewertet ist, ignorieren
+            return response()->json(['status' => 'ignored']);
         }
 
+
+        // Stellen Sie sicher, dass das Array korrekt initialisiert und die Zeit korrekt formatiert wird
         $flags = $attempt->flags ?? [];
-        $flags[] = ['timestamp' => now()->toDateTimeString(), 'event' => 'User lost focus on the page'];
-        $attempt->update(['flags' => $flags]);
+
+        // Fügen Sie das neue Flag hinzu. Verwenden Sie den Request-Body, falls er Events enthält.
+        $event = $request->input('event', 'User lost focus on the page'); // Kann nun im JS gesendet werden
         
-        // Hier könnte man eine Echtzeit-Benachrichtigung an einen Prüfer auslösen
+        $flags[] = [
+            'timestamp' => now()->toDateTimeString(), 
+            'event' => $event,
+            // Fügen Sie optional die URL hinzu, falls Sie wissen wollen, wo der Fokus verloren ging
+            'url' => $request->header('Referer') 
+        ]; 
+        
+        $attempt->flags = $flags; // Zuweisung des Arrays
+        $attempt->save(); // Speichern
 
         return response()->json(['status' => 'flagged']);
     }

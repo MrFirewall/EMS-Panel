@@ -86,13 +86,34 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Anti-Cheat: Überwacht, ob der Tab verlassen wird
+        
+        // **Die Korrektur für sendBeacon:** Senden der Daten als URL-Encoded
+        const sendFlag = function(event) {
+            const flagUrl = '{{ route("exams.flag", $attempt) }}';
+            
+            // Erstellen von URLSearchParams, um standardmäßige Formulardaten zu simulieren
+            const data = new URLSearchParams();
+            data.append('_token', '{{ csrf_token() }}');
+            data.append('event', event); 
+            
+            // sendBeacon senden. Der Browser wartet nicht auf die Antwort.
+            navigator.sendBeacon(flagUrl, data);
+        };
+        
+        // 1. Anti-Cheat: Überwacht, ob der Tab verlassen wird
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
-                // sendBeacon ist zuverlässiger als fetch/axios, um Daten zu senden, bevor eine Seite geschlossen wird.
-                const flagUrl = '{{ route("exams.flag", $attempt) }}';
-                navigator.sendBeacon(flagUrl, new Blob([JSON.stringify({_token: '{{ csrf_token() }}'})], {type : 'application/json'}));
+                sendFlag('Page focus lost (hidden)');
             }
+        });
+        
+        // 2. Anti-Cheat: Überwacht das Klicken auf den Absendebutton 
+        //    oder das erneute Drücken der Eingabetaste (was den Submit auslösen würde)
+        document.getElementById('exam-form').addEventListener('submit', function() {
+            // Hier wird der Fokus-Schutz entfernt, ABER wir senden das Event ZUERST.
+            sendFlag('Form submitted (Attempted Finish)');
+            window.onbeforeunload = null;
+            window.onpopstate = null;
         });
 
         // Verhindert versehentliches Schließen oder Neuladen der Seite
@@ -106,12 +127,6 @@
         window.onpopstate = function () {
             history.go(1);
         };
-
-        // Entfernt die Schutzmechanismen beim Absenden des Formulars
-        document.getElementById('exam-form').addEventListener('submit', function() {
-            window.onbeforeunload = null;
-            window.onpopstate = null;
-        });
     });
 </script>
 @endpush
