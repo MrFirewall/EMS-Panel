@@ -35,12 +35,36 @@
                                     <div class="question-block mb-4 p-3 border rounded">
                                         <h5>Frage {{ $index + 1 }}: {{ $question->question_text }}</h5>
                                         <div class="form-group mt-3">
-                                            @foreach($question->options as $option)
-                                                <div class="custom-control custom-radio">
-                                                    <input type="radio" id="option_{{ $option->id }}" name="answers[{{ $question->id }}]" value="{{ $option->id }}" class="custom-control-input" required>
-                                                    <label class="custom-control-label" for="option_{{ $option->id }}">{{ $option->option_text }}</label>
-                                                </div>
-                                            @endforeach
+                                            
+                                            {{-- KORRIGIERT: Switch-Anweisung für verschiedene Fragetypen --}}
+                                            @switch($question->type)
+                                                
+                                                @case('single_choice')
+                                                    @foreach($question->options as $option)
+                                                        <div class="custom-control custom-radio">
+                                                            {{-- Name ist 'answers[question_id]' --}}
+                                                            <input type="radio" id="option_{{ $option->id }}" name="answers[{{ $question->id }}]" value="{{ $option->id }}" class="custom-control-input" required>
+                                                            <label class="custom-control-label" for="option_{{ $option->id }}">{{ $option->option_text }}</label>
+                                                        </div>
+                                                    @endforeach
+                                                    @break
+
+                                                @case('multiple_choice')
+                                                    @foreach($question->options as $option)
+                                                        <div class="custom-control custom-checkbox">
+                                                            {{-- Name ist 'answers[question_id][]' um ein Array zu empfangen --}}
+                                                            <input type="checkbox" id="option_{{ $option->id }}" name="answers[{{ $question->id }}][]" value="{{ $option->id }}" class="custom-control-input">
+                                                            <label class="custom-control-label" for="option_{{ $option->id }}">{{ $option->option_text }}</label>
+                                                        </div>
+                                                    @endforeach
+                                                    @break
+
+                                                @case('text_field')
+                                                    <textarea name="answers[{{ $question->id }}]" class="form-control" rows="3" placeholder="Ihre Antwort..." required></textarea>
+                                                    @break
+                                                    
+                                            @endswitch
+
                                         </div>
                                     </div>
                                     @if(!$loop->last) <hr class="my-4"> @endif
@@ -91,4 +115,3 @@
     });
 </script>
 @endpush
-
