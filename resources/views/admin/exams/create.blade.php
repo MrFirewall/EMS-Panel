@@ -11,7 +11,7 @@
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('admin.modules.index') }}">Module</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('modules.index') }}">Module</a></li>
                     <li class="breadcrumb-item active">Prüfung erstellen</li>
                 </ol>
             </div>
@@ -75,7 +75,7 @@
                             @endif
                         </div>
                         <div class="card-footer">
-                            <a href="{{ route('admin.modules.index') }}" class="btn btn-secondary">Abbrechen</a>
+                            <a href="{{ route('modules.index') }}" class="btn btn-secondary">Abbrechen</a>
                             <button type="submit" class="btn btn-success float-right"><i class="fas fa-save"></i> Prüfung speichern</button>
                         </div>
                     </div>
