@@ -39,7 +39,7 @@ class EvaluationController extends Controller
      */
     public function index()
     {
-        $this->authorize('viewAny', Evaluation::class); // Nutzt die Policy
+        #$this->authorize('viewAny', Evaluation::class); // Nutzt die Policy
 
         $canViewAll = Auth::user()->can('evaluations.view.all'); // Bessere Berechtigungsprüfung
 
