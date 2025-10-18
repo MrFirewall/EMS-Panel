@@ -146,6 +146,7 @@ class ExamController extends Controller
                         // Text answers are not automatically scored
                         $attempt->answers()->create([
                             'question_id' => $questionId,
+                            'option_id' => null,
                             'text_answer' => $submittedAnswer,
                             'is_correct_at_time_of_answer' => 0, // <-- HINZUGEFÜGT (0 = false)
                         ]);
