@@ -36,7 +36,7 @@
                                 <p class="card-text">
                                     Erstellen Sie neue Module, um die Qualifikationen Ihrer Mitarbeiter zu definieren und zu verfolgen.
                                 </p>
-                                <a href="{{ route('admin.modules.create') }}" class="btn btn-primary">
+                                <a href="{{ route('modules.create') }}" class="btn btn-primary">
                                     <i class="fas fa-plus"></i> Neues Modul erstellen
                                 </a>
                             </div>
@@ -72,18 +72,18 @@
                                                 <td>{{ Str::limit($module->description, 50) }}</td>
                                                 <td class="text-right">
                                                     {{-- Die "show" Route wurde im Controller definiert und kann hier genutzt werden --}}
-                                                    <a href="{{ route('admin.modules.show', $module) }}" class="btn btn-sm btn-outline-info" title="Details anzeigen">
+                                                    <a href="{{ route('modules.show', $module) }}" class="btn btn-sm btn-outline-info" title="Details anzeigen">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                     
                                                     @can('update', $module)
-                                                        <a href="{{ route('admin.modules.edit', $module) }}" class="btn btn-sm btn-outline-warning" title="Modul bearbeiten">
+                                                        <a href="{{ route('modules.edit', $module) }}" class="btn btn-sm btn-outline-warning" title="Modul bearbeiten">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
                                                     @endcan
                                                     
                                                     @can('delete', $module)
-                                                        <form action="{{ route('admin.modules.destroy', $module) }}" method="POST" class="d-inline" onsubmit="return confirm('Sind Sie sicher, dass Sie dieses Modul unwiderruflich löschen möchten? Alle Zuweisungen gehen verloren!');">
+                                                        <form action="{{ route('modules.destroy', $module) }}" method="POST" class="d-inline" onsubmit="return confirm('Sind Sie sicher, dass Sie dieses Modul unwiderruflich löschen möchten? Alle Zuweisungen gehen verloren!');">
                                                             @csrf
                                                             @method('DELETE')
                                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Modul löschen">
