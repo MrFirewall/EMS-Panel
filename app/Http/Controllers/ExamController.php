@@ -123,7 +123,7 @@ class ExamController extends Controller
                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
 
                         // The answer is correct if the submitted IDs match the correct IDs exactly
-                        $isCorrect = $submittedAnswerIds->sort()->values()->is($correctOptionIds->sort()->values());
+                        $isCorrect = $submittedAnswerIds->sort()->values()->all() === $correctOptionIds->sort()->values()->all();
                         if ($isCorrect) {
                             $correctAnswers++;
                         }
