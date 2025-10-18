@@ -69,7 +69,7 @@ Route::middleware('auth.cfx')->group(function () {
     Route::post('vacations', [VacationController::class, 'store'])->name('vacations.store');
 
     Route::resource('modules', \App\Http\Controllers\Admin\TrainingModuleController::class)->except(['show']);
-
+ 
     // Bürgerakten verwalten
     Route::resource('citizens', CitizenController::class);
     Route::get('citizens/{citizen}/prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create');

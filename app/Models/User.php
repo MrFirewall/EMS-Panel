@@ -227,7 +227,7 @@ class User extends Authenticatable
     public function examinations() { return $this->hasMany(Examination::class); }
     public function vacations() { return $this->hasMany(Vacation::class); }
     public function attendedReports() { return $this->belongsToMany(Report::class, 'report_user'); }
-
+ 
     /**
      * Determines if this user can impersonate others.
      */

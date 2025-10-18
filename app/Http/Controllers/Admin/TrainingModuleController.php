@@ -147,3 +147,4 @@ class TrainingModuleController extends Controller
         return redirect()->route('admin.modules.index')->with('success', 'Ausbildungsmodul erfolgreich gelöscht.');
     }
 }
+ 

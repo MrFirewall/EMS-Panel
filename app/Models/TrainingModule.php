@@ -24,4 +24,4 @@ class TrainingModule extends Model
                     ->withPivot('status', 'completed_at', 'notes') // Diese Zusatzinfos laden
                     ->withTimestamps();
     }
-}
+} 

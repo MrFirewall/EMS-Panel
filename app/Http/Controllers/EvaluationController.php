@@ -8,7 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\TrainingModule; // Wichtig für die neuen Formulare
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+ 
 class EvaluationController extends Controller
 {
     // Statische Arrays für Konsistenz
