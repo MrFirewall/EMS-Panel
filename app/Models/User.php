@@ -10,6 +10,7 @@ use Lab404\Impersonate\Models\Impersonate;
 use Illuminate\Database\Eloquent\Casts\Attribute; // Wichtig für den Accessor
 use Illuminate\Support\Carbon; // Wichtig für Datumsberechnungen
 
+
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, Impersonate;
@@ -224,7 +225,6 @@ class User extends Authenticatable
     public function serviceRecords() { return $this->hasMany(ServiceRecord::class); }
     public function reports() { return $this->hasMany(Report::class); }
     public function examinations() { return $this->hasMany(Examination::class); }
-    public function trainingModules() { return $this->hasMany(TrainingModule::class); }
     public function vacations() { return $this->hasMany(Vacation::class); }
     public function attendedReports() { return $this->belongsToMany(Report::class, 'report_user'); }
 
@@ -246,5 +246,20 @@ class User extends Authenticatable
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
+    }
+
+    public function trainingModules()
+    {
+        return $this->belongsToMany(TrainingModule::class, 'training_module_user')
+                    ->withPivot('status', 'completed_at', 'notes')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Hilfsfunktion: Gibt nur die Module zurück, die der User bestanden hat.
+     */
+    public function qualifications()
+    {
+        return $this->trainingModules()->wherePivot('status', 'bestanden');
     }
 }

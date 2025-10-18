@@ -16,6 +16,7 @@ use Lab404\Impersonate\Controllers\ImpersonateController;
 use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
+use App\Http\Controllers\TrainingModuleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +68,8 @@ Route::middleware('auth.cfx')->group(function () {
     Route::get('vacations/request', [VacationController::class, 'create'])->name('vacations.create');
     Route::post('vacations', [VacationController::class, 'store'])->name('vacations.store');
 
+    Route::resource('modules', \App\Http\Controllers\Admin\TrainingModuleController::class)->except(['show']);
+
     // Bürgerakten verwalten
     Route::resource('citizens', CitizenController::class);
     Route::get('citizens/{citizen}/prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create');
@@ -79,6 +82,8 @@ Route::middleware('auth.cfx')->group(function () {
         Route::get('leitstelle', [EvaluationController::class, 'leitstelle'])->name('leitstelle');
         Route::get('mitarbeiter', [EvaluationController::class, 'mitarbeiter'])->name('mitarbeiter');
         Route::post('/', [EvaluationController::class, 'store'])->name('store');
+        Route::get('modul-anmeldung', [EvaluationController::class, 'modulAnmeldung'])->name('fmodulAnmeldung');
+        Route::get('pruefung-anmeldung', [EvaluationController::class, 'pruefungsAnmeldung'])->name('pruefungsAnmeldung');
         // Die "show"-Route für Admins ist unten im Admin-Bereich definiert.
     });
 });
