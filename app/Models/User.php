@@ -262,4 +262,13 @@ class User extends Authenticatable
     {
         return $this->trainingModules()->wherePivot('status', 'bestanden');
     }
+
+    /**
+     * NEU: Die Prüfungsversuche dieses Benutzers.
+     */
+    public function examAttempts()
+    {
+        return $this->hasMany(ExamAttempt::class);
+    }
 }
+

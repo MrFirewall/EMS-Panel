@@ -24,4 +24,12 @@ class TrainingModule extends Model
                     ->withPivot('status', 'completed_at', 'notes') // Diese Zusatzinfos laden
                     ->withTimestamps();
     }
-} 
+
+    /**
+     * NEU: Die Prüfung, die zu diesem Modul gehört.
+     */
+    public function exam()
+    {
+        return $this->hasOne(Exam::class);
+    }
+}

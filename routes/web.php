@@ -17,6 +17,7 @@ use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\TrainingModuleController;
+use App\Http\Controllers\Admin\TrainingAssignmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +71,8 @@ Route::middleware('auth.cfx')->group(function () {
 
     Route::resource('modules', TrainingModuleController::class);
 
+    Route::post('training/assign/{user}/{module}', [TrainingAssignmentController::class, 'assign'])->name('admin.training.assign');
+    
     // Bürgerakten verwalten
     Route::resource('citizens', CitizenController::class);
     Route::get('citizens/{citizen}/prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create');
