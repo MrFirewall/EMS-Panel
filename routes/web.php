@@ -94,6 +94,9 @@ Route::middleware('auth.cfx')->group(function () {
         Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])->name('exams.flag');
         Route::get('/notifications', [NotificationController::class, 'fetch'])->name('notifications.fetch');
     });
+
+
+    Route::resource('modules', TrainingModuleController::class); // NEU: Hier korrekt platziert
 });
 
 
@@ -110,7 +113,6 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     Route::resource('users', UserController::class)->except(['destroy']);
     Route::resource('roles', RoleController::class)->except(['create', 'edit', 'show']);
     Route::resource('permissions', PermissionController::class)->except(['show']);
-    Route::resource('modules', TrainingModuleController::class); // NEU: Hier korrekt platziert
 
     // Spezifische Admin-Aktionen
     Route::post('users/{user}/records', [UserController::class, 'addRecord'])->name('users.records.store');
