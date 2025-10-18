@@ -19,6 +19,9 @@ use App\Policies\PermissionPolicy;
 use Spatie\Permission\Models\TrainingModule;
 use App\Policies\TrainingModulePolicy;
 
+use App\Models\Evaluation;
+use App\Policies\EvaluationPolicy;
+
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
  
@@ -35,6 +38,7 @@ class AuthServiceProvider extends ServiceProvider
         Prescription::class => PrescriptionPolicy::class,
         Permission::class => PermissionPolicy::class,
         TrainingModule::class => TrainingModulePolicy::class,
+        Evaluation::class => EvaluationPolicy::class,
     ];
 
     /**
