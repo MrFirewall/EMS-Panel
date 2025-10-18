@@ -19,11 +19,6 @@
         <div class="container-fluid">
              <div class="row">
                 <div class="col-12">
-                    <div class="alert alert-danger">
-                        <h5 class="alert-heading"><i class="icon fas fa-exclamation-triangle"></i> Wichtiger Hinweis</h5>
-                        Das Verlassen dieser Seite (Tab-Wechsel, Minimieren des Fensters) während der Prüfung wird protokolliert und kann als Betrugsversuch gewertet werden. Die Prüfung muss in einer Sitzung abgeschlossen werden.
-                    </div>
-
                     <form action="{{ route('exams.submit', $attempt) }}" method="POST" id="exam-form">
                         @csrf
                         <div class="card card-primary card-outline">
@@ -82,51 +77,3 @@
         </div>
     </div>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        
-        // **Die Korrektur für sendBeacon:** Senden der Daten als URL-Encoded
-        const sendFlag = function(event) {
-            const flagUrl = '{{ route("exams.flag", $attempt) }}';
-            
-            // Erstellen von URLSearchParams, um standardmäßige Formulardaten zu simulieren
-            const data = new URLSearchParams();
-            data.append('_token', '{{ csrf_token() }}');
-            data.append('event', event); 
-            
-            // sendBeacon senden. Der Browser wartet nicht auf die Antwort.
-            navigator.sendBeacon(flagUrl, data);
-        };
-        
-        // 1. Anti-Cheat: Überwacht, ob der Tab verlassen wird
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                sendFlag('Page focus lost (hidden)');
-            }
-        });
-        
-        // 2. Anti-Cheat: Überwacht das Klicken auf den Absendebutton 
-        //    oder das erneute Drücken der Eingabetaste (was den Submit auslösen würde)
-        document.getElementById('exam-form').addEventListener('submit', function() {
-            // Hier wird der Fokus-Schutz entfernt, ABER wir senden das Event ZUERST.
-            sendFlag('Form submitted (Attempted Finish)');
-            window.onbeforeunload = null;
-            window.onpopstate = null;
-        });
-
-        // Verhindert versehentliches Schließen oder Neuladen der Seite
-        window.addEventListener('beforeunload', function (e) {
-            e.preventDefault();
-            e.returnValue = 'Sind Sie sicher, dass Sie die Prüfung verlassen möchten? Ihr Fortschritt geht verloren.';
-        });
-
-        // Deaktiviert den "Zurück"-Button im Browser, während die Prüfung läuft
-        history.pushState(null, null, location.href);
-        window.onpopstate = function () {
-            history.go(1);
-        };
-    });
-</script>
-@endpush
