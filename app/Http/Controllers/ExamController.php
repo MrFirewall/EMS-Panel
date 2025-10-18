@@ -147,6 +147,7 @@ class ExamController extends Controller
                         $attempt->answers()->create([
                             'question_id' => $questionId,
                             'text_answer' => $submittedAnswer,
+                            'is_correct_at_time_of_answer' => 0, // <-- HINZUGEFÜGT (0 = false)
                         ]);
                         break;
                 }
