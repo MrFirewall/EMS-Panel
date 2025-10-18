@@ -133,6 +133,7 @@ class ExamController extends Controller
                             $attempt->answers()->create([
                                 'question_id' => $questionId,
                                 'option_id' => $optionId,
+                                'is_correct_at_time_of_answer' => $isOptionCorrect,
                             ]);
                         }
                         break;
