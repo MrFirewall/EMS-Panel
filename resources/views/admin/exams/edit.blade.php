@@ -92,8 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let questionIndex = 0;
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
-
-    // KORRIGIERT: @json wurde durch {!! json_encode(...) !!} ersetzt, um den Blade Parse-Fehler zu beheben
     const initialData = {!! json_encode(old('questions') ?? $exam->questions->map(function ($q) {
         $data = array(
             'id' => $q->id,
@@ -104,7 +102,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })->all()
         );
         if ($q->type === 'single_choice') {
-            // KORRIGIERT: Die kurze Pfeilfunktion (fn) wurde durch eine volle anonyme Funktion ersetzt.
             $correctIndex = $q->options->search(function($o) { return $o->is_correct; });
             $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
         }
@@ -162,9 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if(type === 'single_choice') {
             inputName = `questions[${qIndex}][correct_option]`;
             inputValue = optionIndex;
-            // KORRIGIERT: Prüft `correct_option` aus dem initialData Array
             checked = optionData ? (optionData.is_correct) : (optionIndex === 0);
-            if(optionData && optionData.source === 'old') { // Logik für `old()` Daten
+            if(optionData && optionData.source === 'old') {
                  checked = optionData.checked;
             }
             required = 'required';
@@ -172,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
             inputName = `questions[${qIndex}][options][${optionIndex}][is_correct]`;
             inputValue = '1';
             checked = optionData ? (optionData.is_correct) : false;
-             if(optionData && optionData.source === 'old') { // Logik für `old()` Daten
+             if(optionData && optionData.source === 'old') {
                  checked = optionData.checked;
             }
             required = '';
@@ -188,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
     }
     
-    // Initiales Rendern des Formulars
     initialData.forEach(qData => addQuestion(qData));
     if (initialData.length === 0) {
         container.innerHTML = '<p class="text-muted text-center">Fügen Sie die erste Frage hinzu.</p>';
@@ -251,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             newElement.checked = true;
                             hasCheckedRadio = true;
                         }
-                    } else { // multiple_choice
+                    } else {
                         newElement.type = 'checkbox';
                         newElement.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
                         newElement.value = '1';
