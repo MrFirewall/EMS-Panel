@@ -32,7 +32,7 @@
 
         <div class="row">
             {{-- Spalte für offene Anträge --}}
-            <div class="col-lg-6">
+            <div class="col-lg-12">
                 <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-inbox"></i> Offene Anträge</h3>
@@ -44,13 +44,12 @@
                                     <tr>
                                         <th>Typ</th>
                                         <th>Antragsteller</th>
-                                        <th>Modul</th>
+                                        <th>Betreff (Modul)</th>
                                         <th>Datum</th>
                                         <th>Aktion</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {{-- $offeneAntraege muss vom Controller übergeben werden --}}
                                     @forelse($offeneAntraege as $antrag)
                                         <tr>
                                             <td>
@@ -58,7 +57,8 @@
                                                     {{ str_replace('_', ' ', ucfirst($antrag->evaluation_type)) }}
                                                 </span>
                                             </td>
-                                            <td>{{ $antrag->target_name }}</td>
+                                            {{-- KORREKTUR 1: Nutzt die User-Relation für den Namen --}}
+                                            <td>{{ $antrag->user->name ?? $antrag->target_name ?? 'Unbekannt' }}</td>
                                             <td>{{ $antrag->json_data['module_name'] ?? 'N/A' }}</td>
                                             <td>{{ $antrag->created_at->format('d.m.Y') }}</td>
                                             <td>
@@ -96,25 +96,26 @@
                 </div>
             </div>
 
-            {{-- Spalte für die letzten Bewertungen (Beispiel) --}}
-            <div class="col-lg-6">
+            {{-- Spalte für die letzten Bewertungen --}}
+            <div class="col-lg-12 mt-4">
                 <div class="card card-secondary card-outline">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-history"></i> Letzte bearbeitete Formulare</h3>
+                        <h3 class="card-title"><i class="fas fa-history"></i> Letzte eingereichte Bewertungen</h3>
                     </div>
                     <div class="card-body p-0">
                          <div class="table-responsive">
                             <table class="table table-striped table-hover">
                                 <thead>
+                                    {{-- KORREKTUR 2: Aussagekräftigere Spaltenüberschriften --}}
                                     <tr>
                                         <th>Typ</th>
-                                        <th>Betreff</th>
+                                        <th>Bewertet für</th>
+                                        <th>Bewertet von</th>
                                         <th>Datum</th>
                                         <th>Aktion</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {{-- $processedEvaluations muss vom Controller übergeben werden --}}
                                     @forelse($evaluations as $evaluation)
                                         <tr>
                                             <td>
@@ -122,8 +123,11 @@
                                                      {{ str_replace('_', ' ', ucfirst($evaluation->evaluation_type)) }}
                                                 </span>
                                             </td>
-                                            <td>{{ $evaluation->target_name }}</td>
-                                            <td>{{ $evaluation->updated_at->format('d.m.Y') }}</td>
+                                            {{-- KORREKTUR 2: Zeigt an, wer bewertet wurde --}}
+                                            <td>{{ $evaluation->user->name ?? $evaluation->target_name ?? 'N/A' }}</td>
+                                            {{-- KORREKTUR 2: Zeigt an, wer die Bewertung erstellt hat --}}
+                                            <td>{{ $evaluation->evaluator->name ?? 'N/A' }}</td>
+                                            <td>{{ $evaluation->created_at->format('d.m.Y') }}</td>
                                             <td>
                                                 <a href="{{ route('admin.forms.evaluations.show', $evaluation) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="fas fa-eye"></i> Details
@@ -132,8 +136,8 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-center text-muted p-3">
-                                                Es wurden noch keine Formulare bearbeitet.
+                                            <td colspan="5" class="text-center text-muted p-3">
+                                                Es wurden noch keine Bewertungen eingereicht.
                                             </td>
                                         </tr>
                                     @endforelse
@@ -141,6 +145,11 @@
                             </table>
                         </div>
                     </div>
+                     @if ($evaluations->hasPages())
+                        <div class="card-footer">
+                            {{ $evaluations->links() }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
