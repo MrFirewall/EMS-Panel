@@ -27,7 +27,7 @@ class TrainingModuleController extends Controller
     public function index()
     {
         $modules = TrainingModule::latest()->paginate(20);
-        return view('admin.training_modules.index', compact('modules'));
+        return view('training_modules.index', compact('modules'));
     }
 
     /**
@@ -37,7 +37,7 @@ class TrainingModuleController extends Controller
      */
     public function create()
     {
-        return view('admin.training_modules.create');
+        return view('training_modules.create');
     }
 
     /**
@@ -65,7 +65,7 @@ class TrainingModuleController extends Controller
             'description' => "Ausbildungsmodul '{$module->name}' wurde erstellt.",
         ]);
 
-        return redirect()->route('admin.modules.index')->with('success', 'Ausbildungsmodul erfolgreich erstellt.');
+        return redirect()->route('modules.index')->with('success', 'Ausbildungsmodul erfolgreich erstellt.');
     }
 
     /**
@@ -78,7 +78,7 @@ class TrainingModuleController extends Controller
     {
         // Eager load the users assigned to this module
         $module->load('users');
-        return view('admin.training_modules.show', compact('module'));
+        return view('training_modules.show', compact('module'));
     }
 
     /**
@@ -89,7 +89,7 @@ class TrainingModuleController extends Controller
      */
     public function edit(TrainingModule $module)
     {
-        return view('admin.training_modules.edit', compact('module'));
+        return view('training_modules.edit', compact('module'));
     }
 
     /**
@@ -118,7 +118,7 @@ class TrainingModuleController extends Controller
             'description' => "Ausbildungsmodul '{$module->name}' wurde aktualisiert.",
         ]);
 
-        return redirect()->route('admin.modules.index')->with('success', 'Ausbildungsmodul erfolgreich aktualisiert.');
+        return redirect()->route('modules.index')->with('success', 'Ausbildungsmodul erfolgreich aktualisiert.');
     }
 
     /**
@@ -144,7 +144,7 @@ class TrainingModuleController extends Controller
             'description' => "Ausbildungsmodul '{$moduleName}' wurde gelöscht.",
         ]);
 
-        return redirect()->route('admin.modules.index')->with('success', 'Ausbildungsmodul erfolgreich gelöscht.');
+        return redirect()->route('modules.index')->with('success', 'Ausbildungsmodul erfolgreich gelöscht.');
     }
 }
  
