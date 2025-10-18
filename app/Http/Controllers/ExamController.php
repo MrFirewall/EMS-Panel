@@ -123,17 +123,21 @@ class ExamController extends Controller
                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
 
                         // The answer is correct if the submitted IDs match the correct IDs exactly
-                        $isCorrect = $submittedAnswerIds->sort()->values()->all() === $correctOptionIds->sort()->values()->all();
+                        $isCorrect = $submittedAnswerIds->sort()->values()->all() === $correctOptionIds->sort()->values()->all(); // KORREKTUR VON FEHLER 1
                         if ($isCorrect) {
                             $correctAnswers++;
                         }
 
                         // Save each submitted option individually for review
                         foreach ($submittedAnswerIds as $optionId) {
+                            // HINZUGEFÜGTE LOGIK: Prüfen Sie die Korrektheit der spezifischen Option
+                            $option = $question->options->firstWhere('id', $optionId);
+                            $isOptionCorrect = $option && $option->is_correct;
+                            
                             $attempt->answers()->create([
                                 'question_id' => $questionId,
                                 'option_id' => $optionId,
-                                'is_correct_at_time_of_answer' => $isOptionCorrect,
+                                'is_correct_at_time_of_answer' => $isOptionCorrect, // <-- JETZT DEFINIERT
                             ]);
                         }
                         break;
