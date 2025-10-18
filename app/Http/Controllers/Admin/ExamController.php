@@ -18,9 +18,6 @@ class ExamController extends Controller
         $this->authorizeResource(Exam::class, 'exam');
     }
 
-    /**
-     * Zeigt eine Liste aller Prüfungen an.
-     */
     public function index()
     {
         $exams = Exam::with('trainingModule')->withCount('questions')->latest()->paginate(15);
@@ -33,9 +30,6 @@ class ExamController extends Controller
         return view('admin.exams.create', compact('modules'));
     }
 
-    /**
-     * Speichert eine neue Prüfung mit dynamischer Validierung für alle Fragetypen.
-     */
     public function store(Request $request)
     {
         $validated = $this->validateExamRequest($request);
@@ -48,7 +42,7 @@ class ExamController extends Controller
                 'pass_mark' => $validated['pass_mark'],
             ]);
 
-            foreach ($validated['questions'] as $qIndex => $questionData) {
+            foreach ($validated['questions'] as $questionData) {
                 $question = $exam->questions()->create([
                     'question_text' => $questionData['question_text'],
                     'type' => $questionData['type'],
@@ -62,47 +56,32 @@ class ExamController extends Controller
                         } elseif ($questionData['type'] === 'multiple_choice') {
                             $isCorrect = isset($optionData['is_correct']) && $optionData['is_correct'] == '1';
                         }
-
-                        $question->options()->create([
-                            'option_text' => $optionData['option_text'],
-                            'is_correct' => $isCorrect,
-                        ]);
+                        $question->options()->create(['option_text' => $optionData['option_text'], 'is_correct' => $isCorrect]);
                     }
                 }
             }
             return $exam;
         });
         
-        ActivityLog::create([
-            'user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'CREATED', 'target_id' => $exam->id,
-            'description' => "Prüfung '{$exam->title}' wurde erstellt.",
-        ]);
-
+        ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'CREATED', 'target_id' => $exam->id, 'description' => "Prüfung '{$exam->title}' wurde erstellt."]);
         return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich erstellt!');
     }
 
-    /**
-     * Zeigt die Detailansicht einer Prüfung an.
-     */
     public function show(Exam $exam)
     {
         $exam->load('trainingModule', 'questions.options');
         return view('admin.exams.show', compact('exam'));
     }
 
-    /**
-     * Zeigt das Formular zum Bearbeiten einer Prüfung an.
-     */
     public function edit(Exam $exam)
     {
         $exam->load('questions.options');
-        // Lade alle Module, damit der Admin das zugehörige Modul ändern kann.
-        $modules = TrainingModule::orderBy('name')->get(); 
+        $modules = TrainingModule::orderBy('name')->get();
         return view('admin.exams.edit', compact('exam', 'modules'));
     }
 
     /**
-     * Aktualisiert eine bestehende Prüfung mit dynamischer Validierung.
+     * Aktualisiert eine bestehende Prüfung mit robusterer Logik.
      */
     public function update(Request $request, Exam $exam)
     {
@@ -117,16 +96,15 @@ class ExamController extends Controller
             ]);
 
             $submittedQuestionIds = [];
-            foreach ($validated['questions'] as $qIndex => $questionData) {
-                // Frage aktualisieren oder erstellen
+            foreach ($validated['questions'] as $questionData) {
                 $question = $exam->questions()->updateOrCreate(
                     ['id' => $questionData['id'] ?? null],
                     ['question_text' => $questionData['question_text'], 'type' => $questionData['type']]
                 );
                 $submittedQuestionIds[] = $question->id;
 
-                // Nur wenn es keine Textfrage ist, Optionen verarbeiten
-                if ($questionData['type'] !== 'text_field') {
+                // KORRIGIERT: Prüfe, ob 'options' überhaupt existiert, bevor die Schleife gestartet wird.
+                if ($questionData['type'] !== 'text_field' && isset($questionData['options'])) {
                     $submittedOptionIds = [];
                     foreach ($questionData['options'] as $oIndex => $optionData) {
                         $isCorrect = false;
@@ -135,57 +113,37 @@ class ExamController extends Controller
                         } elseif ($questionData['type'] === 'multiple_choice') {
                             $isCorrect = isset($optionData['is_correct']) && $optionData['is_correct'] == '1';
                         }
-                        // Option aktualisieren oder erstellen
                         $option = $question->options()->updateOrCreate(
                             ['id' => $optionData['id'] ?? null],
                             ['option_text' => $optionData['option_text'], 'is_correct' => $isCorrect]
                         );
                         $submittedOptionIds[] = $option->id;
                     }
-                    // Veraltete Optionen für diese Frage löschen
                     $question->options()->whereNotIn('id', $submittedOptionIds)->delete();
                 } else {
-                    // Wenn der Typ zu Textfeld geändert wurde, alle Optionen löschen
                     $question->options()->delete();
                 }
             }
-            // Veraltete Fragen für diese Prüfung löschen
             $exam->questions()->whereNotIn('id', $submittedQuestionIds)->delete();
         });
 
-        ActivityLog::create([
-            'user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'UPDATED', 'target_id' => $exam->id,
-            'description' => "Prüfung '{$exam->title}' wurde aktualisiert.",
-        ]);
-
+        ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'UPDATED', 'target_id' => $exam->id, 'description' => "Prüfung '{$exam->title}' wurde aktualisiert."]);
         return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich aktualisiert!');
     }
 
-    /**
-     * Löscht eine Prüfung.
-     */
     public function destroy(Exam $exam)
     {
         $examTitle = $exam->title;
         $examId = $exam->id;
         $exam->delete();
 
-        ActivityLog::create([
-            'user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'DELETED', 'target_id' => $examId,
-            'description' => "Prüfung '{$examTitle}' wurde gelöscht.",
-        ]);
-
+        ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'DELETED', 'target_id' => $examId, 'description' => "Prüfung '{$examTitle}' wurde gelöscht."]);
         return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich gelöscht.');
     }
 
-
-    /**
-     * Private Hilfsfunktion zur Validierung von Prüfungsanfragen.
-     */
     private function validateExamRequest(Request $request, ?Exam $exam = null): array
     {
         $moduleIdRule = 'required|exists:training_modules,id';
-        // Beim Erstellen muss die ID einzigartig sein, beim Update muss sie auf die aktuelle Prüfung beschränkt sein
         $moduleIdRule .= $exam ? '|unique:exams,training_module_id,' . $exam->id : '|unique:exams,training_module_id';
 
         $baseRules = [
@@ -204,11 +162,7 @@ class ExamController extends Controller
         $validator->after(function ($validator) use ($request) {
             foreach ($request->input('questions', []) as $key => $question) {
                 $type = $question['type'] ?? 'single_choice';
-
-                // Für Textfelder sind keine weiteren Prüfungen nötig
-                if ($type === 'text_field') {
-                    continue;
-                }
+                if ($type === 'text_field') continue;
 
                 if (!isset($question['options']) || !is_array($question['options']) || count($question['options']) < 2) {
                     $validator->errors()->add("questions.{$key}.options", "Für eine Auswahlfrage werden mindestens 2 Antwortmöglichkeiten benötigt.");

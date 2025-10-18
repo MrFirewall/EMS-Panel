@@ -30,13 +30,11 @@
                     <div class="card card-warning card-outline sticky-top">
                         <div class="card-header"><h3 class="card-title">Prüfungsdetails</h3></div>
                         <div class="card-body">
-                            <div class="form-group">
+                           <div class="form-group">
                                 <label for="training_module_id">Zugehöriges Modul</label>
                                 <select name="training_module_id" class="form-control @error('training_module_id') is-invalid @enderror" required>
-                                    {{-- Das aktuell zugewiesene Modul wird als erstes angezeigt --}}
                                     <option value="{{ $exam->training_module_id }}">{{ $exam->trainingModule->name }}</option>
                                     @foreach($modules as $module)
-                                        {{-- Zeige nur Module an, die nicht bereits zugewiesen sind --}}
                                         @if($module->id !== $exam->training_module_id)
                                         <option value="{{ $module->id }}" {{ old('training_module_id') == $module->id ? 'selected' : '' }}>{{ $module->name }}</option>
                                         @endif
@@ -74,59 +72,7 @@
                             </div>
                         </div>
                         <div class="card-body" id="questions-container">
-                            {{-- Bestehende Fragen werden hier per Blade geladen --}}
-                             @foreach($exam->questions as $qIndex => $question)
-                                <div class="question-block card card-outline card-secondary mb-3" id="q{{ $qIndex }}">
-                                    <div class="card-header">
-                                        <h3 class="card-title">Frage {{ $qIndex + 1 }}</h3>
-                                        <div class="card-tools">
-                                            <button type="button" class="btn btn-sm btn-danger remove-question-btn"><i class="fas fa-trash"></i></button>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        {{-- Verstecktes Feld für die ID der bestehenden Frage --}}
-                                        <input type="hidden" name="questions[{{ $qIndex }}][id]" value="{{ $question->id }}">
-                                        <div class="row">
-                                            <div class="col-md-8">
-                                                <div class="form-group">
-                                                    <label>Fragentext</label>
-                                                    <textarea name="questions[{{ $qIndex }}][question_text]" class="form-control" rows="2" required>{{ $question->question_text }}</textarea>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label>Fragetyp</label>
-                                                    <select name="questions[{{ $qIndex }}][type]" class="form-control question-type-select">
-                                                        <option value="single_choice" {{ $question->type == 'single_choice' ? 'selected' : '' }}>Einzelantwort</option>
-                                                        <option value="multiple_choice" {{ $question->type == 'multiple_choice' ? 'selected' : '' }}>Mehrfachantwort</option>
-                                                        <option value="text_field" {{ $question->type == 'text_field' ? 'selected' : '' }}>Textfeld</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="options-wrapper" style="{{ $question->type == 'text_field' ? 'display: none;' : '' }}">
-                                            <label>Antwortmöglichkeiten</label>
-                                            <div class="options-container">
-                                                @foreach($question->options as $oIndex => $option)
-                                                    <div class="input-group mt-2">
-                                                        <input type="hidden" name="questions[{{ $qIndex }}][options][{{ $oIndex }}][id]" value="{{ $option->id }}">
-                                                        <div class="input-group-prepend"><div class="input-group-text">
-                                                            @if($question->type == 'single_choice')
-                                                                <input type="radio" name="questions[{{ $qIndex }}][correct_option]" value="{{ $oIndex }}" required {{ $option->is_correct ? 'checked' : '' }}>
-                                                            @else
-                                                                <input type="checkbox" name="questions[{{ $qIndex }}][options][{{ $oIndex }}][is_correct]" value="1" {{ $option->is_correct ? 'checked' : '' }}>
-                                                            @endif
-                                                        </div></div>
-                                                        <input type="text" name="questions[{{ $qIndex }}][options][{{ $oIndex }}][option_text]" class="form-control" value="{{ $option->option_text }}" required>
-                                                        <div class="input-group-append"><button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button></div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-btn" data-qindex="{{ $qIndex }}">Antwort hinzufügen</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
+                            {{-- Container für dynamische Fragen --}}
                         </div>
                         <div class="card-footer">
                             <a href="{{ route('admin.exams.index') }}" class="btn btn-secondary">Abbrechen</a>
@@ -143,81 +89,104 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let questionIndex = {{ $exam->questions->count() }};
+    let questionIndex = 0;
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
 
-    function addQuestion() {
-        const questionId = `q${questionIndex}`;
+    // KORRIGIERT: Datenquelle wird zentralisiert
+    const initialData = @json(old('questions') ?? $exam->questions->map(function ($q) {
+        $data = [
+            'id' => $q->id,
+            'question_text' => $q->question_text,
+            'type' => $q->type,
+            'options' => $q->options->map(function($o) {
+                return [ 'id' => $o->id, 'option_text' => $o->option_text, 'is_correct' => $o->is_correct];
+            })->all()
+        ];
+        if ($q->type === 'single_choice') {
+            $correctIndex = $q->options->search(fn($o) => $o->is_correct);
+            $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
+        }
+        return $data;
+    })->all());
+
+    function addQuestion(questionData = null) {
+        const qIndex = questionIndex;
+        const questionId = `q${qIndex}`;
+        const isNew = questionData === null;
+        
         const questionHtml = `
             <div class="question-block card card-outline card-secondary mb-3" id="${questionId}">
                 <div class="card-header">
-                    <h3 class="card-title">Neue Frage ${questionIndex + 1}</h3>
+                    <h3 class="card-title">${isNew ? 'Neue Frage' : `Frage ${qIndex + 1}`}</h3>
                     <div class="card-tools"><button type="button" class="btn btn-sm btn-danger remove-question-btn"><i class="fas fa-trash"></i></button></div>
                 </div>
                 <div class="card-body">
-                    <input type="hidden" name="questions[${questionIndex}][id]" value="">
+                    <input type="hidden" name="questions[${qIndex}][id]" value="${questionData?.id || ''}">
                     <div class="row">
-                        <div class="col-md-8">
-                            <div class="form-group">
-                                <label for="${questionId}_text">Fragentext</label>
-                                <textarea name="questions[${questionIndex}][question_text]" id="${questionId}_text" class="form-control" rows="2" required></textarea>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="${questionId}_type">Fragetyp</label>
-                                <select name="questions[${questionIndex}][type]" class="form-control question-type-select">
-                                    <option value="single_choice" selected>Einzelantwort</option>
-                                    <option value="multiple_choice">Mehrfachantwort</option>
-                                    <option value="text_field">Textfeld</option>
-                                </select>
-                            </div>
-                        </div>
+                        <div class="col-md-8"><div class="form-group"><label>Fragentext</label><textarea name="questions[${qIndex}][question_text]" class="form-control" rows="2" required>${questionData?.question_text || ''}</textarea></div></div>
+                        <div class="col-md-4"><div class="form-group"><label>Fragetyp</label><select name="questions[${qIndex}][type]" class="form-control question-type-select">
+                            <option value="single_choice" ${questionData?.type == 'single_choice' ? 'selected' : ''}>Einzelantwort</option>
+                            <option value="multiple_choice" ${questionData?.type == 'multiple_choice' ? 'selected' : ''}>Mehrfachantwort</option>
+                            <option value="text_field" ${questionData?.type == 'text_field' ? 'selected' : ''}>Textfeld</option>
+                        </select></div></div>
                     </div>
-                    <div class="options-wrapper">
-                        <label>Antwortmöglichkeiten (Markieren Sie die korrekte Auswahl)</label>
+                    <div class="options-wrapper" style="${questionData?.type == 'text_field' ? 'display: none;' : ''}">
+                        <label>Antwortmöglichkeiten</label>
                         <div class="options-container"></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-btn" data-qindex="${questionIndex}">Antwort hinzufügen</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-btn" data-qindex="${qIndex}">Antwort hinzufügen</button>
                     </div>
                 </div>
             </div>`;
         container.insertAdjacentHTML('beforeend', questionHtml);
-        
+
         const newQuestionBlock = document.getElementById(questionId);
         const optionsContainer = newQuestionBlock.querySelector('.options-container');
-        addOption(questionIndex, optionsContainer, 'single_choice');
-        addOption(questionIndex, optionsContainer, 'single_choice');
-
+        
+        if (questionData?.options && questionData.options.length > 0) {
+            questionData.options.forEach(optionData => addOption(qIndex, optionsContainer, questionData.type, optionData));
+        } else if (isNew) {
+            addOption(qIndex, optionsContainer, 'single_choice');
+            addOption(qIndex, optionsContainer, 'single_choice');
+        }
+        
         questionIndex++;
     }
 
-    function addOption(qIndex, optionsContainer, type) {
+    function addOption(qIndex, optionsContainer, type, optionData = null) {
         const optionIndex = optionsContainer.children.length;
         const inputType = type === 'single_choice' ? 'radio' : 'checkbox';
-        const inputName = type === 'single_choice' 
-            ? `questions[${qIndex}][correct_option]` 
-            : `questions[${qIndex}][options][${optionIndex}][is_correct]`;
-        const inputValue = type === 'single_choice' ? optionIndex : '1';
-        const required = type === 'single_choice' ? 'required' : '';
+        
+        let inputName, inputValue, checked, required;
+        if(type === 'single_choice') {
+            inputName = `questions[${qIndex}][correct_option]`;
+            inputValue = optionIndex;
+            checked = optionData ? (optionData.is_correct || optionData.checked) : (optionIndex === 0);
+            required = 'required';
+        } else {
+            inputName = `questions[${qIndex}][options][${optionIndex}][is_correct]`;
+            inputValue = '1';
+            checked = optionData ? (optionData.is_correct || optionData.checked) : false;
+            required = '';
+        }
 
         const optionHtml = `
             <div class="input-group mt-2">
-                <input type="hidden" name="questions[${qIndex}][options][${optionIndex}][id]" value="">
-                <div class="input-group-prepend">
-                    <div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${required}></div>
-                </div>
-                <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" required>
+                <input type="hidden" name="questions[${qIndex}][options][${optionIndex}][id]" value="${optionData?.id || ''}">
+                <div class="input-group-prepend"><div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${checked ? 'checked' : ''} ${required}></div></div>
+                <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" value="${optionData?.option_text || ''}" required>
                 <div class="input-group-append"><button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button></div>
             </div>`;
         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
-        
-        if (type === 'single_choice' && optionIndex === 0 && !optionsContainer.querySelector('input[type="radio"]:checked')) {
-            optionsContainer.querySelector('input[type="radio"]').checked = true;
-        }
     }
     
-    addQuestionBtn.addEventListener('click', addQuestion);
+    // Initiales Rendern des Formulars
+    initialData.forEach(qData => addQuestion(qData));
+    if (initialData.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Fügen Sie die erste Frage hinzu.</p>';
+    }
+
+    addQuestionBtn.addEventListener('click', () => addQuestion());
 
     container.addEventListener('click', function(e) {
         const removeQuestionBtn = e.target.closest('.remove-question-btn');
@@ -260,14 +229,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 options.forEach((optionGroup, oIndex) => {
                     const currentInput = optionGroup.querySelector('input[type="radio"], input[type="checkbox"]');
                     const nameParts = currentInput.name.split('[');
-                    // Find the question index reliably from the name attribute
-                    const qIndex = nameParts.find(part => !isNaN(parseInt(part)))
+                    const qIndex = nameParts.find(part => !isNaN(parseInt(part)));
                     
                     if (!qIndex) return;
 
-                    let newElement;
-                    if(newType === 'single_choice') {
-                        newElement = document.createElement('input');
+                    let newElement = document.createElement('input');
+                    if (newType === 'single_choice') {
                         newElement.type = 'radio';
                         newElement.name = `questions[${qIndex}][correct_option]`;
                         newElement.value = oIndex;
@@ -277,7 +244,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             hasCheckedRadio = true;
                         }
                     } else { // multiple_choice
-                        newElement = document.createElement('input');
                         newElement.type = 'checkbox';
                         newElement.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
                         newElement.value = '1';
