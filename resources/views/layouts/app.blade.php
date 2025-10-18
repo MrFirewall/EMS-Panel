@@ -151,6 +151,18 @@
                 </a>
             </li>
 
+            {{-- NEU: BENACHRICHTIGUNGS-DROPDOWN --}}
+            <li class="nav-item dropdown" id="notification-dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#">
+                    <i class="far fa-bell"></i>
+                    <span class="badge badge-warning navbar-badge" id="notification-count" style="display: none;"></span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" id="notification-list">
+                    {{-- Der Inhalt wird per JavaScript geladen --}}
+                    <div class="dropdown-item">Lade Benachrichtigungen...</div>
+                </div>
+            </li>
+            
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
                     <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
@@ -306,13 +318,52 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Validierungsfehler!',
-                html: `Bitte korrigiere die folgenden Fehler:<ul>${errorHtml}</ul>`,
+                html: `Bitte korrigere die folgenden Fehler:<ul>${errorHtml}</ul>`,
                 showConfirmButton: true,
                 confirmButtonText: 'Verstanden'
             });
         }
     });
 </script>
+
+{{-- NEU: JAVASCRIPT FÜR BENACHRICHTIGUNGEN --}}
+<script>
+    $(document).ready(function() {
+        const notificationCount = $('#notification-count');
+        const notificationList = $('#notification-list');
+        const fetchUrl = '{{ route("api.notifications.fetch") }}';
+
+        function fetchNotifications() {
+            $.ajax({
+                url: fetchUrl,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    // Zähler aktualisieren
+                    if (response.count > 0) {
+                        notificationCount.text(response.count).show();
+                    } else {
+                        notificationCount.hide();
+                    }
+
+                    // Dropdown-Liste mit dem HTML aus dem Partial füllen
+                    notificationList.html(response.html);
+                },
+                error: function() {
+                    console.error('Fehler beim Abrufen der Benachrichtigungen.');
+                    notificationList.html('<a href="#" class="dropdown-item">Fehler beim Laden.</a>');
+                }
+            });
+        }
+
+        // Führe die Funktion sofort beim Laden der Seite aus...
+        fetchNotifications();
+
+        // ...und dann alle 60 Sekunden erneut.
+        setInterval(fetchNotifications, 60000); 
+    });
+</script>
+
 
 @impersonating
     <div style="position: fixed; bottom: 0; width: 100%; z-index: 9999; background-color: #dc3545; color: white; text-align: center; padding: 10px; font-weight: bold;">

@@ -12,20 +12,19 @@ use App\Http\Controllers\Admin\LogController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\UserController;
-use Lab404\Impersonate\Controllers\ImpersonateController;
+use App\Http\Controllers\Admin\TrainingAssignmentController;
+use App\Http\Controllers\TrainingModuleController; // Korrekter Import
 use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
-use App\Http\Controllers\TrainingModuleController;
-use App\Http\Controllers\Admin\TrainingAssignmentController;
+use App\Http\Controllers\ExamController; // NEU
+use App\Http\Controllers\NotificationController; // NEU
+use Lab404\Impersonate\Controllers\ImpersonateController;
 
 /*
 |--------------------------------------------------------------------------
 | Öffentliche Routen & Authentifizierung
 |--------------------------------------------------------------------------
-|
-| Diese Routen sind für alle Besucher zugänglich.
-|
 */
 
 Route::get('/', function () {
@@ -38,46 +37,42 @@ Route::get('login/cfx', [LoginController::class, 'redirectToCfx'])->name('login.
 Route::get('login/cfx/callback', [LoginController::class, 'handleCfxCallback']);
 Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 
-// ID-Check (falls benötigt)
+// ID-Check
 Route::get('/check-id', [LoginController::class, 'showCheckIdPage'])->name('check-id.show');
 Route::get('/check-id/start', [LoginController::class, 'startCheckIdFlow'])->name('check-id.start');
 
+// Impersonate Routes
 Route::middleware(['web', 'auth'])->group(function() {
-    Route::get('/impersonate/take/{id}/{guardName?}', [ImpersonateController::class, 'take'])
-        ->name('impersonate');
-    Route::get('/impersonate/leave', [ImpersonateController::class, 'leave'])
-        ->name('impersonate.leave');
+    Route::get('/impersonate/take/{id}/{guardName?}', [ImpersonateController::class, 'take'])->name('impersonate');
+    Route::get('/impersonate/leave', [ImpersonateController::class, 'leave'])->name('impersonate.leave');
 });
+
 /*
 |--------------------------------------------------------------------------
 | Authentifizierte Benutzer-Routen
 |--------------------------------------------------------------------------
-|
-| Diese Routen erfordern, dass der Benutzer eingeloggt ist.
-|
 */
 
 Route::middleware('auth.cfx')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
 
-    // Standard-Ressourcen für eingeloggte Benutzer
+    // Standard-Ressourcen
     Route::resource('reports', ReportController::class);
-    // Dienststatus umschalten
+    Route::resource('citizens', CitizenController::class);
+
+    // Dienststatus
     Route::post('/duty-status/toggle', [DutyStatusController::class, 'toggle'])->name('duty.toggle');
-    // Mitarbeiter-Aktionen für Urlaub
+
+    // Urlaubsanträge
     Route::get('vacations/request', [VacationController::class, 'create'])->name('vacations.create');
     Route::post('vacations', [VacationController::class, 'store'])->name('vacations.store');
-
-    Route::resource('modules', TrainingModuleController::class);
-
-    Route::post('training/assign/{user}/{module}', [TrainingAssignmentController::class, 'assign'])->name('admin.training.assign');
     
-    // Bürgerakten verwalten
-    Route::resource('citizens', CitizenController::class);
+    // Rezepte
     Route::get('citizens/{citizen}/prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create');
     Route::post('citizens/{citizen}/prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store');
-    // Mitarbeiter-Aktionen für Bewertungen
+    
+    // Formular-System (Bewertungen & Anträge)
     Route::prefix('forms/evaluations')->name('forms.evaluations.')->group(function () {
         Route::get('/', [EvaluationController::class, 'index'])->name('index');
         Route::get('azubi', [EvaluationController::class, 'azubi'])->name('azubi');
@@ -87,7 +82,17 @@ Route::middleware('auth.cfx')->group(function () {
         Route::post('/', [EvaluationController::class, 'store'])->name('store');
         Route::get('modul-anmeldung', [EvaluationController::class, 'modulAnmeldung'])->name('modulAnmeldung');
         Route::get('pruefung-anmeldung', [EvaluationController::class, 'pruefungsAnmeldung'])->name('pruefungsAnmeldung');
-        // Die "show"-Route für Admins ist unten im Admin-Bereich definiert.
+    });
+
+    // NEU: Prüfung ablegen (öffentlich zugänglich für den Prüfling mit dem Link)
+    Route::get('/exams/take/{uuid}', [ExamController::class, 'take'])->name('exams.take');
+    Route::post('/exams/submit/{uuid}', [ExamController::class, 'submit'])->name('exams.submit');
+    Route::get('/exams/result/{uuid}', [ExamController::class, 'result'])->name('exams.result');
+
+    // NEU: API-Routen für Frontend-Interaktionen
+    Route::prefix('api')->name('api.')->group(function () {
+        Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])->name('exams.flag');
+        Route::get('/notifications', [NotificationController::class, 'fetch'])->name('notifications.fetch');
     });
 });
 
@@ -96,32 +101,30 @@ Route::middleware('auth.cfx')->group(function () {
 |--------------------------------------------------------------------------
 | Admin-Bereich
 |--------------------------------------------------------------------------
-|
-| Alle Routen hier sind durch 'auth' und 'can:admin.access' geschützt.
-| Die granulare Rechteprüfung findet in den jeweiligen Controllern statt.
-|
 */
 
 Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admin.')->group(function () {
     
     // Management-Ressourcen
     Route::resource('announcements', AnnouncementController::class);
-    Route::resource('users', UserController::class)->except(['destroy']); // 'destroy' ggf. später hinzufügen
+    Route::resource('users', UserController::class)->except(['destroy']);
     Route::resource('roles', RoleController::class)->except(['create', 'edit', 'show']);
     Route::resource('permissions', PermissionController::class)->except(['show']);
+    Route::resource('modules', TrainingModuleController::class); // NEU: Hier korrekt platziert
 
     // Spezifische Admin-Aktionen
     Route::post('users/{user}/records', [UserController::class, 'addRecord'])->name('users.records.store');
-    
-    // Log-Ansicht
     Route::get('logs', [LogController::class, 'index'])->name('logs.index');
 
     // Urlaubsverwaltung
     Route::get('vacations', [VacationController::class, 'index'])->name('vacations.index');
     Route::patch('vacations/{vacation}/status', [VacationController::class, 'updateStatus'])->name('vacations.update.status');
 
-    // Detailansicht für Bewertungen (nur für Admins hier)
-    Route::get('forms/evaluations/{evaluation}/show', [EvaluationController::class, 'show'])->name('forms.evaluations.show');
+    // Detailansicht für Formulare (Bewertungen & Anträge)
+    Route::get('forms/evaluations/{evaluation}', [EvaluationController::class, 'show'])->name('forms.evaluations.show');
 
-
+    // NEU: Aktionen für das Ausbildungsmodul
+    Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
+    Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink');
 });
+
