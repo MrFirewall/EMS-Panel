@@ -9,19 +9,12 @@ return new class extends Migration {
         Schema::table('evaluations', function (Blueprint $table) {
             $table->string('status')->default('pending')->after('evaluation_type'); // pending, processed
         });
-
-        Schema::table('exam_attempts', function (Blueprint $table) {
-            $table->uuid('uuid')->after('id')->unique();
-        });
     }
 
     public function down(): void
     {
         Schema::table('evaluations', function (Blueprint $table) {
             $table->dropColumn('status');
-        });
-        Schema::table('exam_attempts', function (Blueprint $table) {
-            $table->dropColumn('uuid');
         });
     }
 };
