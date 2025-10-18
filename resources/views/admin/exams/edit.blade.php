@@ -104,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })->all()
         );
         if ($q->type === 'single_choice') {
+            // KORRIGIERT: Die kurze Pfeilfunktion (fn) wurde durch eine volle anonyme Funktion ersetzt.
             $correctIndex = $q->options->search(function($o) { return $o->is_correct; });
             $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
         }
