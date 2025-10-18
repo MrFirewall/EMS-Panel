@@ -75,7 +75,7 @@
                             @endif
                         </div>
                         <div class="card-footer">
-                            <a href="{{ route('admin.modules.index') }}" class="btn btn-secondary">Abbrechen</a>
+                            <a href="{{ route('modules.index') }}" class="btn btn-secondary">Abbrechen</a>
                             <button type="submit" class="btn btn-success float-right"><i class="fas fa-save"></i> Prüfung speichern</button>
                         </div>
                     </div>
