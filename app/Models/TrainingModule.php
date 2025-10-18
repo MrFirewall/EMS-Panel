@@ -9,23 +9,19 @@ class TrainingModule extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'user_id',
-        'date',
-        'module_name',
-        'instructor_name',
+        'name',
+        'description',
+        'category',
     ];
 
     /**
-     * Get the user that owns the training module record.
+     * Die Benutzer, die diesem Modul zugewiesen sind.
      */
-    public function user()
+    public function users()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsToMany(User::class, 'training_module_user')
+                    ->withPivot('status', 'completed_at', 'notes') // Diese Zusatzinfos laden
+                    ->withTimestamps();
     }
 }
