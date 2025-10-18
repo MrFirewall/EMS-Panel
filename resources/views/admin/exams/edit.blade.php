@@ -93,18 +93,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
 
-    // KORRIGIERT: Datenquelle wird zentralisiert
+    // KORRIGIERT: Alte array() Syntax wird verwendet, um Blade Parsing-Fehler zu vermeiden
     const initialData = @json(old('questions') ?? $exam->questions->map(function ($q) {
-        $data = [
+        $data = array(
             'id' => $q->id,
             'question_text' => $q->question_text,
             'type' => $q->type,
             'options' => $q->options->map(function($o) {
-                return [ 'id' => $o->id, 'option_text' => $o->option_text, 'is_correct' => $o->is_correct];
+                return array( 'id' => $o->id, 'option_text' => $o->option_text, 'is_correct' => $o->is_correct);
             })->all()
-        ];
+        );
         if ($q->type === 'single_choice') {
-            $correctIndex = $q->options->search(fn($o) => $o->is_correct);
+            $correctIndex = $q->options->search(function($o) { return $o->is_correct; });
             $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
         }
         return $data;
@@ -161,12 +161,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if(type === 'single_choice') {
             inputName = `questions[${qIndex}][correct_option]`;
             inputValue = optionIndex;
-            checked = optionData ? (optionData.is_correct || optionData.checked) : (optionIndex === 0);
+            // KORRIGIERT: Prüft `correct_option` aus dem initialData Array
+            checked = optionData ? (optionData.is_correct) : (optionIndex === 0);
+            if(optionData && optionData.source === 'old') { // Logik für `old()` Daten
+                 checked = optionData.checked;
+            }
             required = 'required';
         } else {
             inputName = `questions[${qIndex}][options][${optionIndex}][is_correct]`;
             inputValue = '1';
-            checked = optionData ? (optionData.is_correct || optionData.checked) : false;
+            checked = optionData ? (optionData.is_correct) : false;
+             if(optionData && optionData.source === 'old') { // Logik für `old()` Daten
+                 checked = optionData.checked;
+            }
             required = '';
         }
 
@@ -231,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const nameParts = currentInput.name.split('[');
                     const qIndex = nameParts.find(part => !isNaN(parseInt(part)));
                     
-                    if (!qIndex) return;
+                    if (qIndex === undefined) return;
 
                     let newElement = document.createElement('input');
                     if (newType === 'single_choice') {
