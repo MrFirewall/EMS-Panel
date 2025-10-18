@@ -25,6 +25,9 @@ use App\Policies\EvaluationPolicy;
 use App\Models\ExamAttempt;
 use App\Policies\ExamAttemptPolicy;
 
+use App\Models\Exam;
+use App\Policies\ExamPolicy;
+
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
  
@@ -43,6 +46,7 @@ class AuthServiceProvider extends ServiceProvider
         TrainingModule::class => TrainingModulePolicy::class,
         Evaluation::class => EvaluationPolicy::class,
         ExamAttempt::class => ExamAttemptPolicy::class,
+        Exam::class => ExamPolicy::class,
     ];
 
     /**

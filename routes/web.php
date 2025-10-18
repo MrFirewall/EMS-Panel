@@ -128,5 +128,8 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     // NEU: Aktionen für das Ausbildungsmodul
     Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
     Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink');
+
+    // NEU: Prüfungsverwaltung
+    Route::resource('exams', \App\Http\Controllers\Admin\ExamController::class);
 });
 

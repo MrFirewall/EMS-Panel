@@ -61,8 +61,8 @@
             </li>
             @endcanany
 
-            {{-- NEU: 2. NESTED DROPDOWN: AUSBILDUNG --}}
-            @can('evaluations.create') {{-- Annahme: Wer Bewertungen erstellen kann, darf auch Anträge stellen --}}
+            {{-- 2. NESTED DROPDOWN: AUSBILDUNG --}}
+            @can('evaluations.create') 
             <li class="nav-item has-treeview {{ $isAusbildungAnmeldungActive ? 'menu-open' : '' }}">
                 <a href="#" class="nav-link {{ $isAusbildungAnmeldungActive ? 'active' : '' }}">
                     <i class="far fa-circle nav-icon"></i>
@@ -131,15 +131,28 @@
             </a>
         </li>
         @endcan
-        {{-- NEU: LINK ZUR MODULVERWALTUNG --}}
+        
+        {{-- KORRIGIERT & NEU --}}
         @can('training.view')
         <li class="nav-item">
+            {{-- KORREKTUR: Route und 'active' Logik angepasst --}}
             <a href="{{ route('modules.index') }}" class="nav-link {{ Request::routeIs('modules.*') ? 'active' : '' }}">
                 <i class="nav-icon fas fa-graduation-cap"></i>
                 <p>Ausbildungsmodule</p>
             </a>
         </li>
         @endcan
+
+        {{-- NEU: LINK ZUR PRÜFUNGSVERWALTUNG --}}
+        @can('exams.manage')
+        <li class="nav-item">
+            <a href="{{ route('admin.exams.index') }}" class="nav-link {{ Request::routeIs('admin.exams.*') ? 'active' : '' }}">
+                <i class="nav-icon fas fa-tasks"></i>
+                <p>Prüfungsverwaltung</p>
+            </a>
+        </li>
+        @endcan
+        
         @can('roles.view')
         <li class="nav-item">
             <a href="{{ route('admin.roles.index') }}" class="nav-link {{ Request::routeIs('admin.roles.*') ? 'active' : '' }}">
@@ -174,4 +187,3 @@
         @endcan
     @endcan
 </ul>
- 
