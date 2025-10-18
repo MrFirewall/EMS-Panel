@@ -20,13 +20,17 @@
 
 <div class="content">
     <div class="container-fluid">
-        {{-- Erfolgsmeldung für generierten Prüfungslink --}}
-        @if(session('exam_link'))
+        {{-- KORRIGIERTER BLOCK: Zeigt die Erfolgsmeldung und den Link an --}}
+        {{-- Prüft jetzt auf 'secure_url', die vom Controller gesendet wird --}}
+        @if(session('secure_url'))
             <div class="alert alert-success alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                <h5><i class="icon fas fa-check"></i> Prüfungslink erfolgreich generiert!</h5>
-                <p>Bitte kopieren Sie den folgenden einmaligen Link und senden Sie ihn an den Prüfling:</p>
-                <input type="text" class="form-control" value="{{ session('exam_link') }}" readonly onclick="this.select(); document.execCommand('copy'); alert('Link in die Zwischenablage kopiert!');">
+                <h5><i class="icon fas fa-check"></i> Erfolg!</h5>
+                {{-- Zeigt die Erfolgsmeldung aus dem Controller an --}}
+                <p>{{ session('success') }}</p>
+                {{-- Zeigt den Link aus 'secure_url' an --}}
+                <input type="text" class="form-control" value="{{ session('secure_url') }}" readonly onclick="this.select(); document.execCommand('copy'); this.nextElementSibling.style.display = 'inline-block';" style="cursor: pointer;">
+                <small class="text-muted" style="display: none;">Link wurde in die Zwischenablage kopiert!</small>
             </div>
         @endif
 
@@ -57,7 +61,6 @@
                                                     {{ str_replace('_', ' ', ucfirst($antrag->evaluation_type)) }}
                                                 </span>
                                             </td>
-                                            {{-- KORREKTUR 1: Nutzt die User-Relation für den Namen --}}
                                             <td>{{ $antrag->user->name ?? $antrag->target_name ?? 'Unbekannt' }}</td>
                                             <td>{{ $antrag->json_data['module_name'] ?? 'N/A' }}</td>
                                             <td>{{ $antrag->created_at->format('d.m.Y') }}</td>
@@ -106,7 +109,6 @@
                          <div class="table-responsive">
                             <table class="table table-striped table-hover">
                                 <thead>
-                                    {{-- KORREKTUR 2: Aussagekräftigere Spaltenüberschriften --}}
                                     <tr>
                                         <th>Typ</th>
                                         <th>Bewertet für</th>
@@ -123,9 +125,7 @@
                                                      {{ str_replace('_', ' ', ucfirst($evaluation->evaluation_type)) }}
                                                 </span>
                                             </td>
-                                            {{-- KORREKTUR 2: Zeigt an, wer bewertet wurde --}}
                                             <td>{{ $evaluation->user->name ?? $evaluation->target_name ?? 'N/A' }}</td>
-                                            {{-- KORREKTUR 2: Zeigt an, wer die Bewertung erstellt hat --}}
                                             <td>{{ $evaluation->evaluator->name ?? 'N/A' }}</td>
                                             <td>{{ $evaluation->created_at->format('d.m.Y') }}</td>
                                             <td>
@@ -156,4 +156,3 @@
     </div>
 </div>
 @endsection
-
