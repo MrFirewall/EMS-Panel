@@ -11,7 +11,7 @@
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('modules.index') }}">Module</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.modules.index') }}">Module</a></li>
                     <li class="breadcrumb-item active">Prüfung erstellen</li>
                 </ol>
             </div>
@@ -75,7 +75,7 @@
                             @endif
                         </div>
                         <div class="card-footer">
-                            <a href="{{ route('modules.index') }}" class="btn btn-secondary">Abbrechen</a>
+                            <a href="{{ route('admin.modules.index') }}" class="btn btn-secondary">Abbrechen</a>
                             <button type="submit" class="btn btn-success float-right"><i class="fas fa-save"></i> Prüfung speichern</button>
                         </div>
                     </div>
@@ -93,9 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
 
-    // Funktion zum Hinzufügen einer Frage
     function addQuestion() {
-        if (questionIndex === 0) {
+        if (questionIndex === 0 && !container.querySelector('.question-block')) {
             container.innerHTML = ''; // Leere die "Keine Fragen"-Nachricht
         }
 
@@ -103,95 +102,165 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionHtml = `
             <div class="question-block card card-outline card-secondary mb-3" id="${questionId}">
                 <div class="card-header">
-                    <h3 class="card-title">Frage ${questionIndex + 1}</h3>
+                    <h3 class="card-title">Neue Frage ${questionIndex + 1}</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-sm btn-danger remove-question-btn" data-target="${questionId}"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="form-group">
-                        <label for="${questionId}_text">Fragentext</label>
-                        <textarea name="questions[${questionIndex}][question_text]" id="${questionId}_text" class="form-control" rows="2" required></textarea>
+                    <input type="hidden" name="questions[${questionIndex}][id]" value="">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="${questionId}_text">Fragentext</label>
+                                <textarea name="questions[${questionIndex}][question_text]" id="${questionId}_text" class="form-control" rows="2" required></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="${questionId}_type">Fragetyp</label>
+                                <select name="questions[${questionIndex}][type]" class="form-control question-type-select">
+                                    <option value="single_choice" selected>Einzelantwort</option>
+                                    <option value="multiple_choice">Mehrfachantwort</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <label>Antwortmöglichkeiten (Markieren Sie die korrekte Antwort)</label>
-                    <div class="options-container">
-                        {{-- Optionen werden hier eingefügt --}}
+                    <div class="options-wrapper">
+                        <label>Antwortmöglichkeiten (Markieren Sie die korrekte Auswahl)</label>
+                        <div class="options-container"></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-btn" data-qindex="${questionIndex}">Antwort hinzufügen</button>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-option-btn" data-qindex="${questionIndex}">Antwort hinzufügen</button>
                 </div>
-            </div>
-        `;
+            </div>`;
         container.insertAdjacentHTML('beforeend', questionHtml);
         
-        // Füge standardmäßig 2 Antwortmöglichkeiten hinzu
-        addOption(questionIndex, document.querySelector(`#${questionId} .options-container`));
-        addOption(questionIndex, document.querySelector(`#${questionId} .options-container`));
+        const newQuestionBlock = document.getElementById(questionId);
+        const optionsContainer = newQuestionBlock.querySelector('.options-container');
+        addOption(questionIndex, optionsContainer, 'single_choice');
+        addOption(questionIndex, optionsContainer, 'single_choice');
 
         questionIndex++;
     }
 
-    // Funktion zum Hinzufügen einer Antwortmöglichkeit
-    function addOption(qIndex, optionsContainer) {
+    function addOption(qIndex, optionsContainer, type) {
         const optionIndex = optionsContainer.children.length;
+        const inputType = type === 'single_choice' ? 'radio' : 'checkbox';
+        const inputName = type === 'single_choice' 
+            ? `questions[${qIndex}][correct_option]` 
+            : `questions[${qIndex}][options][${optionIndex}][is_correct]`;
+        const inputValue = type === 'single_choice' ? optionIndex : '1';
+        const required = type === 'single_choice' ? 'required' : '';
+
         const optionHtml = `
             <div class="input-group mt-2">
+                <input type="hidden" name="questions[${qIndex}][options][${optionIndex}][id]" value="">
                 <div class="input-group-prepend">
                     <div class="input-group-text">
-                        <input type="radio" name="questions[${qIndex}][correct_option]" value="${optionIndex}" required ${optionIndex === 0 ? 'checked' : ''}>
+                        <input type="${inputType}" name="${inputName}" value="${inputValue}" ${required}>
                     </div>
                 </div>
                 <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" required>
                 <div class="input-group-append">
                     <button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button>
                 </div>
-            </div>
-        `;
+            </div>`;
         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
+        
+        if (type === 'single_choice' && optionIndex === 0) {
+            optionsContainer.querySelector('input[type="radio"]').checked = true;
+        }
     }
-
-    // Event Listeners
+    
     addQuestionBtn.addEventListener('click', addQuestion);
 
     container.addEventListener('click', function(e) {
-        // Frage entfernen
-        if (e.target.closest('.remove-question-btn')) {
-            const targetId = e.target.closest('.remove-question-btn').dataset.target;
-            document.getElementById(targetId).remove();
+        const removeQuestionBtn = e.target.closest('.remove-question-btn');
+        const addOptionBtn = e.target.closest('.add-option-btn');
+        const removeOptionBtn = e.target.closest('.remove-option-btn');
+
+        if (removeQuestionBtn) {
+            removeQuestionBtn.closest('.question-block').remove();
         }
-        // Antwortmöglichkeit hinzufügen
-        if (e.target.closest('.add-option-btn')) {
-            const btn = e.target.closest('.add-option-btn');
-            const qIndex = btn.dataset.qindex;
-            const optionsContainer = btn.previousElementSibling;
-            addOption(qIndex, optionsContainer);
+        if (addOptionBtn) {
+            const qIndex = addOptionBtn.dataset.qindex;
+            const questionBlock = addOptionBtn.closest('.question-block');
+            const type = questionBlock.querySelector('.question-type-select').value;
+            const optionsContainer = addOptionBtn.closest('.options-wrapper').querySelector('.options-container');
+            addOption(qIndex, optionsContainer, type);
         }
-        // Antwortmöglichkeit entfernen
-        if (e.target.closest('.remove-option-btn')) {
-            e.target.closest('.input-group').remove();
+        if (removeOptionBtn) {
+            removeOptionBtn.closest('.input-group').remove();
+        }
+    });
+
+    container.addEventListener('change', function(e) {
+        if(e.target.classList.contains('question-type-select')) {
+            const questionBlock = e.target.closest('.question-block');
+            const optionsContainer = questionBlock.querySelector('.options-container');
+            const newType = e.target.value;
+
+            const options = optionsContainer.querySelectorAll('.input-group');
+            
+            options.forEach((optionGroup, oIndex) => {
+                const radioOrCheckbox = optionGroup.querySelector('input[type="radio"], input[type="checkbox"]');
+                const nameParts = radioOrCheckbox.name.split('[');
+                const qIndex = nameParts[1].replace(']', '');
+
+                if(newType === 'single_choice') {
+                    radioOrCheckbox.type = 'radio';
+                    radioOrCheckbox.name = `questions[${qIndex}][correct_option]`;
+                    radioOrCheckbox.value = oIndex;
+                    radioOrCheckbox.required = true;
+                    radioOrCheckbox.checked = (oIndex === 0);
+                } else { // multiple_choice
+                    radioOrCheckbox.type = 'checkbox';
+                    radioOrCheckbox.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
+                    radioOrCheckbox.value = '1';
+                    radioOrCheckbox.required = false;
+                }
+            });
         }
     });
 
     // Wiederherstellen des Formulars bei Validierungsfehlern
     @if(old('questions'))
         const oldQuestions = @json(old('questions'));
-        oldQuestions.forEach((question, qIdx) => {
+        oldQuestions.forEach((questionData, qIdx) => {
             addQuestion();
             const currentBlock = document.getElementById(`q${qIdx}`);
-            currentBlock.querySelector('textarea').value = question.question_text;
             
-            const optionsContainer = currentBlock.querySelector('.options-container');
+            currentBlock.querySelector('textarea[name*="question_text"]').value = questionData.question_text;
+            const typeSelect = currentBlock.querySelector('select[name*="type"]');
+            typeSelect.value = questionData.type;
+
+            const optionsWrapper = currentBlock.querySelector('.options-wrapper');
+            const optionsContainer = optionsWrapper.querySelector('.options-container');
             optionsContainer.innerHTML = ''; // Leere die Standard-Optionen
 
-            question.options.forEach((option, oIdx) => {
-                addOption(qIdx, optionsContainer);
-                const currentOptionGroup = optionsContainer.children[oIdx];
-                currentOptionGroup.querySelector('input[type=text]').value = option.option_text;
-                if (question.correct_option == oIdx) {
-                    currentOptionGroup.querySelector('input[type=radio]').checked = true;
-                }
-            });
+            if (questionData.type !== 'text_field') {
+                optionsWrapper.style.display = 'block';
+                (questionData.options || []).forEach((optionData, oIdx) => {
+                    addOption(qIdx, optionsContainer, questionData.type);
+                    const currentOptionGroup = optionsContainer.children[oIdx];
+                    currentOptionGroup.querySelector('input[type=text]').value = optionData.option_text;
+                    
+                    if (questionData.type === 'single_choice') {
+                        if (questionData.correct_option == oIdx) {
+                            currentOptionGroup.querySelector('input[type=radio]').checked = true;
+                        }
+                    } else if (questionData.type === 'multiple_choice') {
+                        if (optionData.is_correct) {
+                            currentOptionGroup.querySelector('input[type=checkbox]').checked = true;
+                        }
+                    }
+                });
+            } else {
+                optionsWrapper.style.display = 'none';
+            }
         });
     @endif
 });
 </script>
 @endpush
+

@@ -24,6 +24,11 @@ class ExamPolicy
         return $user->can('exams.manage');
     }
 
+    public function view(User $user): bool
+    {
+        return $user->can('exams.manage');
+    }
+
     public function create(User $user): bool
     {
         return $user->can('exams.manage');
