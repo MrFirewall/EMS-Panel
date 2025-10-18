@@ -82,7 +82,7 @@ Route::middleware('auth.cfx')->group(function () {
         Route::get('leitstelle', [EvaluationController::class, 'leitstelle'])->name('leitstelle');
         Route::get('mitarbeiter', [EvaluationController::class, 'mitarbeiter'])->name('mitarbeiter');
         Route::post('/', [EvaluationController::class, 'store'])->name('store');
-        Route::get('modul-anmeldung', [EvaluationController::class, 'modulAnmeldung'])->name('fmodulAnmeldung');
+        Route::get('modul-anmeldung', [EvaluationController::class, 'modulAnmeldung'])->name('modulAnmeldung');
         Route::get('pruefung-anmeldung', [EvaluationController::class, 'pruefungsAnmeldung'])->name('pruefungsAnmeldung');
         // Die "show"-Route für Admins ist unten im Admin-Bereich definiert.
     });
