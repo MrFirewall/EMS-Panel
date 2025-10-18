@@ -29,7 +29,7 @@ return new class extends Migration {
         });
         Schema::create('exam_attempts', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid')->after('id')->unique()->nullable(); // UUID ist hier enthalten
+            $table->uuid('uuid')->unique()->nullable(); // KORRIGIERT: ->after('id') entfernt
             $table->foreignId('exam_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->timestamp('started_at');
