@@ -80,34 +80,85 @@ class ExamController extends Controller
     }
 
     /**
-     * Nimmt die Prüfungsantworten entgegen und wertet sie aus.
+     * Handles the submission of an exam.
      */
-    public function submit(Request $request, string $uuid)
+    public function submit(Request $request, $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
+
+        // Use the policy to authorize the action
         $this->authorize('submit', $attempt);
 
-        $validated = $request->validate(['answers' => 'required|array']);
-        $answers = $validated['answers'];
-        $totalQuestions = $attempt->exam->questions()->count();
+        $answers = $request->input('answers', []);
         $correctAnswers = 0;
+        
+        // Eager load questions and options to perform fewer database queries
+        $questions = $attempt->exam->questions()->with('options')->get()->keyBy('id');
 
-        DB::transaction(function () use ($answers, $attempt, &$correctAnswers, $totalQuestions) {
-            foreach ($answers as $questionId => $optionId) {
-                $option = Option::find($optionId);
-                $isCorrect = $option && $option->is_correct;
-                if ($isCorrect) $correctAnswers++;
+        DB::transaction(function () use ($answers, $attempt, &$correctAnswers, $questions) {
+            foreach ($answers as $questionId => $submittedAnswer) {
+                $question = $questions->get($questionId);
+                if (!$question) continue; // Skip if a submitted answer doesn't match a question
 
-                $attempt->answers()->create([
-                    'question_id' => $questionId, 'option_id' => $optionId, 'is_correct_at_time_of_answer' => $isCorrect,
-                ]);
+                switch ($question->type) {
+                    case 'single_choice':
+                        $option = $question->options->find($submittedAnswer);
+                        $isCorrect = $option && $option->is_correct;
+                        if ($isCorrect) {
+                            $correctAnswers++;
+                        }
+
+                        $attempt->answers()->create([
+                            'question_id' => $questionId,
+                            'option_id' => $submittedAnswer,
+                            'is_correct_at_time_of_answer' => $isCorrect,
+                        ]);
+                        break;
+
+                    case 'multiple_choice':
+                        // Ensure submittedAnswer is an array for safety
+                        $submittedAnswerIds = collect(is_array($submittedAnswer) ? $submittedAnswer : []);
+
+                        // Get the IDs of all correct options for this question
+                        $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
+
+                        // The answer is correct if the submitted IDs match the correct IDs exactly
+                        $isCorrect = $submittedAnswerIds->sort()->values()->is($correctOptionIds->sort()->values());
+                        if ($isCorrect) {
+                            $correctAnswers++;
+                        }
+
+                        // Save each submitted option individually for review
+                        foreach ($submittedAnswerIds as $optionId) {
+                            $attempt->answers()->create([
+                                'question_id' => $questionId,
+                                'option_id' => $optionId,
+                            ]);
+                        }
+                        break;
+
+                    case 'text_field':
+                        // Text answers are not automatically scored
+                        $attempt->answers()->create([
+                            'question_id' => $questionId,
+                            'text_answer' => $submittedAnswer,
+                        ]);
+                        break;
+                }
             }
 
-            $score = ($totalQuestions > 0) ? round(($correctAnswers / $totalQuestions) * 100) : 0;
-            $attempt->update(['completed_at' => now(), 'status' => 'submitted', 'score' => $score]);
+            // Calculate score based only on questions that can be auto-graded
+            $scorableQuestionsCount = $questions->whereIn('type', ['single_choice', 'multiple_choice'])->count();
+            $score = ($scorableQuestionsCount > 0) ? round(($correctAnswers / $scorableQuestionsCount) * 100) : 0;
+            
+            $attempt->update([
+                'completed_at' => now(),
+                'status' => 'submitted',
+                'score' => $score,
+            ]);
         });
 
-        return redirect()->route('exams.result', $attempt->uuid);
+        return redirect()->route('exams.result', ['uuid' => $attempt->uuid]);
     }
 
     /**
@@ -116,7 +167,7 @@ class ExamController extends Controller
     public function result(string $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        $this->authorize('viewResult', $attempt);
+        $this->authorize('exams.viewResult', $attempt);
         return view('exams.result', compact('attempt'));
     }
 
