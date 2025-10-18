@@ -12,5 +12,10 @@ class ExamAttemptPolicy
     {
         return $user->hasRole('Super-Admin') || $user->can('evaluations.view.all') || $user->id === $attempt->user_id;
     }
+    public function generateExamLink(User $user): bool
+    {
+
+        return $user->can('exams.generatelinks');
+    }
 }
 
