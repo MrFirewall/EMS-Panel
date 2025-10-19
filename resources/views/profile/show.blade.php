@@ -5,7 +5,7 @@
 @section('content')
     <div class="row">
         {{-- Linke Spalte: Hauptprofil, Stammdaten & Metadaten --}}
-        <div class="col-md-4">
+        <div class="col-md-3">
 
             {{-- Haupt-Stammdaten mit Profilbild --}}
             <div class="card card-primary card-outline">
@@ -46,7 +46,7 @@
         </div>
 
         {{-- Rechte Spalte: Detailinformationen in Tabs --}}
-        <div class="col-md-8">
+        <div class="col-md-9">
             <div class="card">
                 <div class="card-header p-2">
                     <ul class="nav nav-pills">
