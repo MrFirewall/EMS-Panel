@@ -3,13 +3,13 @@
 
 @section('content')
 <div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0"><i class="fas fa-list-alt nav-icon"></i> Alle Prüfungsversuche</h1>
-            </div>
-        </div>
-    </div>
+<div class="container-fluid">
+<div class="row mb-2">
+<div class="col-sm-6">
+<h1 class="m-0"><i class="fas fa-list-alt nav-icon"></i> Alle Prüfungsversuche</h1>
+</div>
+</div>
+</div>
 </div>
 
 <div class="content">
@@ -28,7 +28,7 @@
                             <p class="mb-0 mt-2">
                                 Link zum manuellen Kopieren: 
                                 <code id="secure-link">{{ session('secure_url') }}</code>
-                                <button class="btn btn-xs btn-outline-secondary ml-2" onclick="copyLink()">
+                                <button type="button" class="btn btn-xs btn-outline-secondary ml-2" onclick="copyLink()">
                                     <i class="fas fa-copy"></i> Kopieren
                                 </button>
                             </p>
@@ -168,3 +168,33 @@
 
 
 @endsection
+
+@push('scripts')
+
+<script>
+// Funktion zum Kopieren des Links (für die manuelle Zwischenablage)
+function copyLink() {
+const linkElement = document.getElementById('secure-link');
+if (linkElement) {
+// Führt den Kopiervorgang aus
+navigator.clipboard.writeText(linkElement.textContent.trim())
+.then(() => {
+alert('Prüfungslink wurde in die Zwischenablage kopiert!');
+})
+.catch(err => {
+// Fallback, falls navigator.clipboard nicht verfügbar ist (z.B. in älteren Browsern oder bestimmten Umgebungen)
+const tempInput = document.createElement('textarea');
+tempInput.value = linkElement.textContent.trim();
+tempInput.style.position = 'fixed';
+tempInput.style.opacity = '0';
+document.body.appendChild(tempInput);
+tempInput.select();
+document.execCommand('copy');
+document.body.removeChild(tempInput);
+alert('Prüfungslink wurde in die Zwischenablage kopiert (Fallback)!');
+});
+}
+}
+</script>
+
+@endpush
