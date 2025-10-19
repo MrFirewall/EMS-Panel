@@ -37,26 +37,9 @@ class ExamAttemptPolicy
      */
     public function viewResult(User $user, ExamAttempt $attempt): bool
     {
-        // DEBUG-LOGIK START
-        $debugData = [
-            '*** POLICY DEBUG ***' => 'viewResult Check',
-            '1. Angemeldete User ID ($user->id)' => $user->id,
-            '2. Attempt User ID ($attempt->user_id)' => $attempt->user_id,
-            '3. IDs stimmen überein (==)' => ($user->id == $attempt->user_id),
-            '4. IDs stimmen überein (===)' => ($user->id === $attempt->user_id),
-            '5. Ist Super-Admin ($user->hasRole)' => $user->hasRole('Super-Admin'),
-            '6. Kann alles einsehen ($user->can)' => $user->can('evaluations.view.all'),
-        ];
-        
-        // Stoppt die Ausführung und zeigt die Variablen.
-        // DIESE ZEILE MUSS ENTFERNT WERDEN, SOBALD DER FEHLER GEFUNDEN WURDE!
-        dd($debugData); 
-        
-        // DEBUG-LOGIK ENDE
-        
-        // Original-Return-Logik (wird von dd() blockiert)
-        return $user->hasRole('Super-Admin') || $user->can('evaluations.view.all') || $user->id === $attempt->user_id;
+        return $user->hasRole('Super-Admin') || $user->can('evaluations.view.all') || $user->id == $attempt->user_id;
     }
+
     /**
      * Determine whether an admin/authorized user can generate a new exam link.
      */
