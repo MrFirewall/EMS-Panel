@@ -1,14 +1,14 @@
 <div class="card card-primary card-outline mb-4">
 <div class="card-header">
-<h3 class="card-title"><i class="fas fa-award me-2"></i> Prüfungen & Modulabschlüsse</h3>
+<h3 class="card-title"><i class="fas fa-file-signature me-2"></i> Prüfungsergebnisse & Einstufungen</h3>
 </div>
 <div class="card-body p-0">
 <table class="table table-sm mb-0 table-striped">
 <thead>
 <tr>
 <th>Typ</th>
-<th>Modul/Titel</th>
-<th>Ergebnis</th>
+<th>Titel</th>
+<th>Status</th>
 <th>Score</th>
 <th>Abgeschlossen</th>
 </tr>
@@ -44,7 +44,6 @@ $statusText = 'Zur Bewertung';
                     <td><span class="badge {{ $statusColor }} text-sm">Prüfung</span></td>
                     <td>
                         <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
-                        <small class="text-muted d-block">{{ $attempt->exam->trainingModule->name ?? 'Modul gelöscht' }}</small>
                     </td>
                     <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
                     <td>{{ $attempt->score ?? 0 }}%</td>
