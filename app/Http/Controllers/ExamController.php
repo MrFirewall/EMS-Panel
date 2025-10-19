@@ -194,7 +194,7 @@ class ExamController extends Controller
     public function finalizeEvaluation(Request $request, string $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        $this->authorize('finalizeEvaluation', $attempt); 
+        $this->authorize('setEvaluated', $attempt); 
 
         $validated = $request->validate([
             'final_score' => 'required|integer|min:0|max:100',
