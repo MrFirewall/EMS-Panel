@@ -32,17 +32,29 @@
                         <input type="hidden" name="evaluation_date" value="{{ date('Y-m-d') }}">
                         <input type="hidden" name="period" value="N/A">
 
-                        @if($modules->isEmpty())
+                        @php
+                            // Filtert Module, deren Status die Prüfungsreife impliziert (z.B. in Ausbildung)
+                            // Filtern Sie direkt nach dem Status der Pivot-Tabelle
+                            $availableModules = $modules->filter(function($module) {
+                                $status = $module->pivot->status;
+                                return $status === 'in_ausbildung' || $status === 'nicht_bestanden';
+                            });
+                        @endphp
+
+                        @if($availableModules->isEmpty())
                             <div class="alert alert-warning">
-                                Du bist derzeit für keine Module angemeldet, für die eine Prüfung abgelegt werden könnte.
+                                Du bist derzeit für keine Module angemeldet, **deren Ausbildung abgeschlossen ist** oder **deren Prüfung wiederholt werden muss**.
                             </div>
                         @else
                             <div class="form-group">
                                 <label for="target_module_id">Prüfung für Modul</label>
                                 <select name="target_module_id" id="target_module_id" class="form-control @error('target_module_id') is-invalid @enderror" required>
                                     <option value="">Bitte auswählen...</option>
-                                    @foreach($modules as $module)
-                                        <option value="{{ $module->id }}">{{ $module->name }} (Aktueller Status: {{ str_replace('_', ' ', ucfirst($module->pivot->status)) }})</option>
+                                    @foreach($availableModules as $module)
+                                        <option value="{{ $module->id }}">
+                                            {{ $module->name }} 
+                                            (Aktueller Status: {{ str_replace('_', ' ', ucfirst($module->pivot->status)) }})
+                                        </option>
                                     @endforeach
                                 </select>
                                 @error('target_module_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -58,7 +70,7 @@
                     <!-- /.card-body -->
                     <div class="card-footer">
                         <a href="{{ route('forms.evaluations.index') }}" class="btn btn-secondary">Abbrechen</a>
-                        <button type="submit" class="btn btn-primary float-right" @if($modules->isEmpty()) disabled @endif>
+                        <button type="submit" class="btn btn-primary float-right" @if($availableModules->isEmpty()) disabled @endif>
                             Prüfung beantragen
                         </button>
                     </div>
@@ -68,5 +80,3 @@
     </div>
 </div>
 @endsection
-
- 
