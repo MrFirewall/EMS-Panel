@@ -3,7 +3,7 @@
     $isEvaluationsActive = Request::routeIs('forms.evaluations.azubi', 'forms.evaluations.praktikant', 'forms.evaluations.mitarbeiter', 'forms.evaluations.leitstelle', 'forms.evaluations.index');
     $isAusbildungAnmeldungActive = Request::routeIs('forms.evaluations.modulAnmeldung', 'forms.evaluations.pruefungsAnmeldung');
     
-    // Neue Logik zur Prüfung, ob eine Prüfungs-Route aktiv ist
+    // Neue Logik zur Prüfung, ob eine Prüfungs-Route aktiv ist (WICHTIG: Prüft auf beide Sub-Gruppen)
     $isExamManagementActive = Request::routeIs('admin.exams.index', 'admin.exams.show', 'admin.exams.create', 'admin.exams.edit') || Request::routeIs('admin.exams.attempts.*');
     
     // Haupt-Dropdown ist aktiv, wenn eine seiner Unterkategorien oder ein direkter Link aktiv ist
