@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\ServiceRecord;
 use App\Models\Evaluation;
+use App\Models\ExamAttempt; // NEU: Importiert, um Prüfungsversuche zu laden
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
@@ -71,7 +72,7 @@ class UserController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:users.view')->only('index');
+        $this->middleware('can:users.view')->only('index', 'show'); // 'show' für die Admin-Ansicht hinzufügen
         $this->middleware('can:users.create')->only(['create', 'store']);
         $this->middleware('can:users.edit')->only(['edit', 'update']);
         $this->middleware('can:users.manage.record')->only('addRecord');
@@ -208,54 +209,68 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Mitarbeiter erfolgreich angelegt.');
     }
     
+    /**
+     * Zeigt das Profil eines spezifischen Benutzers (Admin-Ansicht).
+     * Der View 'profile.show' wird hier wiederverwendet.
+     */
     public function show(User $user)
     {
+        // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
         $user->load([
             'examinations', 
             'trainingModules', 
             'vacations',
-            'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
+            'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(), 
         ]);
         
+        // 1. Prüfungsversuche laden (Behebt den 'Undefined variable $examAttempts' Fehler)
+        $examAttempts = ExamAttempt::where('user_id', $user->id)
+                                    ->with('exam.trainingModule')
+                                    ->latest('completed_at')
+                                    ->get();
+                                    
+        // 2. Weitere Variablen laden, die der View erwartet (Stunden, Records, Counts)
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
-        $evaluationCounts = $this->calculateEvaluationCounts($user);
+        $evaluationCounts = $this->calculateEvaluationCounts($user); 
 
-        // NEU: Rufe die Stundenberechnung aus dem User-Model auf
+        // Annahme: Diese Methoden existieren im User Model
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
-        // NEU: Übergib die $hourData an die View
-        return view('profile.show', compact('user','serviceRecords','evaluationCounts', 'hourData', 'weeklyHours'));
+
+
+        return view('profile.show', compact( // WICHTIG: Nutzt den allgemeinen 'profile.show' View
+            'user', 
+            'serviceRecords', 
+            'examAttempts', // VARIABLE HINZUGEFÜGT
+            'evaluationCounts',
+            'hourData',
+            'weeklyHours'
+        ));
     }
 
     private function calculateEvaluationCounts(User $user): array
     {
-        $currentUserId = $user->id;
-        $evaluatorId = Auth::id();
-
-        $counts = ['verfasst' => [], 'erhalten' => [], 'gesamt' => []];
         $typeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle'];
-        
+        $counts = ['verfasst' => [], 'erhalten' => []];
+
+        // Zählungen des Profilbesitzers ($user) - ERHALTEN
+        $receivedCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
+                                    ->where('user_id', $user->id)
+                                    ->whereIn('evaluation_type', $typeLabels)
+                                    ->groupBy('evaluation_type')
+                                    ->pluck('count', 'evaluation_type');
+
+        // Zählungen des angemeldeten Benutzers (Auth::user()) - VERFASST
+        $authoredCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
+                                    ->where('evaluator_id', Auth::id())
+                                    ->whereIn('evaluation_type', $typeLabels)
+                                    ->groupBy('evaluation_type')
+                                    ->pluck('count', 'evaluation_type');
+
+        // Initialisiere mit 0 und fülle die Ergebnisse auf
         foreach ($typeLabels as $type) {
-            $counts['verfasst'][$type] = 0;
-            $counts['erhalten'][$type] = 0;
-        }
-        
-        $allEvaluations = Evaluation::where('user_id', $currentUserId)
-                                        ->orWhere('evaluator_id', $evaluatorId)
-                                        ->get();
-
-        foreach ($allEvaluations as $evaluation) {
-            $type = $evaluation->evaluation_type;
-
-            if (!isset($counts['verfasst'][$type])) continue;
-
-            if ($evaluation->user_id === $currentUserId) {
-                $counts['erhalten'][$type]++;
-            }
-
-            if ($evaluation->evaluator_id === $evaluatorId) {
-                $counts['verfasst'][$type]++;
-            }
+            $counts['erhalten'][$type] = $receivedCounts->get($type, 0);
+            $counts['verfasst'][$type] = $authoredCounts->get($type, 0);
         }
         
         return $counts;
@@ -344,7 +359,7 @@ class UserController extends Controller
         }
         
         ActivityLog::create([
-            'user_id' => Auth::id(), 'log_type' => 'USER', 'action' => 'UPDATED',
+            'user_id' => Auth::id(), 'log_type' => 'USER_RECORD', 'action' => 'UPDATED',
             'target_id' => $user->id, 'description' => $description,
         ]);
 
