@@ -71,6 +71,9 @@
                                 @php
                                     // Logik zur Bestimmung, ob die Antwort korrekt war
                                     $userAnswersForQuestion = $attempt->answers->where('question_id', $question->id);
+                                    if ($question->type === 'text_field') {
+            dd($userAnswersForQuestion); 
+        }
                                     $isCorrect = false;
 
                                     if ($question->type === 'single_choice') {
