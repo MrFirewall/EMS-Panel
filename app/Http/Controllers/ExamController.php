@@ -8,6 +8,7 @@ use App\Models\ExamAttempt;
 use App\Models\Option;
 use App\Models\TrainingModule;
 use App\Models\User;
+use App\Models\TrainingModuleUser; // HINZUGEFÜGT
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -72,7 +73,8 @@ class ExamController extends Controller
         }
         
         if ($attempt->status !== 'in_progress') {
-             return redirect()->route('exams.result', $attempt->uuid)->with('info', 'Diese Prüfung wurde bereits abgeschlossen.');
+             // PRÜFUNG IST ABGESCHLOSSEN, WEITERLEITUNG AUF DIE GENERISCHE BESTÄTIGUNGSSEITE
+             return redirect()->route('exams.submitted')->with('info', 'Diese Prüfung wurde bereits abgeschlossen und zur Bewertung eingereicht.');
         }
 
         $attempt->load('exam.questions.options');
@@ -123,8 +125,7 @@ class ExamController extends Controller
                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
 
                         // The answer is correct if the submitted IDs match the correct IDs exactly
-                        // KORRIGIERT: Verwenden des nicht-strengen Vergleichs (==) für Array-Werte
-                        $isCorrect = $submittedAnswerIds->sort()->values()->all() == $correctOptionIds->sort()->values()->all();
+                        $isCorrect = $submittedAnswerIds->sort()->values()->all() == $correctOptionIds->sort()->values()->all(); 
                         if ($isCorrect) {
                             $correctAnswers++;
                         }
@@ -165,17 +166,68 @@ class ExamController extends Controller
                 'score' => $score,
             ]);
         });
-
-        return redirect()->route('exams.result', ['uuid' => $attempt->uuid]);
+        
+        // ZIEL 1: Leitet den Prüfling auf die generische Bestätigungsseite um
+        return redirect()->route('exams.submitted');
     }
 
     /**
-     * Zeigt die Ergebnisseite nach Abschluss an.
+     * ZEIGT die Ergebnisseite an - NUR FÜR TRAINER/ADMINS (Ziel 2)
      */
     public function result(string $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        $this->authorize('viewResult', $attempt);
+        // Stellt sicher, dass NUR Admins oder der Besitzer die Ergebnisseite sehen
+        $this->authorize('viewResult', $attempt); 
+        
+        // Wenn der User kein Admin ist, leiten wir ihn trotzdem auf die generische Seite um.
+        if (Auth::id() !== $attempt->user_id && !$attempt->user->can('evaluations.view.all')) {
+            return redirect()->route('exams.submitted')->with('error', 'Die Ergebnisseite ist nur für Prüfer zugänglich.');
+        }
+
         return view('exams.result', compact('attempt'));
+    }
+    
+    /**
+     * NEU: Schließt die Bewertung ab und setzt den Modulstatus (Ziel 3)
+     */
+    public function finalizeEvaluation(Request $request, string $uuid)
+    {
+        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
+        $this->authorize('finalizeEvaluation', $attempt); 
+
+        $validated = $request->validate([
+            'final_score' => 'required|integer|min:0|max:100',
+            'status_result' => 'required|in:bestanden,nicht_bestanden',
+        ]);
+        
+        $isPassed = $validated['status_result'] === 'bestanden';
+
+        DB::transaction(function () use ($attempt, $validated, $isPassed) {
+            // 1. Prüfungsversuch auf finalen Status setzen
+            $attempt->update([
+                'score' => $validated['final_score'],
+                'status' => 'evaluated',
+            ]);
+
+            // 2. Zugehöriges Trainingsmodul-User-Mapping aktualisieren
+            $moduleUser = TrainingModuleUser::where('user_id', $attempt->user_id)
+                                            ->where('training_module_id', $attempt->exam->training_module_id)
+                                            ->first();
+
+            if ($moduleUser) {
+                $moduleUser->update([
+                    'status' => $validated['status_result'],
+                    'completed_at' => now()->toDateString(),
+                    'notes' => 'Abgeschlossen durch Prüfung: ' . $attempt->exam->title,
+                ]);
+            }
+            
+            // Logeintrag (optional, aber gut)
+            $actionDesc = "Prüfung '{$attempt->exam->title}' von {$attempt->user->name} wurde als '{$validated['status_result']}' bewertet. Score: {$validated['final_score']}%";
+            // ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'EVALUATED', 'target_id' => $attempt->id, 'description' => $actionDesc]);
+        });
+
+        return redirect()->route('admin.exams.attempts.index')->with('success', "Prüfung finalisiert: Status für {$attempt->user->name} auf '{$validated['status_result']}' gesetzt.");
     }
 }

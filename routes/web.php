@@ -87,8 +87,14 @@ Route::middleware('auth.cfx')->group(function () {
     // NEU: Prüfung ablegen (öffentlich zugänglich für den Prüfling mit dem Link)
     Route::get('/exams/take/{uuid}', [ExamController::class, 'take'])->name('exams.take');
     Route::post('/exams/submit/{uuid}', [ExamController::class, 'submit'])->name('exams.submit');
+    
+    // NEU: Endpunkt für Prüfungsresultate
+    // 1. NEU: Generische Bestätigungsseite nach Submit (für jeden User)
+    Route::get('/exams/submitted', fn() => view('exams.submitted'))->name('exams.submitted');
+    // 2. NEU: Ergebnisseite NUR FÜR ADMINS/TRAINER (muss durch Policy geschützt werden)
     Route::get('/exams/result/{uuid}', [ExamController::class, 'result'])->name('exams.result');
-    Route::post('/exams/flag/{attempt:uuid}', [ExamController::class, 'flagAttempt'])->name('exams.flag');
+    // 3. NEU: Finale Bewertung durch Admin
+    Route::post('/exams/finalize/{uuid}', [ExamController::class, 'finalizeEvaluation'])->name('exams.finalize');
     
     // NEU: API-Routen für Frontend-Interaktionen
     Route::prefix('api')->name('api.')->group(function () {
@@ -130,7 +136,7 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
     Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink');
 
-    // NEU: Prüfungs-Verwaltung (CRUD der Prüfungsdefinitionen)
+    // NEU: Prüfungsverwaltung
     Route::resource('exams', \App\Http\Controllers\Admin\ExamController::class);
     
     // NEU: Prüfungsversuch-Verwaltung (ExamAttempt Management)
