@@ -3,6 +3,9 @@
     $isEvaluationsActive = Request::routeIs('forms.evaluations.azubi', 'forms.evaluations.praktikant', 'forms.evaluations.mitarbeiter', 'forms.evaluations.leitstelle', 'forms.evaluations.index');
     $isAusbildungAnmeldungActive = Request::routeIs('forms.evaluations.modulAnmeldung', 'forms.evaluations.pruefungsAnmeldung');
     
+    // Neue Logik zur Prüfung, ob eine Prüfungs-Route aktiv ist
+    $isExamManagementActive = Request::routeIs('admin.exams.index', 'admin.exams.show', 'admin.exams.create', 'admin.exams.edit') || Request::routeIs('admin.exams.attempts.*');
+    
     // Haupt-Dropdown ist aktiv, wenn eine seiner Unterkategorien oder ein direkter Link aktiv ist
     $isFormsActive = $isEvaluationsActive || $isAusbildungAnmeldungActive || Request::routeIs('vacations.create');
 @endphp
@@ -132,10 +135,8 @@
         </li>
         @endcan
         
-        {{-- KORRIGIERT & NEU --}}
         @can('training.view')
         <li class="nav-item">
-            {{-- KORREKTUR: Route und 'active' Logik angepasst --}}
             <a href="{{ route('modules.index') }}" class="nav-link {{ Request::routeIs('modules.*') ? 'active' : '' }}">
                 <i class="nav-icon fas fa-graduation-cap"></i>
                 <p>Ausbildungsmodule</p>
@@ -143,13 +144,32 @@
         </li>
         @endcan
 
-        {{-- NEU: LINK ZUR PRÜFUNGSVERWALTUNG --}}
+        {{-- PRÜFUNGSVERWALTUNG DROPDOWN --}}
         @can('exams.manage')
-        <li class="nav-item">
-            <a href="{{ route('admin.exams.index') }}" class="nav-link {{ Request::routeIs('admin.exams.*') ? 'active' : '' }}">
+        <li class="nav-item has-treeview {{ $isExamManagementActive ? 'menu-open' : '' }}">
+            <a href="#" class="nav-link {{ $isExamManagementActive ? 'active' : '' }}">
                 <i class="nav-icon fas fa-tasks"></i>
-                <p>Prüfungsverwaltung</p>
+                <p>
+                    Prüfungsmanagement
+                    <i class="right fas fa-angle-left"></i>
+                </p>
             </a>
+            <ul class="nav nav-treeview">
+                {{-- 1. Link: CRUD für Prüfungsdefinitionen --}}
+                <li class="nav-item">
+                    <a href="{{ route('admin.exams.index') }}" class="nav-link {{ Request::routeIs('admin.exams.index', 'admin.exams.show', 'admin.exams.create', 'admin.exams.edit') ? 'active' : '' }}">
+                        <i class="far fa-circle nav-icon"></i>
+                        <p>Prüfungsdefinitionen</p>
+                    </a>
+                </li>
+                {{-- 2. Link: Verwaltung der Versuche (NEU) --}}
+                <li class="nav-item">
+                    <a href="{{ route('admin.exams.attempts.index') }}" class="nav-link {{ Request::routeIs('admin.exams.attempts.*') ? 'active' : '' }}">
+                        <i class="far fa-circle nav-icon"></i>
+                        <p>Prüfungsversuche</p>
+                    </a>
+                </li>
+            </ul>
         </li>
         @endcan
         
