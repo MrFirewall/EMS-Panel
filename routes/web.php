@@ -140,5 +140,11 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
         
         // Setzt den Prüfungsversuch zurück (löscht Antworten und setzt Status auf 'in_progress')
         Route::post('/{attempt}/reset', [\App\Http\Controllers\Admin\ExamController::class, 'resetAttempt'])->name('reset.attempt');
+        
+        // Manuelle Bewertung durch Admin
+        Route::post('/{attempt}/evaluate', [\App\Http\Controllers\Admin\ExamController::class, 'setEvaluated'])->name('set.evaluated');
+        
+        // Link erneut senden
+        Route::post('/{attempt}/send-link', [\App\Http\Controllers\Admin\ExamController::class, 'sendLink'])->name('send.link');
     });
 });

@@ -55,4 +55,16 @@ class ExamAttemptPolicy
         // Erlaube nur Super-Admins oder Benutzern mit der passenden Berechtigung
         return $user->hasRole('Super-Admin') || $user->can('exams.manage'); 
     }
+
+    // NEU: Berechtigung, einen Versuch manuell zu bewerten
+    public function setEvaluated(User $user, ExamAttempt $attempt): bool
+    {
+        return $user->hasRole('Super-Admin') || $user->can('exams.manage');
+    }
+
+    // NEU: Berechtigung, den Link manuell zu senden (Admin-Funktion)
+    public function sendLink(User $user, ExamAttempt $attempt): bool
+    {
+        return $user->hasRole('Super-Admin') || $user->can('exams.generatelinks');
+    }
 }
