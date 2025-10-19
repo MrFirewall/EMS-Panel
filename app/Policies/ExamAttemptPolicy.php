@@ -2,6 +2,7 @@
 namespace App\Policies;
 use App\Models\ExamAttempt;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class ExamAttemptPolicy
 {
@@ -37,7 +38,27 @@ class ExamAttemptPolicy
      */
     public function viewResult(User $user, ExamAttempt $attempt): bool
     {
-        return $user->hasRole('Super-Admin') || $user->can('evaluations.view.all') || $user->id == $attempt->user_id;
+        // Debug-Ausgabe: Wer versucht zuzugreifen?
+        Log::info('POLICY DEBUG: ViewResult Check Started.');
+        Log::info('User ID: ' . $user->id . ' | Attempt User ID: ' . $attempt->user_id);
+        
+        // 1. Bedingung: Ist der angemeldete User der Besitzer des Versuchs?
+        $isOwner = ($user->id == $attempt->user_id);
+        Log::info('Check 1 (Is Owner): ' . ($isOwner ? 'TRUE' : 'FALSE'));
+        
+        // 2. Bedingung: Hat der User die Super-Admin Rolle?
+        $isSuperAdmin = $user->hasRole('Super-Admin');
+        Log::info('Check 2 (Super-Admin Role Found): ' . ($isSuperAdmin ? 'TRUE' : 'FALSE'));
+        
+        // 3. Bedingung: Hat der User die Berechtigung 'evaluations.view.all'?
+        $canViewAll = $user->can('evaluations.view.all');
+        Log::info('Check 3 (Can View All Evals): ' . ($canViewAll ? 'TRUE' : 'FALSE'));
+
+        $result = $isSuperAdmin || $canViewAll || $isOwner;
+        
+        Log::info('FINAL POLICY RESULT: ' . ($result ? 'ALLOWED' : 'DENIED'));
+
+        return $result;
     }
 
     /**
