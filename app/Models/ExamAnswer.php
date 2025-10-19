@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 class ExamAnswer extends Model
 {
     use HasFactory;
-    protected $fillable = ['exam_attempt_id', 'question_id', 'option_id', 'is_correct_at_time_of_answer'];
+    protected $fillable = ['exam_attempt_id', 'question_id', 'option_id', 'text_answer', 'is_correct_at_time_of_answer'];
     protected $casts = ['is_correct_at_time_of_answer' => 'boolean'];
 
     public function attempt() { return $this->belongsTo(ExamAttempt::class); }
