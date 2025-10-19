@@ -20,10 +20,13 @@ $pivot = $module->pivot;
                     $statusColor = 'bg-secondary';
                     if ($pivot->status === 'bestanden') {
                         $statusColor = 'bg-success';
+                        $statusText = 'Bestanden';
                     } elseif ($pivot->status === 'nicht_bestanden') {
                         $statusColor = 'bg-danger';
+                        $statusText = 'nicht Bestanden';
                     } elseif ($pivot->status === 'in_ausbildung') {
                         $statusColor = 'bg-info';
+                        $statusText = 'in Ausbildung';
                     }
                 @endphp
                 <tr>
