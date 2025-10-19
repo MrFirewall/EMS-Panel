@@ -8,7 +8,7 @@ use App\Models\ExamAttempt;
 use App\Models\Option;
 use App\Models\TrainingModule;
 use App\Models\User;
-use App\Models\TrainingModuleUser; // HINZUGEFÜGT
+// use App\Models\TrainingModuleUser; // <--- ENTFERNT: Dieses Model existiert nicht
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -181,7 +181,7 @@ class ExamController extends Controller
         $this->authorize('viewResult', $attempt); 
         
         // Wenn der User kein Admin ist, leiten wir ihn trotzdem auf die generische Seite um.
-        if (Auth::id() !== $attempt->user_id && !$attempt->user->can('evaluations.view.all')) {
+        if (Auth::id() !== $attempt->user_id && !Auth::user()->hasRole('Super-Admin') && !Auth::user()->can('evaluations.view.all')) {
             return redirect()->route('exams.submitted')->with('error', 'Die Ergebnisseite ist nur für Prüfer zugänglich.');
         }
 
@@ -194,6 +194,8 @@ class ExamController extends Controller
     public function finalizeEvaluation(Request $request, string $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
+        
+        // KORREKTUR DES FEHLERS: Policy muss 'setEvaluated' aufrufen
         $this->authorize('setEvaluated', $attempt); 
 
         $validated = $request->validate([
@@ -211,12 +213,11 @@ class ExamController extends Controller
             ]);
 
             // 2. Zugehöriges Trainingsmodul-User-Mapping aktualisieren
-            $moduleUser = TrainingModuleUser::where('user_id', $attempt->user_id)
-                                            ->where('training_module_id', $attempt->exam->training_module_id)
-                                            ->first();
-
-            if ($moduleUser) {
-                $moduleUser->update([
+            // KORRIGIERTE LOGIK: Aktualisiere die Pivot-Tabelle über die users()-Relation des Moduls
+            $module = $attempt->exam->trainingModule;
+            
+            if ($module) {
+                 $module->users()->updateExistingPivot($attempt->user_id, [
                     'status' => $validated['status_result'],
                     'completed_at' => now()->toDateString(),
                     'notes' => 'Abgeschlossen durch Prüfung: ' . $attempt->exam->title,
@@ -224,8 +225,8 @@ class ExamController extends Controller
             }
             
             // Logeintrag (optional, aber gut)
-            $actionDesc = "Prüfung '{$attempt->exam->title}' von {$attempt->user->name} wurde als '{$validated['status_result']}' bewertet. Score: {$validated['final_score']}%";
-            // ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'EVALUATED', 'target_id' => $attempt->id, 'description' => $actionDesc]);
+             $actionDesc = "Prüfung '{$attempt->exam->title}' von {$attempt->user->name} wurde als '{$validated['status_result']}' bewertet. Score: {$validated['final_score']}%";
+             ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'EVALUATED', 'target_id' => $attempt->id, 'description' => $actionDesc]);
         });
 
         return redirect()->route('admin.exams.attempts.index')->with('success', "Prüfung finalisiert: Status für {$attempt->user->name} auf '{$validated['status_result']}' gesetzt.");
