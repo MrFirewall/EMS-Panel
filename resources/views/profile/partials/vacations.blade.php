@@ -3,7 +3,7 @@
         <h3 class="card-title"><i class="fas fa-plane me-2"></i> Urlaub / Abwesenheiten</h3>
     </div>
     <div class="card-body p-0">
-        <table class="table table-sm mb-0 small table-striped">
+        <table class="table table-sm mb-0 table-striped">
             <thead>
                 <tr>
                     <th>Von</th>
