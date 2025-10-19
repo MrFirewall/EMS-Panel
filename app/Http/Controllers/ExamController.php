@@ -185,7 +185,7 @@ public function result(string $uuid)
         ]);
         // ENDE DEBUG
 
-        $this->authorize('exams.viewResult', $attempt);
+        $this->authorize('viewResult', $attempt);
         return view('exams.result', compact('attempt'));
     }
 }
