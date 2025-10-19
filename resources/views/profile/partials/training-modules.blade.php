@@ -16,32 +16,36 @@
 @php
 // Holt den Pivot-Status
 $pivot = $module->pivot;
+$statusColor = 'bg-secondary';
+$statusText = $pivot->status; // Standard: Datenbankwert
 
-                    $statusColor = 'bg-secondary';
                     if ($pivot->status === 'bestanden') {
                         $statusColor = 'bg-success';
                         $statusText = 'Bestanden';
                     } elseif ($pivot->status === 'nicht_bestanden') {
                         $statusColor = 'bg-danger';
-                        $statusText = 'nicht Bestanden';
+                        $statusText = 'Nicht bestanden';
                     } elseif ($pivot->status === 'in_ausbildung') {
                         $statusColor = 'bg-info';
-                        $statusText = 'in Ausbildung';
+                        $statusText = 'In Ausbildung';
+                    } elseif ($pivot->status === 'angemeldet') {
+                        $statusColor = 'bg-warning';
+                        $statusText = 'Angemeldet';
                     }
                 @endphp
-                <tr>
-                    <td>{{ $module->name }}</td>
-                    <td><span class="badge {{ $statusColor }}">{{ $pivot->status }}</span></td>
-                    <td>{{ $pivot->completed_at ? \Carbon\Carbon::parse($pivot->completed_at)->format('d.m.Y') : '-' }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="3" class="text-center text-muted">Keine Moduleinträge.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+            <tr>
+                <td>{{ $module->name }}</td>
+                <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
+                <td>{{ $pivot->completed_at ? \Carbon\Carbon::parse($pivot->completed_at)->format('d.m.Y') : '-' }}</td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="3" class="text-center text-muted">Keine Moduleinträge.</td>
+            </tr>
+        @endforelse
+    </tbody>
+</table>
+
+
 </div>
-
-
 </div>
