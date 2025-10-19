@@ -123,7 +123,8 @@ class ExamController extends Controller
                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
 
                         // The answer is correct if the submitted IDs match the correct IDs exactly
-                        $isCorrect = $submittedAnswerIds->sort()->values()->all() === $correctOptionIds->sort()->values()->all(); // KORREKTUR VON FEHLER 1
+                        // KORRIGIERT: Verwenden des nicht-strengen Vergleichs (==) für Array-Werte
+                        $isCorrect = $submittedAnswerIds->sort()->values()->all() == $correctOptionIds->sort()->values()->all();
                         if ($isCorrect) {
                             $correctAnswers++;
                         }
@@ -137,7 +138,7 @@ class ExamController extends Controller
                             $attempt->answers()->create([
                                 'question_id' => $questionId,
                                 'option_id' => $optionId,
-                                'is_correct_at_time_of_answer' => $isOptionCorrect, // <-- JETZT DEFINIERT
+                                'is_correct_at_time_of_answer' => $isOptionCorrect, 
                             ]);
                         }
                         break;
@@ -148,7 +149,7 @@ class ExamController extends Controller
                             'question_id' => $questionId,
                             'option_id' => null,
                             'text_answer' => $submittedAnswer,
-                            'is_correct_at_time_of_answer' => 0, // <-- HINZUGEFÜGT (0 = false)
+                            'is_correct_at_time_of_answer' => 0, 
                         ]);
                         break;
                 }
