@@ -130,7 +130,15 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
     Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink');
 
-    // NEU: Prüfungsverwaltung
+    // NEU: Prüfungs-Verwaltung (CRUD der Prüfungsdefinitionen)
     Route::resource('exams', \App\Http\Controllers\Admin\ExamController::class);
+    
+    // NEU: Prüfungsversuch-Verwaltung (ExamAttempt Management)
+    Route::prefix('attempts')->name('exams.')->group(function () {
+        // Übersicht über alle Prüfungsversuche
+        Route::get('/', [\App\Http\Controllers\Admin\ExamController::class, 'attemptsIndex'])->name('attempts.index');
+        
+        // Setzt den Prüfungsversuch zurück (löscht Antworten und setzt Status auf 'in_progress')
+        Route::post('/{attempt}/reset', [\App\Http\Controllers\Admin\ExamController::class, 'resetAttempt'])->name('reset.attempt');
+    });
 });
-

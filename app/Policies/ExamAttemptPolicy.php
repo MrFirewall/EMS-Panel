@@ -47,4 +47,12 @@ class ExamAttemptPolicy
     {
         return $user->can('exams.generatelinks');
     }
+        /**
+     * Determine whether the user can reset an exam attempt.
+     */
+    public function resetAttempt(User $user, ExamAttempt $attempt): bool
+    {
+        // Erlaube nur Super-Admins oder Benutzern mit der passenden Berechtigung
+        return $user->hasRole('Super-Admin') || $user->can('exams.manage'); 
+    }
 }

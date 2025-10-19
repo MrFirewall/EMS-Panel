@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\TrainingModule;
+use App\Models\ExamAttempt; // HINZUGEFÜGT
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\ActivityLog;
@@ -15,11 +16,15 @@ class ExamController extends Controller
 {
     public function __construct()
     {
+        // Policy-Prüfung für Exam CRUD
         $this->authorizeResource(Exam::class, 'exam');
     }
 
+    // Standard CRUD Methoden für 'exams' (index, create, store, etc.)
+
     public function index()
     {
+        // Zeigt die Liste der Prüfungen (Definiert in der Datenbank)
         $exams = Exam::with('trainingModule')->withCount('questions')->latest()->paginate(15);
         return view('admin.exams.index', compact('exams'));
     }
@@ -248,4 +253,56 @@ class ExamController extends Controller
         
         return $validator->validate();
     }
+    
+    // NEUE METHODEN FÜR EXAM ATTEMPTS START
+    
+    /**
+     * Zeigt eine Übersicht aller Prüfungsversuche (ExamAttempts)
+     * zur Verwaltung an (zum Nachverfolgen und Bewerten).
+     */
+    public function attemptsIndex()
+    {
+        // Lädt alle Versuche und die zugehörigen Prüfungs- und Benutzerdaten.
+        // Sortiert nach dem letzten Update, um die aktuellsten Versuche oben zu sehen.
+        $attempts = ExamAttempt::with(['exam.trainingModule', 'user'])
+                              ->orderBy('updated_at', 'desc')
+                              ->paginate(25); // Paginierung für große Datenmengen
+
+        // WICHTIG: Erstellen Sie eine neue View namens 'admin.exams.attempts-index'
+        return view('admin.exams.attempts-index', compact('attempts'));
+    }
+
+    /**
+     * Setzt einen Prüfungsversuch auf "in_progress" zurück.
+     * Nützlich für Admin-Korrekturen oder Neustarts.
+     */
+    public function resetAttempt(ExamAttempt $attempt)
+    {
+        // Autorisation: Sicherstellen, dass nur Admins diese Aktion durchführen können
+        // Sie benötigen diese Fähigkeit in Ihrer Policy/Gate.
+        $this->authorize('resetAttempt', $attempt); 
+        
+        // Fügt DB-Use hinzu (falls nicht bereits global in der Klasse verfügbar)
+        if (!class_exists('DB')) {
+            throw new \Exception("DB Facade not found. Please add 'use Illuminate\Support\Facades\DB;' to the top of the file.");
+        }
+
+
+        // Die Transaktion zurücksetzen (Löscht alte Antworten und setzt den Status zurück)
+        DB::transaction(function () use ($attempt) {
+            $attempt->answers()->delete(); 
+            $attempt->update([
+                'status' => 'in_progress',
+                'completed_at' => null,
+                'score' => null,
+                'flags' => null,
+            ]);
+            
+            ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'RESET', 'target_id' => $attempt->id, 'description' => "Prüfungsversuch #{$attempt->id} von {$attempt->user->name} wurde zurückgesetzt."]);
+        });
+
+        return back()->with('success', 'Prüfungsversuch erfolgreich zurückgesetzt. Der Link ist wieder aktiv.');
+    }
+    
+    // NEUE METHODEN FÜR EXAM ATTEMPTS ENDE
 }
