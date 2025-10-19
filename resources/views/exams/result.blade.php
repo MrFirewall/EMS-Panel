@@ -80,7 +80,7 @@
                                     } elseif ($question->type === 'multiple_choice') {
                                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id')->sort()->values();
                                         $userOptionIds = $userAnswersForQuestion->pluck('option_id')->sort()->values();
-                                        $isCorrect = $correctOptionIds->is($userOptionIds);
+                                        $isCorrect = $correctOptionIds->all() === $userOptionIds->all();
                                     }
                                     // Textfelder werden nicht automatisch bewertet
                                 @endphp
