@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Evaluation;
+use App\Models\ExamAttempt; // NEU: Importieren Sie das ExamAttempt Model
 
 class ProfileController extends Controller
 {
@@ -24,6 +25,7 @@ class ProfileController extends Controller
         // Hole den eingeloggten Benutzer direkt
         $user = Auth::user();
 
+        // Laden Sie alle benötigten Relationen
         $user->load([
             'examinations', 
             'trainingModules', 
@@ -31,18 +33,26 @@ class ProfileController extends Controller
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
         ]);
         
+        // NEU: Laden Sie die Prüfungsversuche
+        $examAttempts = ExamAttempt::where('user_id', $user->id)
+                                    ->with('exam.trainingModule') // Laden des zugehörigen Moduls und der Prüfung
+                                    ->latest('completed_at')
+                                    ->get();
+        
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
         $evaluationCounts = $this->calculateEvaluationCounts($user);
 
         // Die neue Stundenberechnung aus dem User-Model aufrufen
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
+        
         return view('profile.show', compact(
             'user', 
             'serviceRecords', 
             'evaluationCounts',
             'hourData',
-            'weeklyHours'
+            'weeklyHours',
+            'examAttempts' // NEU: Übergabe der Versuche an die View
         ));
     }
 
