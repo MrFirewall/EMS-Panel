@@ -2,7 +2,6 @@
 namespace App\Policies;
 use App\Models\ExamAttempt;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
 
 class ExamAttemptPolicy
 {
@@ -38,29 +37,26 @@ class ExamAttemptPolicy
      */
     public function viewResult(User $user, ExamAttempt $attempt): bool
     {
-        // Debug-Ausgabe: Wer versucht zuzugreifen?
-        Log::info('POLICY DEBUG: ViewResult Check Started.');
-        Log::info('User ID: ' . $user->id . ' | Attempt User ID: ' . $attempt->user_id);
+        // DEBUG-LOGIK START
+        $debugData = [
+            '*** POLICY DEBUG ***' => 'viewResult Check',
+            '1. Angemeldete User ID ($user->id)' => $user->id,
+            '2. Attempt User ID ($attempt->user_id)' => $attempt->user_id,
+            '3. IDs stimmen überein (==)' => ($user->id == $attempt->user_id),
+            '4. IDs stimmen überein (===)' => ($user->id === $attempt->user_id),
+            '5. Ist Super-Admin ($user->hasRole)' => $user->hasRole('Super-Admin'),
+            '6. Kann alles einsehen ($user->can)' => $user->can('evaluations.view.all'),
+        ];
         
-        // 1. Bedingung: Ist der angemeldete User der Besitzer des Versuchs?
-        $isOwner = ($user->id == $attempt->user_id);
-        Log::info('Check 1 (Is Owner): ' . ($isOwner ? 'TRUE' : 'FALSE'));
+        // Stoppt die Ausführung und zeigt die Variablen.
+        // DIESE ZEILE MUSS ENTFERNT WERDEN, SOBALD DER FEHLER GEFUNDEN WURDE!
+        dd($debugData); 
         
-        // 2. Bedingung: Hat der User die Super-Admin Rolle?
-        $isSuperAdmin = $user->hasRole('Super-Admin');
-        Log::info('Check 2 (Super-Admin Role Found): ' . ($isSuperAdmin ? 'TRUE' : 'FALSE'));
+        // DEBUG-LOGIK ENDE
         
-        // 3. Bedingung: Hat der User die Berechtigung 'evaluations.view.all'?
-        $canViewAll = $user->can('evaluations.view.all');
-        Log::info('Check 3 (Can View All Evals): ' . ($canViewAll ? 'TRUE' : 'FALSE'));
-
-        $result = $isSuperAdmin || $canViewAll || $isOwner;
-        
-        Log::info('FINAL POLICY RESULT: ' . ($result ? 'ALLOWED' : 'DENIED'));
-
-        return $result;
+        // Original-Return-Logik (wird von dd() blockiert)
+        return $user->hasRole('Super-Admin') || $user->can('evaluations.view.all') || $user->id === $attempt->user_id;
     }
-
     /**
      * Determine whether an admin/authorized user can generate a new exam link.
      */
