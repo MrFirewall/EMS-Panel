@@ -9,8 +9,6 @@
 <th>Typ</th>
 <th>Titel</th>
 <th>Status</th>
-<th>Score</th>
-<th>Abgeschlossen</th>
 </tr>
 </thead>
 <tbody>
@@ -46,8 +44,7 @@ $statusText = 'Zur Bewertung';
                         <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
                     </td>
                     <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
-                    <td>{{ $attempt->score ?? 0 }}%</td>
-                    <td>{{ $attempt->completed_at ? $attempt->completed_at->format('d.m.Y H:i') : '-' }}</td>
+                    
                 </tr>
             @empty
                 {{-- Wird unten behandelt, falls beide leer sind --}}
@@ -60,7 +57,6 @@ $statusText = 'Zur Bewertung';
                     <td>Einstufung ({{ $exam->examiner_name }})</td>
                     <td><span class="badge bg-primary">Abgeschlossen</span></td>
                     <td>-</td>
-                    <td>{{ $exam->date ? \Carbon\Carbon::parse($exam->date)->format('d.m.Y') : '-' }}</td>
                 </tr>
             @empty
                 {{-- Wird ignoriert, wenn examAttempts Ergebnisse hat --}}
