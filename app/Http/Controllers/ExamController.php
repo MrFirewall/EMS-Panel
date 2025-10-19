@@ -171,9 +171,20 @@ class ExamController extends Controller
     /**
      * Zeigt die Ergebnisseite nach Abschluss an.
      */
-    public function result(string $uuid)
+public function result(string $uuid)
     {
         $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
+        
+        // DEBUG-AUSGABE IM CONTROLLER
+        // Diese Zeile MUSS eine Ausgabe liefern, da sie vor dem Policy-Check liegt.
+        dd([
+            'Controller Check' => 'About to authorize viewResult',
+            'Attempt Status' => $attempt->status,
+            'Attempt User ID' => $attempt->user_id,
+            'Auth User ID' => Auth::id(),
+        ]);
+        // ENDE DEBUG
+
         $this->authorize('exams.viewResult', $attempt);
         return view('exams.result', compact('attempt'));
     }
