@@ -14,9 +14,12 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
 {
     use Queueable;
 
+    // HINWEIS: Wir müssen den notifiable-User als geschützte Eigenschaft speichern, 
+    // damit broadcastOn darauf zugreifen kann, da es keine Parameter erhält.
     protected $text;
     protected $icon;
     protected $url;
+    protected $notifiable; // NEU: Speichert das Notifiable-Objekt
 
     /**
      * Create a new notification instance.
@@ -30,6 +33,13 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
         $this->text = $text;
         $this->icon = $icon;
         $this->url = $url;
+    }
+    
+    // WICHTIGER FIX: Überschreiben der setNotifiable-Methode, um das Objekt intern zu speichern
+    public function setNotifiable($notifiable)
+    {
+        $this->notifiable = $notifiable;
+        return parent::setNotifiable($notifiable);
     }
 
     /**
@@ -47,16 +57,22 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
     /**
      * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
      *
-     * Dies wird automatisch von Laravel beim Broadcasting gesucht.
+     * AKZEPTIERT KEINE PARAMETER, um PHP-FatalError zu vermeiden.
+     * Nutzt stattdessen die intern gespeicherte Eigenschaft.
      *
-     * @param mixed $notifiable
      * @return array
      */
-    public function broadcastOn($notifiable) // PARAMETER WIEDER HERGESTELLT
+    public function broadcastOn() // KEINE PARAMETER HIER!
     {
+        // Wir verwenden die intern gespeicherte Eigenschaft $this->notifiable
+        if (!$this->notifiable) {
+             // Fallback, falls setNotifiable nicht aufgerufen wurde (sollte bei Laravel Notifications nicht passieren)
+             return [];
+        }
+        
         // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
         return [
-            new PrivateChannel('users.' . $notifiable->id),
+            new PrivateChannel('users.' . $this->notifiable->id),
         ];
     }
     
