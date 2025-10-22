@@ -3,8 +3,10 @@
 
 {{-- Füge Select2 CSS hinzu, falls noch nicht im Hauptlayout geladen --}}
 @push('styles')
+    {{-- KORREKTUR: Markdown entfernt --}}
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css"> {{-- Theme für Bootstrap 4 --}}
+    {{-- KORREKTUR: Markdown entfernt und Version fixiert (ersetze x.x.x ggf. durch eine spezifische Version) --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
     <style>
         /* Style Anpassungen für Select2 im Dark Mode */
         .dark-mode .select2-container--bootstrap4 .select2-selection {
@@ -132,6 +134,7 @@
 
 {{-- JavaScript für Select2 und dynamische Identifier --}}
 @push('scripts')
+{{-- KORREKTUR: Markdown entfernt --}}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
