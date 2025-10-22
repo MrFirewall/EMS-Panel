@@ -245,8 +245,168 @@
 <script src="https://cdn.datatables.net/responsive/3.0.2/js/responsive.bootstrap4.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
 
-{{-- JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig) --}}
+{{-- ECHO & PUSHER DEPENDENCIES (FÜR ECHTZEIT) --}}
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.0/echo.iife.min.js"></script>
+
 <script>
+    // ------------------------------------------------------------------------
+    // THEME-LOGIK (Wiederhergestellt)
+    // ------------------------------------------------------------------------
+    (() => {
+        'use strict'
+        const getStoredTheme = () => localStorage.getItem('theme')
+        const setStoredTheme = theme => localStorage.setItem('theme', theme)
+
+        const getPreferredTheme = () => {
+            const storedTheme = getStoredTheme()
+            if (storedTheme) return storedTheme
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+
+        const applyTheme = theme => {
+            const body = document.body;
+            const navbar = document.getElementById('mainNavbar');
+            const sidebar = document.getElementById('mainSidebar');
+            const toggleIcon = document.getElementById('darkModeToggle').querySelector('i');
+            
+            if (theme === 'dark') {
+                body.classList.add('dark-mode');
+                
+                navbar.classList.add('navbar-dark');
+                navbar.classList.remove('navbar-white', 'navbar-light');
+                
+                sidebar.classList.add('sidebar-dark-primary'); 
+                sidebar.classList.remove('sidebar-light-primary');
+                
+                toggleIcon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                body.classList.remove('dark-mode');
+                
+                navbar.classList.add('navbar-white', 'navbar-light');
+                navbar.classList.remove('navbar-dark');
+                
+                sidebar.classList.add('sidebar-light-primary');
+                sidebar.classList.remove('sidebar-dark-primary');
+                
+                toggleIcon.classList.replace('fa-sun', 'fa-moon');
+            }
+        }
+        
+        applyTheme(getPreferredTheme());
+        
+        document.getElementById('darkModeToggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            const currentTheme = getStoredTheme() === 'dark' ? 'light' : 'dark';
+            setStoredTheme(currentTheme);
+            applyTheme(currentTheme);
+        });
+    })();
+
+
+    // ------------------------------------------------------------------------
+    // SWEETALERT2 INTEGRATION (Wiederhergestellt)
+    // ------------------------------------------------------------------------
+    function decodeHtml(str) {
+        const doc = new DOMParser().parseFromString(str, "text/html");
+        return doc.documentElement.textContent;
+    }
+    function showSweetAlert(type, message) {
+        setTimeout(() => {
+            if (typeof Swal === 'undefined') return;
+            let title = type === 'success' ? 'Erfolg!' : 'Fehler!';
+            let timer = type === 'success' ? 3000 : 5000;
+            const decodedMessage = decodeHtml(message);
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: title,
+                text: decodedMessage,
+                showConfirmButton: false,
+                timer: timer
+            });
+        }, 50);
+    }
+    $(document).ready(function() {
+        const successMessage = '{{ session("success") }}'.trim();
+        const errorMessage = '{{ session("error") }}'.trim();
+        const validationErrors = @json($errors->all() ?? []);
+        if (successMessage.length > 0) {
+            showSweetAlert('success', successMessage);
+        } else if (errorMessage.length > 0) {
+            showSweetAlert('error', errorMessage);
+        } 
+        if (validationErrors.length > 0) {
+            const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join('');
+            Swal.fire({
+                icon: 'error',
+                title: 'Validierungsfehler!',
+                html: `Bitte korrigiere die folgenden Fehler:<ul>${errorHtml}</ul>`,
+                showConfirmButton: true,
+                confirmButtonText: 'Verstanden'
+            });
+        }
+    });
+
+
+    // ------------------------------------------------------------------------
+    // ECHO INITIALISIERUNG
+    // ------------------------------------------------------------------------
+    window.Pusher = Pusher;
+
+    // Host wird von Laravel übernommen
+    const isHttps = window.location.protocol === 'https:';
+
+    console.log('[DEBUG] 1. Initialisierung Echo-Konfig.');
+    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${isHttps}`);
+
+    window.Echo = new Echo({
+        broadcaster: 'pusher',
+        key: '{{ env("REVERB_APP_KEY") }}', 
+        
+        wsHost: '{{ request()->getHost() }}', 
+        wssHost: '{{ request()->getHost() }}',
+
+        wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
+        wssPort: {{ env("REVERB_PORT") ?? 8080 }},
+        
+        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
+
+        disableStats: true,
+        // Authorizer bleibt unverändert
+        authorizer: (channel, options) => {
+             console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
+            return {
+                authorize: (socketId, callback) => {
+                    $.post('/broadcasting/auth', {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        socket_id: socketId,
+                        channel_name: channel.name
+                    })
+                    .done(response => {
+                        console.log('[DEBUG] 3. Autorisierung erfolgreich:', response);
+                        callback(false, response);
+                    })
+                    .fail(error => {
+                        console.error('[DEBUG] 3. Autorisierung FEHLGESCHLAGEN!', error);
+                        callback(true, error);
+                    });
+                }
+            };
+        },
+    });
+    
+    // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
+    window.Echo.connector.pusher.connection.bind('state_change', function(states) {
+        console.warn(`[DEBUG] Reverb Statusänderung: ${states.current} (Vorher: ${states.previous})`);
+        if (states.current === 'connected') {
+            console.info('[DEBUG] WebSocket-Verbindung erfolgreich hergestellt und verbunden!');
+        }
+    });
+
+
+    // JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig)
     
     // Holt Benachrichtigungen vom Server und stellt den Zustand der Collapse-Gruppen wieder her.
     function fetchNotifications() {
@@ -303,13 +463,21 @@
         fetchNotifications();
 
         // --------------------------------------------------------------------
-        // RÜCKFALL-LOGIK: Stellt das Polling wieder her.
-        // Das Polling ist die einzige funktionierende Lösung, da WSS/Proxy fehlschlägt.
+        // ECHTE ECHTZEIT-LOGIK (Laravel Echo)
         // --------------------------------------------------------------------
         @auth
-        console.log('[INFO] Polling-Fallback aktiv (Alle 5s). Echzeiteit-Verbindung blockiert durch WSS/Proxy.');
-        setInterval(fetchNotifications, 5000); 
+        // Lauscht auf den privaten Kanal des eingeloggten Benutzers
+        console.log('[DEBUG] 7. Listener für .App.Notifications.GeneralNotification aktiviert.');
+        window.Echo.private(`users.{{ Auth::id() }}`) 
+            // FINALER FIX: Lauscht auf den vollen Klassennamen, um den Namespace-Konflikt zu vermeiden
+            .listen('.App\\Notifications\\GeneralNotification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
+                console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
+                console.log('[DEBUG] 8. Benachrichtigung über .listen() erhalten!', e);
+                // Lädt das Dropdown nur, wenn ein Event eintrifft
+                fetchNotifications(); 
+            });
         @endauth
+        // --------------------------------------------------------------------
 
     });
 
