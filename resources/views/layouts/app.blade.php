@@ -475,10 +475,10 @@
         @auth
         // Lauscht auf den privaten Kanal des eingeloggten Benutzers
         window.Echo.private(`users.{{ Auth::id() }}`) 
-            // Nutzt die eingebaute Echo Notification-Methode für Laravel Notifications
-            .notification((notification) => {
+            // FINALER FIX: Lauscht auf den vollständigen Klassennamen des Notification-Events
+            .listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (e) => {
                 console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
-                console.log('[DEBUG] 7. Benachrichtigung über .notification() erhalten!', notification);
+                console.log('[DEBUG] 7. Benachrichtigung über .listen() erhalten!', e);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
                 fetchNotifications(); 
             });
