@@ -256,16 +256,23 @@
     // ------------------------------------------------------------------------
     window.Pusher = Pusher;
 
-    // TODO: Ersetzen Sie diese Platzhalter durch Ihre tatsächlichen Laravel/Broadcaster-Konfigurationswerte
+    // Wir nutzen die .env-Werte, die Sie im Backend konfiguriert haben.
     window.Echo = new Echo({
         broadcaster: 'pusher',
         key: '{{ env("REVERB_APP_KEY") }}', 
-        wsHost: '{{ env("REVERB_HOST") ?? request()->getHost() }}',
+        
+        // WICHTIG: Im Browser muss der Host die Domain (nicht 127.0.0.1) sein, 
+        // wenn keine Reverse-Proxy-Konfiguration verwendet wird.
+        wsHost: '{{ env("REVERB_HOST") === "127.0.0.1" ? request()->getHost() : env("REVERB_HOST") }}',
+        wssHost: '{{ env("REVERB_HOST") === "127.0.0.1" ? request()->getHost() : env("REVERB_HOST") }}',
+        
         wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
         wssPort: {{ env("REVERB_PORT") ?? 8080 }},
-        // forceTLS nur auf true setzen, wenn der Host explizit SSL (WSS) verwendet
-        forceTLS: ('{{ env("REVERB_SCHEME") }}' === 'https' || window.location.protocol === 'https:'),
+        
+        // forceTLS ist true, da Sie REVERB_SCHEME=https verwenden
+        forceTLS: (('{{ env("REVERB_SCHEME") }}' === 'https') || (window.location.protocol === 'https:')),
         disableStats: true,
+        
         // Authorizer für private Channel (notwendig für benutzer-spezifische Benachrichtigungen)
         authorizer: (channel, options) => {
             return {
@@ -280,9 +287,8 @@
                     })
                     .fail(error => {
                         console.error('Echo Authorization Failed:', error);
-                        // Falls die Autorisierung fehlschlägt, versuchen wir es nicht erneut,
-                        // verhindern aber, dass das Haupt-Dropdown schließt.
-                        // callback(true, error);
+                        // Schlägt fehl, wenn Server nicht erreichbar oder Auth-Route fehlschlägt
+                        // console.error(error.responseText);
                     });
                 }
             };
@@ -465,13 +471,10 @@
 
     // FIX: Verhindert, dass das Haupt-Dropdown-Menü schließt, wenn auf Toggle- oder Content-Elemente der Untergruppen geklickt wird.
     $(document).on('click', '#notification-dropdown .dropdown-menu', function (e) {
-        // Überprüft, ob das geklickte Element (oder ein Elternteil) ein Link für eine Collapse-Gruppe ist
         const isToggle = $(e.target).closest('a[data-toggle="collapse"]').length > 0;
-        // Überprüft, ob das geklickte Element innerhalb einer Collapse-Gruppe liegt
         const isContent = $(e.target).closest('.collapse').length > 0;
 
-        // Nur wenn es ein Toggle-Klick ist oder ein Klick auf den Inhalt einer geöffneten Gruppe,
-        // stoppen wir die Weitergabe des Events, um das Haupt-Dropdown offen zu halten.
+        // Stoppt die Weitergabe des Events, wenn ein Collapse-Element (de-)aktiviert oder dessen Inhalt angeklickt wird.
         if (isToggle || isContent) {
              e.stopPropagation();
         }
