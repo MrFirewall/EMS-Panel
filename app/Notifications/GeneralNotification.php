@@ -32,7 +32,7 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
     // Wir verwenden die leere Signatur, die den Fatal Error endlich gelöst hat.
     public function broadcastOn(): array
     {
-        // Wir verwenden die Notification-ID für den Kanal.
+        info('Broadcasting to user: ' . $this->notifiable->id);
         return [
             new PrivateChannel('users.' . $this->notifiable->id),
         ];

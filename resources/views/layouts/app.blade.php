@@ -469,6 +469,7 @@
         // Lauscht auf den privaten Kanal des eingeloggten Benutzers
         console.log('[DEBUG] 7. Listener für .App.Notifications.GeneralNotification aktiviert.');
         window.Echo.private(`users.{{ Auth::id() }}`) 
+            .channel.bind_global((event, data) => console.log(event, data));
             // FINALER FIX: Lauscht auf den vollen Klassennamen, um den Namespace-Konflikt zu vermeiden
             .listen('.new.ems.notification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
                 console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
