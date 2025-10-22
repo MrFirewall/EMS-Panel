@@ -63,7 +63,7 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
         ];
         
         // DEBUG: Prüft, ob die Daten korrekt an den Broadcaster übergeben werden.
-        // dd('Broadcasting Payload:', $payload, 'Broadcast Name:', $this->broadcastAs()); 
+         dd('Broadcasting Payload:', $payload, 'Broadcast Name:', $this->broadcastAs()); 
 
         return $payload;
     }
