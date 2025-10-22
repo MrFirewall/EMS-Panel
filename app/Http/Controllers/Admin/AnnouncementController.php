@@ -1,13 +1,14 @@
 <?php
 
 // KORRIGIERT: Namespace an die Admin-Struktur angepasst
-namespace App\Http\Controllers\Admin; 
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ActivityLog;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 
 class AnnouncementController extends Controller
 {
@@ -20,9 +21,6 @@ class AnnouncementController extends Controller
         $this->middleware('can:announcements.delete')->only('destroy');
     }
 
-    // Der Rest deines Controllers (index, create, store, etc.) bleibt exakt gleich,
-    // da deine Logik für Validierung und Logging bereits einwandfrei ist.
-    
     public function index()
     {
         $announcements = Announcement::with('user')->latest()->get();
@@ -42,7 +40,7 @@ class AnnouncementController extends Controller
         ]);
 
         $data['user_id'] = Auth::id();
-        $data['is_active'] = $request->has('is_active');
+        $data['is_active'] = $request->boolean('is_active'); // boolean() verwenden
         $announcement = Announcement::create($data);
 
         ActivityLog::create([
@@ -53,7 +51,16 @@ class AnnouncementController extends Controller
             'description' => "Neue Ankündigung '{$announcement->title}' erstellt.",
         ]);
 
-        return redirect()->route('admin.announcements.index')->with('success', 'Ankündigung erstellt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'AnnouncementController@store',
+            Auth::user(), // Der Ersteller
+            $announcement, // Die erstellte Ankündigung
+            Auth::user() // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.announcements.index'); // Ohne success
     }
 
     public function edit(Announcement $announcement)
@@ -69,8 +76,9 @@ class AnnouncementController extends Controller
         ]);
 
         $oldStatus = $announcement->is_active ? 'aktiv' : 'inaktiv';
-        $newStatus = $request->has('is_active') ? 'aktiv' : 'inaktiv';
-        $data['is_active'] = $request->has('is_active');
+        $newStatusBool = $request->boolean('is_active'); // boolean() verwenden
+        $newStatus = $newStatusBool ? 'aktiv' : 'inaktiv';
+        $data['is_active'] = $newStatusBool;
         $announcement->update($data);
 
         $description = "Ankündigung '{$announcement->title}' ({$announcement->id}) aktualisiert.";
@@ -86,13 +94,26 @@ class AnnouncementController extends Controller
             'description' => $description,
         ]);
 
-        return redirect()->route('admin.announcements.index')->with('success', 'Ankündigung aktualisiert.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'AnnouncementController@update',
+            Auth::user(), // Der Bearbeiter
+            $announcement, // Die aktualisierte Ankündigung
+            Auth::user() // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.announcements.index'); // Ohne success
     }
 
     public function destroy(Announcement $announcement)
     {
         $announcementTitle = $announcement->title;
         $announcementId = $announcement->id;
+        
+        // Temporäre Kopie der Daten für das Event erstellen, da das Model gelöscht wird
+        $deletedAnnouncementData = $announcement->toArray(); 
+        
         $announcement->delete();
 
         ActivityLog::create([
@@ -103,6 +124,17 @@ class AnnouncementController extends Controller
             'description' => "Ankündigung '{$announcementTitle}' ({$announcementId}) gelöscht.",
         ]);
 
-        return redirect()->route('admin.announcements.index')->with('success', 'Ankündigung gelöscht.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        // Hinweis: Wir können das gelöschte Model nicht direkt übergeben.
+        // Wir übergeben den Akteur und ggf. Daten aus der Kopie im Listener auswerten.
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'AnnouncementController@destroy',
+            Auth::user(), // Der Löschende
+            (object) $deletedAnnouncementData, // Übergabe als Objekt, um Typkonsistenz zu wahren (könnte auch null sein)
+            Auth::user() // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.announcements.index'); // Ohne success
     }
 }
