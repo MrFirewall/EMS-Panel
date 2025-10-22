@@ -18,7 +18,7 @@ use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\ExamController; // NEU
-use App\Http\Controllers\NotificationController; // NEU
+use App\Http\Controllers\NotificationController; // NEU (Benötigt für die API)
 use Lab404\Impersonate\Controllers\ImpersonateController;
 
 /*
@@ -96,13 +96,6 @@ Route::middleware('auth.cfx')->group(function () {
     // 3. NEU: Finale Bewertung durch Admin
     Route::post('/exams/finalize/{uuid}', [ExamController::class, 'finalizeEvaluation'])->name('exams.finalize');
     
-    // NEU: API-Routen für Frontend-Interaktionen
-    Route::prefix('api')->name('api.')->group(function () {
-        Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])->name('exams.flag');
-        Route::get('/notifications', [NotificationController::class, 'fetch'])->name('notifications.fetch');
-    });
-
-
     Route::resource('modules', TrainingModuleController::class); // NEU: Hier korrekt platziert
 });
 

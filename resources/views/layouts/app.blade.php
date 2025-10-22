@@ -31,7 +31,7 @@
             color: #adb5bd !important;
         }
 
-                /* Stellt sicher, dass Select2-Felder im Dark Mode den dunklen Hintergrund und die passende Schriftfarbe erhalten */
+        /* Stellt sicher, dass Select2-Felder im Dark Mode den dunklen Hintergrund und die passende Schriftfarbe erhalten */
         .dark-mode .select2-container--bootstrap4 .select2-selection {
             background-color: #343a40;
             border-color: #6c757d;
@@ -98,7 +98,7 @@
             color: #fff;
         }
         /* Stil für die hervorgehobene Option in der Liste */
-         .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
+        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
             background-color: #007bff;
             color: #fff;
         }
@@ -151,14 +151,14 @@
                 </a>
             </li>
 
-            {{-- NEU: BENACHRICHTIGUNGS-DROPDOWN --}}
+            {{-- BENACHRICHTIGUNGS-DROPDOWN --}}
             <li class="nav-item dropdown" id="notification-dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#">
                     <i class="far fa-bell"></i>
                     <span class="badge badge-warning navbar-badge" id="notification-count" style="display: none;"></span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" id="notification-list">
-                    {{-- Der Inhalt wird per JavaScript geladen --}}
+                    {{-- Der Inhalt wird per JavaScript geladen und nutzt layouts._notifications --}}
                     <div class="dropdown-item">Lade Benachrichtigungen...</div>
                 </div>
             </li>
@@ -318,7 +318,7 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Validierungsfehler!',
-                html: `Bitte korrigere die folgenden Fehler:<ul>${errorHtml}</ul>`,
+                html: `Bitte korrigiere die folgenden Fehler:<ul>${errorHtml}</ul>`,
                 showConfirmButton: true,
                 confirmButtonText: 'Verstanden'
             });
@@ -331,7 +331,8 @@
     $(document).ready(function() {
         const notificationCount = $('#notification-count');
         const notificationList = $('#notification-list');
-        const fetchUrl = '{{ route("api.notifications.fetch") }}';
+        // WICHTIG: Verwende die definierte Route
+        const fetchUrl = '{{ route("api.notifications.fetch") }}'; 
 
         function fetchNotifications() {
             $.ajax({
@@ -339,6 +340,9 @@
                 method: 'GET',
                 dataType: 'json',
                 success: function(response) {
+                    // KORREKTUR: Verwende 'items_html' anstelle von 'html' (wie im Controller definiert)
+                    const htmlContent = response.items_html;
+                    
                     // Zähler aktualisieren
                     if (response.count > 0) {
                         notificationCount.text(response.count).show();
@@ -347,11 +351,17 @@
                     }
 
                     // Dropdown-Liste mit dem HTML aus dem Partial füllen
-                    notificationList.html(response.html);
+                    if (htmlContent) {
+                       notificationList.html(htmlContent);
+                    } else {
+                       // Fallback, wenn kein HTML zurückkommt (sollte nicht passieren)
+                       notificationList.html('<li class="dropdown-item">Fehler beim Laden oder leere Antwort.</li>');
+                    }
                 },
-                error: function() {
-                    console.error('Fehler beim Abrufen der Benachrichtigungen.');
-                    notificationList.html('<a href="#" class="dropdown-item">Fehler beim Laden.</a>');
+                error: function(xhr, status, error) {
+                    console.error('Fehler beim Abrufen der Benachrichtigungen:', status, error);
+                    // Zeige einen Fehler im Dropdown an
+                    notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
                 }
             });
         }
@@ -360,6 +370,7 @@
         fetchNotifications();
 
         // ...und dann alle 60 Sekunden erneut.
+        // Nur starten, wenn der Benutzer berechtigt ist, Benachrichtigungen zu sehen (vom Backend gesteuert)
         setInterval(fetchNotifications, 60000); 
     });
 </script>
