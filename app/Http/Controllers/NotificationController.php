@@ -9,8 +9,7 @@ use Carbon\Carbon; // Wichtig für die Zeitangabe
 class NotificationController extends Controller
 {
     /**
-     * Ruft alle ungelesenen Benachrichtigungen für den eingeloggten Benutzer ab
-     * und rendert sie als HTML für das Dropdown-Menü.
+     * Ruft ungelesene Benachrichtigungen für das Dropdown ab.
      */
     public function fetch()
     {
@@ -20,30 +19,70 @@ class NotificationController extends Controller
 
         $user = Auth::user();
         
-        // Hole alle ungelesenen Benachrichtigungen aus der Datenbank
+        // Hole alle ungelesenen Benachrichtigungen
         $notifications = $user->unreadNotifications;
 
-        // Formatiere die Daten so, wie es das _notifications.blade.php Partial erwartet
+        // Formatiere die Daten
         $items = $notifications->map(function($notification) {
             return [
                 'text' => $notification->data['text'] ?? 'Unbekannte Benachrichtigung',
                 'icon' => $notification->data['icon'] ?? 'fas fa-bell',
                 'url'  => $notification->data['url'] ?? '#',
-                'time' => $notification->created_at->diffForHumans(null, true, true), // z.B. "vor 5m" oder "5m"
+                'time' => $notification->created_at->diffForHumans(null, true, true), // z.B. "5m"
             ];
         });
 
-        // Rendere das Partial-View mit den formatierten Daten
-        // (Wir verwenden das Partial, das Sie bereits haben)
+        // Rendere das Partial-View
         $html = view('layouts._notifications', ['notifications' => $items])->render();
 
-        // Markiere die Benachrichtigungen als gelesen, *nachdem* wir sie abgerufen haben
-        $user->unreadNotifications->markAsRead();
+        // WICHTIG: Wir markieren sie hier NICHT mehr als gelesen.
+        // Das passiert jetzt manuell per Klick.
+        // $user->unreadNotifications->markAsRead(); // DIESE ZEILE WURDE ENTFERNT
 
-        // Sende die Anzahl und das gerenderte HTML zurück
         return response()->json([
             'count'      => $items->count(),
             'items_html' => $html
         ]);
     }
+
+    /**
+     * Zeigt die Archiv-Seite mit allen Benachrichtigungen (gelesen und ungelesen).
+     */
+    public function index()
+    {
+        $user = Auth::user();
+        
+        // Hole alle Benachrichtigungen, paginiert
+        $allNotifications = $user->notifications()->paginate(20);
+        
+        // Hole nur die ungelesenen für den Zähler
+        $unreadCount = $user->unreadNotifications()->count();
+
+        return view('notifications.index', [
+            'allNotifications' => $allNotifications,
+            'unreadCount' => $unreadCount
+        ]);
+    }
+
+    /**
+     * Markiert alle ungelesenen Benachrichtigungen als gelesen.
+     */
+    public function markAllRead()
+    {
+        Auth::user()->unreadNotifications->markAsRead();
+
+        return redirect()->back()->with('success', 'Alle Benachrichtigungen wurden als gelesen markiert.');
+    }
+
+    /**
+     * Löscht eine einzelne Benachrichtigung.
+     */
+    public function destroy($id)
+    {
+        $notification = Auth::user()->notifications()->findOrFail($id);
+        $notification->delete();
+
+        return redirect()->back()->with('success', 'Benachrichtigung gelöscht.');
+    }
 }
+
