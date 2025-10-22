@@ -3,6 +3,11 @@
 Ein umfassendes Verwaltungs-Panel (Admin-Panel) für Rettungsdienste (EMS), entwickelt mit dem Laravel-Framework. Es dient zur Verwaltung von Personal, Ausbildung, Prüfungen, Einsätzen und Patientenakten.
 
 > ⚠️ **Hinweis:** Diese Datei wurde **anonymisiert**. Alle Platzhalter (z. B. `<repository-url>`, `<user>`, `<app_key>`) **müssen vor der Verwendung manuell ersetzt** werden. Bitte kopiere die Datei **nicht unverändert** in eine Produktionsumgebung.
+---
+
+> **Transparenz-Hinweis:**  
+> Das EMS-Panel wurde komplett mit KI-Unterstützung (Google Gemini) erstellt.  
+> Inhalte und Funktionen wurden automatisiert generiert. Es wird keine Haftung für Fehler oder unvollständige Funktionen übernommen. 
 
 ---
 
