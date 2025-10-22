@@ -363,20 +363,14 @@
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env("REVERB_APP_KEY") }}', 
-        
-        wsHost: '{{ request()->getHost() }}', 
-        wssHost: '{{ request()->getHost() }}',
-
-        wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
-        wssPort: {{ env("REVERB_PORT") ?? 8080 }},
-        
-        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
-
+        key: '{{ env("REVERB_APP_KEY") }}',
+        wsHost: '{{ env("REVERB_HOST") }}',
+        wsPort: {{ env("REVERB_PORT") }},
+        wssHost: '{{ env("REVERB_HOST") }}',
+        wssPort: {{ env("REVERB_PORT") }},
+        forceTLS: true,
         disableStats: true,
-        // Authorizer bleibt unverändert
         authorizer: (channel, options) => {
-             console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
             return {
                 authorize: (socketId, callback) => {
                     $.post('/broadcasting/auth', {
@@ -384,26 +378,20 @@
                         socket_id: socketId,
                         channel_name: channel.name
                     })
-                    .done(response => {
-                        console.log('[DEBUG] 3. Autorisierung erfolgreich:', response);
-                        callback(false, response);
-                    })
-                    .fail(error => {
-                        console.error('[DEBUG] 3. Autorisierung FEHLGESCHLAGEN!', error);
-                        callback(true, error);
-                    });
+                    .done(response => callback(false, response))
+                    .fail(error => callback(true, error));
                 }
             };
         },
     });
-    
-    // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
-    window.Echo.connector.pusher.connection.bind('state_change', function(states) {
-        console.warn(`[DEBUG] Reverb Statusänderung: ${states.current} (Vorher: ${states.previous})`);
-        if (states.current === 'connected') {
-            console.info('[DEBUG] WebSocket-Verbindung erfolgreich hergestellt und verbunden!');
-        }
-    });
+        
+        // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
+        window.Echo.connector.pusher.connection.bind('state_change', function(states) {
+            console.warn(`[DEBUG] Reverb Statusänderung: ${states.current} (Vorher: ${states.previous})`);
+            if (states.current === 'connected') {
+                console.info('[DEBUG] WebSocket-Verbindung erfolgreich hergestellt und verbunden!');
+            }
+        });
 
 
     // JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig)
