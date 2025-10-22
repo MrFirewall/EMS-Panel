@@ -476,7 +476,7 @@
         // Lauscht auf den privaten Kanal des eingeloggten Benutzers
         window.Echo.private(`users.{{ Auth::id() }}`) 
             // FINALER FIX: Lauscht auf den vollständigen Klassennamen des Notification-Events
-            .listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (e) => {
+            .listen('.new.ems.notification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
                 console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
                 console.log('[DEBUG] 7. Benachrichtigung über .listen() erhalten!', e);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft

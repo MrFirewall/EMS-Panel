@@ -3,26 +3,23 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; // NEU: Für Transaktionssicherheit
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Broadcasting\PrivateChannel;
+// Hinzufügen des InteractsWithBroadcasting Trait
+use Illuminate\Notifications\CastsNotifications; 
 
 // Wir implementieren nur ShouldDispatchAfterCommit, um Transaktionssicherheit zu gewährleisten.
-class GeneralNotification extends Notification implements ShouldDispatchAfterCommit 
+class GeneralNotification extends Notification implements ShouldDispatchAfterCommit
 {
-    use Queueable;
+    // Die Basisklasse Illuminate\Notifications\Notification verwendet bereits den Notifiable-Trait.
+    // Wir entfernen ShouldBroadcast, da dies durch die via-Methode impliziert wird.
+    use Queueable, CastsNotifications; 
 
     protected $text;
     protected $icon;
     protected $url;
 
-    /**
-     * Create a new notification instance.
-     *
-     * @param string $text Der Anzeigetext (z.B. "Neuer Urlaubsantrag")
-     * @param string $icon Eine FontAwesome-Icon-Klasse (z.B. "fas fa-plane")
-     * @param string $url Die URL, zu der man beim Klicken gelangt
-     */
     public function __construct(string $text, string $icon, string $url)
     {
         $this->text = $text;
@@ -30,9 +27,6 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
         $this->url = $url;
     }
     
-    // setNotifiable wird entfernt, da es nur den FatalError umgangen hat. 
-    // Wir vertrauen auf den Parameter in broadcastOn.
-
     /**
      * Get the notification's delivery channels.
      *
@@ -41,50 +35,51 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
      */
     public function via($notifiable): array
     {
-        // Wir speichern in der Datenbank UND senden per Broadcast
-        return ['database', 'broadcast']; 
+        return ['database', 'broadcast'];
     }
 
     /**
      * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
      *
-     * Wir geben den Parameter $notifiable NICHT an, um die PHP-Kompatibilität zu wahren.
-     * Laravel injiziert $notifiable intern.
-     *
      * @return array
      */
-    public function broadcastOn(): array // KEINE PARAMETER HIER!
+    public function broadcastOn(): array
     {
-        // Da die Notification-Basisklasse keine Typisierung erlaubt,
-        // muss der Kanal über den Notifiable-User im Kontext der Notification definiert werden.
-        // Der Kanalname muss die Logik in routes/channels.php widerspiegeln.
-        // HINWEIS: $this->id des Notifiable-Objekts ist NICHT verlässlich.
-        // Der Standardweg, wenn $notifiable nicht übergeben wird, ist, den Kanal-Namen direkt zu bauen.
-        // Da wir die Strictness brechen mussten, können wir hier nur den User-Typ des notifiable erwarten.
-
-        // WICHTIGE ANNAHME: Wir gehen davon aus, dass der Notifiable-User IMMER die Auth-ID ist,
-        // wenn er über den Broadcast-Kanal gesendet wird, oder der Kanal wird in toBroadcast() definiert.
-
-        // Im Falle eines FatalError mit $notifiable: Verwenden Sie den Kanal, den Laravel erwartet:
+        // Wir verwenden $this->notifiable, da die FatalError-Probleme nur durch den Parameter ausgelöst wurden.
+        // Wenn $this->notifiable hier null ist, liegt ein Problem in der Basisklasse vor.
+        // ANNAHME: Der notifiable ist jetzt durch das Notification-System korrekt gesetzt.
         return [
-            new PrivateChannel('users.' . $this->id),
+            new PrivateChannel('users.' . $this->notifiable->id),
         ];
     }
 
     /**
+     * Setzt den Broadcast-Namen auf einen einfachen, eindeutigen String.
+     * Echo kann diesen leichter identifizieren.
+     * * @return string
+     */
+    public function broadcastAs(): string
+    {
+        return 'new.ems.notification';
+    }
+
+    /**
      * Definiert die zu sendenden Daten für das Broadcasting.
+     *
+     * Wir senden die Datenbankdaten, da diese bereits die Icon/Text/URL-Struktur enthalten.
      *
      * @param mixed $notifiable
      * @return array
      */
     public function toBroadcast($notifiable): array
     {
-        // Beim Broadcasting muss die Benachrichtigungs-ID übergeben werden, damit das Frontend
-        // weiß, welche Datenbank-Zeile abgerufen werden muss.
+        // Wir senden alle Daten, die wir in die DB schreiben, direkt über den Broadcast.
         return [
-            // Die ID wird automatisch von Laravel als 'id' im Event-Payload gesendet.
-            'id' => $this->id, // WICHTIG: Stellt sicher, dass die ID für den Fetch vorhanden ist.
-            'text' => $this->text, // Optional: Fügen Sie den Text hinzu, um die Payload zu prüfen
+            'id' => $this->id,
+            'text' => $this->text,
+            'icon' => $this->icon,
+            'url' => $this->url,
+            // Die Benachrichtigungs-ID (UUID) ist entscheidend für den Fetch.
         ];
     }
 
@@ -96,7 +91,6 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
      */
     public function toDatabase($notifiable): array
     {
-        // Diese Daten werden in der 'data'-Spalte der 'notifications'-Tabelle gespeichert.
         return [
             'text' => $this->text,
             'icon' => $this->icon,
@@ -104,16 +98,9 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
         ];
     }
     
-    /**
-     * Get the array representation of the notification (wird hier nicht genutzt).
-     *
-     * @param mixed $notifiable
-     * @return array<string, mixed>
-     */
+    // toArray und toBroadcast sind jetzt getrennt, um beide Kanäle korrekt zu bedienen.
     public function toArray($notifiable): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 }
