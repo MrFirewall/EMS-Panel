@@ -248,7 +248,7 @@ class EvaluationController extends Controller
                 Notification::send($berechtigteBenutzer, new GeneralNotification(
                     "Neuer Antrag ({$antragArt}) für '{$module->name}' von {$antragsteller->name}.", // Nachrichtentext
                     'fas fa-file-signature text-warning', // Icon (Beispiel)
-                    route('forms.evaluations.show', $evaluation->id) // URL zum Antrag/Evaluation
+                    route('admin.forms.evaluations.show', $evaluation->id) // URL zum Antrag/Evaluation
                 ));
             }
         }
