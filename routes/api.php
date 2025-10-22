@@ -22,11 +22,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Benachrichtigungen abrufen (für das Navbar-Dropdown)
     // Wird alle 60 Sekunden vom Frontend aufgerufen
     Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])
-        ->name('api.notifications.fetch');
+        ->name('notifications.fetch');
 
     // Prüfungsversuch flaggen
     Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])
-        ->name('api.exams.flag');
+        ->name('exams.flag');
 });
 
 // Beispiel für eine öffentliche API-Route (wenn benötigt)
