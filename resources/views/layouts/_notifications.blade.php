@@ -3,13 +3,15 @@
 
 {{-- Füge diesen Style-Block hinzu oder integriere die Klasse in deine CSS-Datei --}}
 <style>
-.notification-text-truncate {
-    display: inline-block; /* Wichtig für korrekte Breitenberechnung */
-    max-width: calc(100% - 70px); /* Ca. 100% minus Breite des Zeitstempels und Icons */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: middle; /* Stellt sicher, dass Text und Icon auf einer Linie sind */
+/* KORREKTUR: Klasse umbenannt und CSS für Zeilenumbruch angepasst */
+.notification-text-wrap {
+    /* display: inline-block; */ /* Entfernt oder auskommentiert */
+    max-width: calc(100% - 70px); /* Beibehalten, um Platz für den Zeitstempel zu lassen */
+    white-space: normal; /* Erlaubt normalen Zeilenumbruch */
+    overflow-wrap: break-word; /* Bricht lange Wörter um, falls nötig */
+    /* overflow: hidden; */ /* Entfernt */
+    /* text-overflow: ellipsis; */ /* Entfernt */
+    vertical-align: middle; /* Beibehalten für vertikale Ausrichtung mit Icon */
 }
 </style>
 
@@ -62,11 +64,11 @@
             <form action="{{ route('notifications.markAsRead', $notification['id']) }}" method="POST" class="m-0 p-0 dropdown-item-form">
                 @csrf
                 {{-- Der Button/Link muss die gesamte Dropdown-Item-Fläche ausfüllen --}}
-                {{-- KORREKTUR: Verwende Flexbox für bessere Kontrolle --}}
+                {{-- Verwende Flexbox für bessere Kontrolle --}}
                 <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-left w-100 pl-4 py-2 d-flex justify-content-between align-items-center">
                     {{-- Pl-4 (Padding-Left) rückt die Einzelnachrichten leicht ein --}}
-                    {{-- KORREKTUR: Füge die CSS-Klasse zum Text-Span hinzu --}}
-                    <span class="notification-text-truncate"> 
+                    {{-- KORREKTUR: CSS-Klasse geändert --}}
+                    <span class="notification-text-wrap"> 
                         <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $notification['text'] }}
                     </span>
                     <span class="text-muted text-sm ml-2">{{ $notification['time'] }}</span> {{-- ml-2 für etwas Abstand --}}
@@ -85,3 +87,4 @@
 {{-- Benachrichtigungs-Footer --}}
 <div class="dropdown-divider"></div>
 <a href="{{ route('notifications.index') }}" class="dropdown-item dropdown-footer">Alle Benachrichtigungen anzeigen</a>
+
