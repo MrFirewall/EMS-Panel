@@ -4,14 +4,13 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Broadcasting\PrivateChannel;
+// ShouldDispatchAfterCommit entfernt, um Transaktions-Konflikte zu vermeiden
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast; // Wird für die broadcastOn Methode benötigt!
 
-// Wichtig: ShouldBroadcast wird durch die via-Methode impliziert, daher nur die Verträge
-// und Traits, die unbedingt notwendig sind.
-class GeneralNotification extends Notification implements ShouldDispatchAfterCommit
+
+class GeneralNotification extends Notification implements ShouldBroadcast
 {
-    // CastsNotifications entfernt, da es in dieser Version nicht gefunden wird
     use Queueable; 
 
     protected $text;
@@ -33,6 +32,7 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
      */
     public function via($notifiable): array
     {
+        // Der Broadcast-Kanal muss enthalten sein
         return ['database', 'broadcast'];
     }
 
@@ -60,36 +60,21 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
     }
 
     /**
-     * Definiert die zu sendenden Daten für das Broadcasting.
+     * Definiert die Daten, die in der Datenbank und als Broadcast gesendet werden.
      *
-     * @param mixed $notifiable
-     * @return array
-     */
-    public function toBroadcast($notifiable): array
-    {
-        // Wir senden alle Daten, die wir in die DB schreiben, direkt über den Broadcast.
-        // Das Frontend fetcht die ID, aber wir senden alle nützlichen Daten mit.
-        return $this->toDatabase($notifiable);
-    }
-
-    /**
-     * Get the array representation of the notification (für die Datenbank).
+     * In Laravel Notifications kann toArray() als Fallback für toBroadcast() dienen,
+     * wenn toBroadcast() nicht definiert ist. Wir nutzen toArray() für beide.
      *
      * @param mixed $notifiable
      * @return array<string, mixed>
      */
-    public function toDatabase($notifiable): array
+    public function toArray($notifiable): array
     {
         return [
             'text' => $this->text,
             'icon' => $this->icon,
             'url'  => $this->url,
+            // HINWEIS: Bei toBroadcast() wird die UUID der Benachrichtigung automatisch hinzugefügt.
         ];
-    }
-    
-    // toArray ist nicht zwingend für Broadcast/Database nötig, bleibt aber als Standard-Methode
-    public function toArray($notifiable): array
-    {
-        return $this->toDatabase($notifiable);
     }
 }
