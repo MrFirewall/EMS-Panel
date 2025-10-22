@@ -1,176 +1,254 @@
-# 🚑 Emergency Medical Service Verwaltungssystem
+# EMS Panel / Verwaltung (Anonymisierte Version)
 
-## 📘 Projektdokumentation
+Ein umfassendes Verwaltungs-Panel (Admin-Panel) für Rettungsdienste (EMS), entwickelt mit dem Laravel-Framework. Es dient zur Verwaltung von Personal, Ausbildung, Prüfungen, Einsätzen und Patientenakten.
 
-Das **Emergency Medical Service (EMS) Verwaltungssystem** ist eine mit dem **Laravel Framework** entwickelte Softwareanwendung zur systematischen Verwaltung von Personal, Bürgerakten (Krankenakten), Rollen und internen Formularen.
-
----
-
-## ⚙️ Funktionsumfang
-
-### 🧭 Zentrales Dashboard
-Bereitstellung einer konsolidierten Übersicht über systemrelevante Informationen und Statistiken zur Effizienzsteigerung.
-
-### 👨‍⚕️ Personalverwaltung
-Module zur Erfassung, Modifikation und Verwaltung von Mitarbeiterprofilen.
-
-### 🩺 Bürgerakten-Verwaltung (Krankenakten)
-System zur Erfassung und Verwaltung von Bürgerdaten inklusive Suchfunktion.  
-Zentrale Detailansicht ("Krankenakte") pro Bürger, die eine chronologische Übersicht aller zugeordneten Einsatzberichte darstellt.
-
-### 🚨 Einsatzberichterstattung mit Vorlagen
-Modul zur Erstellung und Verwaltung von Einsatzprotokollen. Um die Konsistenz und Geschwindigkeit bei der Berichterstellung zu erhöhen, können Administratoren Text-Vorlagen definieren. Diese Vorlagen stehen den Benutzern beim Ausfüllen eines Berichts zur Verfügung und können per Klick eingefügt werden.
-
-### 🧩 Hierarchisches Berechtigungssystem
-Implementierung einer granularen Zugriffskontrolle, basierend auf einer definierten Ranghierarchie.  
-Definition spezifischer Rollen für einzelne Abteilungen mit dedizierter Zuweisungslogik.  
-Etablierung einer Super-Admin-Rolle, die über uneingeschränkte Systemprivilegien verfügt, jedoch in der GUI weder sichtbar noch zuweisbar ist.
-
-### 🕵️‍♂️ Impersonierungsfunktion
-Ermöglicht autorisierten Administratoren den temporären Zugriff auf Benutzerkonten zu Diagnose- und Supportzwecken.
-
-### 📂 Digitale Personalaktenführung
-Systematische Erfassung und Archivierung von personalrelevanten Vorgängen und Dokumenten für jeden Mitarbeiter.
-
-### 🧾 Digitalisiertes Formularwesen
-Abwicklung interner Antragsverfahren (z. B. Urlaubsanträge oder Mitarbeiterbewertungen) über eine webbasierte Schnittstelle.
-
-### 🧠 Aktivitätsprotokollierung
-Lückenlose Aufzeichnung aller systemrelevanten Aktionen zur Gewährleistung der Nachvollziehbarkeit und Revision.
+> ⚠️ **Hinweis:** Diese Datei wurde **anonymisiert**. Alle Platzhalter (z. B. `<repository-url>`, `<user>`, `<app_key>`) **müssen vor der Verwendung manuell ersetzt** werden. Bitte kopiere die Datei **nicht unverändert** in eine Produktionsumgebung.
 
 ---
 
-## 🧑‍💻 Technologische Grundlage
+## Hauptfunktionen
 
-- **Backend:** PHP 8.2+ / Laravel 12+
-- **Frontend:** Blade, AdminLTE 3 (inkl. Dark Mode & Preloader), JavaScript
-- **Datenbank:** MySQL
+Basierend auf dem Entwicklungsverlauf umfasst das Panel folgende Kernmodule:
+
+### 1. Personal- & Rollenverwaltung
+
+* Benutzerverwaltung (CRUD)
+* Rollen & Berechtigungen (Policies)
+* Super-Admin mit vollem Zugriff
+* Impersonalisierung (Login als anderer Benutzer)
+* Dienststatusverwaltung (aktiv/inaktiv)
+
+### 2. Dienst- & Personalakte
+
+* Automatische Stundenberechnung und Archivierung
+* Wochenübersicht der Dienststunden
+* Aktivitätsprotokoll aller Benutzeraktionen
+
+### 3. Prüfungssystem
+
+* Erstellung und Verwaltung von Prüfungen
+* Unterstützung von Single-Choice, Multiple-Choice und Freitextfragen
+* Prüfungsversuche mit eindeutigen Links
+* Anti-Cheat-Protokollierung (Fokusverlust im Browser)
+* Automatische und manuelle Auswertung
+* Zurücksetzen von Versuchen durch Administratoren
+
+### 4. Ausbildungsmodule
+
+* Verwaltung von Ausbildungsmodulen (z. B. Kurse)
+* Zuweisung an Benutzer mit Statusverwaltung
+
+### 5. Formulare & Anträge
+
+* Verwaltung von Anträgen für Module und Prüfungen
+* Evaluierungen und Feedbackformulare
+* Statusverfolgung (z. B. pending, processed)
+
+### 6. Einsatzberichte
+
+* Erfassung und Verwaltung von Einsatzberichten
+* Nutzung von Vorlagen
+* Zuordnung beteiligten Personals
+
+### 7. Patientenakten
+
+* Verwaltung von Patienteninformationen (Blutgruppe, Allergien etc.)
+* Speicherung medizinischer und persönlicher Daten
+
+### 8. Rezept-Management
+
+* Erstellung und Verwaltung von Rezepten
+* Verwendung von Vorlagen
+
+### 9. Technische Features
+
+* Modernes Admin-Layout (AdminLTE)
+* DataTables & Select2-Integration
+* Dark Mode-Unterstützung
+* Umfassendes Logging-System
 
 ---
 
-## 🧱 Implementierte Kernbibliotheken
+## Voraussetzungen
 
-- **spatie/laravel-permission:** Rollen- und Berechtigungslogik  
-- **lab404/laravel-impersonate:** Impersonierungsfunktionalität  
-- **SocialiteProviders/Cfx.re:** Authentifizierung über das Cfx.re-Netzwerk  
-
----
-
-## 🌟 Highlights & Besondere Features
-
-### 🎨 Dynamisches Frontend
-- **Dark Mode:** Nutzerpräferenz wird im `localStorage` gespeichert.
-- **Preloader:** Animierte EKG-Linie als Ladeanimation für professionelles Erscheinungsbild.
-
-### 🩺 Bürgerakten als "Krankenakte"
-Das System ermöglicht die Führung einer digitalen Akte für jeden Bürger. Die Detailansicht aggregiert automatisch alle Einsatzberichte, in denen der Bürger als Patient erfasst wurde. Dies schafft eine chronologische "Krankenakte" zur Nachverfolgung der medizinischen Vorgeschichte.
+* PHP ≥ 8.1
+* Composer
+* Node.js & NPM
+* Datenbank (z. B. MySQL, MariaDB, PostgreSQL)
+* Webserver (z. B. Nginx, Apache)
 
 ---
 
-## 🧩 Installations- und Inbetriebnahme-Anleitung
+## Installation & Inbetriebnahme
 
-### 1️⃣ Repository klonen
-```bash
-git clone https://github.com/MrFirewall/EMS-Panel.git
-cd EMS-Panel
+1. Repository klonen
+   ⚠️ *Ersetze `<repository-url>` durch die echte Repository-Adresse.*
+
+   ```bash
+   git clone <repository-url>
+   cd ems-panel
+   ```
+2. Abhängigkeiten installieren
+
+   ```bash
+   composer install
+   npm install
+   ```
+3. Frontend kompilieren
+
+   ```bash
+   npm run dev   # Entwicklung
+   npm run build # Produktion
+   ```
+4. Umgebungsdatei einrichten
+
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+5. Datenbank konfigurieren
+   ⚠️ *Ersetze Benutzername und Passwort durch reale Werte.*
+
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=ems_panel
+   DB_USERNAME=<user>
+   DB_PASSWORD=<password>
+   ```
+6. Migrationen ausführen
+
+   ```bash
+   php artisan migrate
+   ```
+7. (Optional) Seeders & Vorlagen importieren
+
+   ```bash
+   php artisan db:seed
+   php artisan import:report-templates
+   php artisan import:prescription-templates
+   ```
+8. (Optional) Speicher verlinken
+
+   ```bash
+   php artisan storage:link
+   ```
+9. Lokalen Server starten
+
+   ```bash
+   php artisan serve
+   ```
+
+Anwendung läuft unter `APP_URL` (z. B. [http://localhost:8000](http://localhost:8000)).
+
+---
+
+## Produktivbetrieb (Beispielkonfiguration)
+
+> ⚠️ **Wichtig:** Alle Pfade (`/path/to/...`) und Benutzer (`<system-user>`) sind Platzhalter und müssen an dein System angepasst werden.
+
+### Supervisor (Queue Worker)
+
+```ini
+[program:ems-worker]
+command=php /path/to/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+user=<system-user>
+autostart=true
+autorestart=true
+stdout_logfile=/path/to/storage/logs/worker.log
 ```
 
-### 2️⃣ Abhängigkeiten installieren
-```bash
-# PHP-Abhängigkeiten
-composer install
+### Supervisor (Laravel Reverb)
 
-# JavaScript-Abhängigkeiten (optional)
-# npm install
+```ini
+[program:reverb]
+command=php /path/to/artisan reverb:start
+user=<system-user>
+autostart=true
+autorestart=true
+stdout_logfile=/path/to/storage/logs/reverb-worker.log
 ```
 
-### 3️⃣ Umgebungsvariablen konfigurieren
-```bash
-cp .env.example .env
-php artisan key:generate
-php artisan cfx:keys
-```
+### Nginx-Proxy
 
-### 4️⃣ Konfiguration anpassen
-```env
-APP_NAME="EMS Verwaltung"
-APP_URL=http://localhost:8000
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=deine_datenbank
-DB_USERNAME=dein_benutzername
-DB_PASSWORD=dein_passwort
-
-CFX_APP_NAME="EMS Verwaltung"
-CFX_REDIRECT_URL="https://DEINE_DOMAIN/login/cfx/callback"
-CFX_PUBLIC_KEY="${APP_KEY_PATH}/cfx-public.key"
-CFX_PRIVATE_KEY="${APP_KEY_PATH}/cfx-private.key"
-```
-
-### 5️⃣ Datenbankmigration & Seeding
-```bash
-php artisan migrate --seed
-```
-
-**Hinweis:** Um dem ersten Benutzer automatisch die Super-Admin-Rolle zuzuweisen, kann folgender Code in `/database/seeders/PermissionsSeeder.php` ergänzt werden:
-
-```php
-// Optional: Weise die Super-Admin Rolle einem bestimmten User zu (z.B. User mit ID 1)
-$user = \App\Models\User::find(1);
-if ($user) {
-    $user->assignRole('Super-Admin');
+```nginx
+location /app/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 60s;
 }
 ```
 
-### 6️⃣ Frontend-Assets kompilieren (optional)
-```bash
-npm run build
-```
-
-### 7️⃣ Storage-Symlink erstellen
-```bash
-php artisan storage:link
-```
-
-### 8️⃣ Entwicklungsserver starten
-```bash
-php artisan serve
-```
-Die Applikation ist anschließend unter [http://localhost:8000](http://localhost:8000) erreichbar.
-
 ---
 
-## 🔐 Administratorzugang & Rollenkonzept
+## Beispielkonfiguration (.env & Laravel)
 
-### 👨‍💼 Standard-Administrator
-Nach dem Seeding-Prozess erhält die Rolle `ems-director` vollen administrativen Zugriff.
+> ⚠️ **Hinweis:** Diese Konfigurationswerte sind Platzhalter. Ersetze `<app_id>`, `<app_key>`, `<app_secret>` und `<domain>` durch reale Werte aus deiner Umgebung.
 
-### 🛡️ Super-Admin-Rolle
-Eine zusätzliche Rolle namens `Super-Admin` existiert mit umfassenden Berechtigungen. Diese Rolle ist in der Benutzeroberfläche weder sichtbar noch zuweisbar und kann nur über die Kommandozeile (z. B. `php artisan tinker`) vergeben werden.  
-Dient ausschließlich Entwicklungs- und Wartungszwecken.
+### .env
 
----
-
-## 🧾 Vorlagen für Berichte erstellen
-
-1️⃣ **Vorlagendatei erstellen/bearbeiten:**  
-`/storage/app/templates/vorlagen.txt`
-
-2️⃣ **Vorlagen importieren:**
-```bash
-php artisan import:report-templates
+```env
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=<app_id>
+REVERB_APP_KEY=<app_key>
+REVERB_APP_SECRET=<app_secret>
+REVERB_HOST="<domain>"
+REVERB_PORT=443
+REVERB_SCHEME=https
+REVERB_SERVER_HOST="127.0.0.1"
+REVERB_SERVER_PORT=8080
+REVERB_SERVER_SCHEME=http
 ```
 
-3️⃣ **Cache leeren:**
-```bash
-php artisan config:clear
+### config/broadcasting.php
+
+```php
+'connections' => [
+    'reverb' => [
+        'driver' => 'reverb',
+        'key' => env('REVERB_APP_KEY'),
+        'secret' => env('REVERB_APP_SECRET'),
+        'app_id' => env('REVERB_APP_ID'),
+        'options' => [
+            'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
+            'port' => env('REVERB_SERVER_PORT', 8080),
+            'scheme' => 'http',
+            'useTLS' => false,
+        ],
+    ],
+],
 ```
 
----
+### config/reverb.php
 
-## 📜 Lizenzierung
+```php
+'servers' => [
+    'reverb' => [
+        'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
+        'port' => env('REVERB_SERVER_PORT', 8080),
+        'hostname' => env('REVERB_HOST'),
+    ],
+],
 
-Diese Software wird unter den Bedingungen der **MIT-Lizenz** bereitgestellt.
-
+'apps' => [
+    'provider' => 'config',
+    'apps' => [
+        [
+            'key' => env('REVERB_APP_KEY'),
+            'secret' => env('REVERB_APP_SECRET'),
+            'app_id' => env('REVERB_APP_ID'),
+            'options' => [
+                'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
+                'port' => env('REVERB_SERVER_PORT', '8080'),
+                'scheme' => 'http',
+                'useTLS' => false,
+            ],
+            'allowed_origins' => ['*'],
+        ],
+    ],
+],
+```
