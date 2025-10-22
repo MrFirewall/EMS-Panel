@@ -370,7 +370,7 @@
         
         forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
-        path: '/app'
+        path: '/app',
 
         disableStats: true,
         
