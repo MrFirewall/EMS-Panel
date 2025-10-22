@@ -31,39 +31,19 @@ return [
     'connections' => [
 
         'reverb' => [
-        'driver' => 'reverb',
-            'key' => env('REVERB_APP_KEY'),
-            'secret' => env('REVERB_APP_SECRET'),
-            'app_id' => env('REVERB_APP_ID'),
-
-            /*
-            |------------------------------------------------------------------
-            | Öffentliche Optionen (für JavaScript/Frontend)
-            |------------------------------------------------------------------
-            | Diese werden an den Browser gesendet, damit Echo weiß,
-            | womit es sich verbinden soll (ems.hostoro.de:443).
-            */
-            'options' => [
-                'host' => env('REVERB_HOST'),
-                'port' => env('REVERB_PORT', 443),
-                'scheme' => env('REVERB_SCHEME', 'https'),
-                'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
-            ],
-
-            /*
-            |------------------------------------------------------------------
-            | Interne Client-Optionen (für PHP/Backend)
-            |------------------------------------------------------------------
-            | Diese überschreiben die 'options' oben, aber NUR für das 
-            | Backend (wenn PHP 'notify()' aufruft).
-            | PHP verbindet sich intern mit http://127.0.0.1:8080.
-            */
-            'client_options' => [
-                'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
-                'port' => env('REVERB_SERVER_PORT', 8080),
-                'scheme' => 'http',
-                'useTLS' => false,
-            ],
+            'driver' => 'reverb',
+                'key' => env('REVERB_APP_KEY'),
+                'secret' => env('REVERB_APP_SECRET'),
+                'app_id' => env('REVERB_APP_ID'),
+                
+                // KORREKTUR: Diese Optionen sind für das BACKEND (PHP).
+                // Sie MÜSSEN auf den internen Reverb-Server zeigen.
+                'options' => [
+                    'host' => env('REVERB_SERVER_HOST', '127.0.0.1'), // <-- INTERNEN Host verwenden
+                    'port' => env('REVERB_SERVER_PORT', 8080),       // <-- INTERNEN Port verwenden
+                    'scheme' => 'http',                               // <-- INTERNES Schema verwenden
+                    'useTLS' => false,
+                ],
         ],
 
         'pusher' => [

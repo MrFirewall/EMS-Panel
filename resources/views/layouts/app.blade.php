@@ -360,19 +360,20 @@
     const reverbScheme = '{{ config("broadcasting.connections.reverb.options.scheme") }}';
 
     console.log(`[DEBUG] 1. Initialisierung Echo-Konfig.`);
-    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: ${reverbPort}, TLS: ${isHttps}`);
+    // KORREKTUR: Lies die ÖFFENTLICHEN .env-Variablen
+    console.log(`[DEBUG] Host: {{ env('REVERB_HOST') }}, Port: {{ env('REVERB_PORT') }}, TLS: ${isHttps}`);
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: reverbKey, // Korrekt
+        key: '{{ env("REVERB_APP_KEY") }}', // <-- KORREKT (verwendet env())
         
-        wsHost: '{{ request()->getHost() }}', 
-        wssHost: '{{ request()->getHost() }}',
+        wsHost: '{{ env("REVERB_HOST") }}', // <-- KORREKT (verwendet env())
+        wssHost: '{{ env("REVERB_HOST") }}', // <-- KORREKT (verwendet env())
 
-        wsPort: reverbPort, // Korrekt
-        wssPort: reverbPort, // Korrekt
+        wsPort: {{ env("REVERB_PORT") ?? 443 }}, // <-- KORREKT (verwendet env())
+        wssPort: {{ env("REVERB_PORT") ?? 443 }}, // <-- KORREKT (verwendet env())
         
-        forceTLS: isHttps || (reverbScheme === 'https'), // Korrekt
+        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'), // KORREKT
 
         path: '/app',
 
