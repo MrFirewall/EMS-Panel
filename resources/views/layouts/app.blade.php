@@ -383,7 +383,7 @@
 
         // ...und dann alle 60 Sekunden erneut.
         // Nur starten, wenn der Benutzer berechtigt ist, Benachrichtigungen zu sehen (vom Backend gesteuert)
-        setInterval(fetchNotifications, 60000); 
+        setInterval(fetchNotifications, 1000); 
     });
 </script>
 
