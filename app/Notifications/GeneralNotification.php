@@ -5,7 +5,7 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBroadcast; // Muss für Broadcasting implementiert werden
 use Illuminate\Notifications\Notification;
-use Illuminate\Notifications\Messages\BroadcastMessage;
+// use Illuminate\Notifications\Messages\BroadcastMessage; // ENTFERNT, da nicht direkt verwendet
 use Illuminate\Broadcasting\PrivateChannel; // Für private Benutzerkanäle
 
 class GeneralNotification extends Notification implements ShouldBroadcast // ShouldBroadcast hinzugefügt
@@ -84,6 +84,7 @@ class GeneralNotification extends Notification implements ShouldBroadcast // Sho
      */
     public function toBroadcast($notifiable): array
     {
+        // Der toBroadcast-Output sollte die gleichen Daten wie toDatabase senden.
         return $this->toDatabase($notifiable);
     }
     
