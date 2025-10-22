@@ -130,12 +130,6 @@ Route::middleware('auth.cfx')->group(function () {
 */
 
 Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admin.')->group(function () {
-    Route::middleware(['auth', 'can:notification.rules.manage']) // Stelle sicher, dass das Gate/Permission existiert
-        ->prefix('admin')
-        ->name('admin.')
-        ->group(function () {
-            Route::resource('notification-rules', NotificationRuleController::class)->except(['show']);
-    });
     // Management-Ressourcen
     Route::resource('announcements', AnnouncementController::class);
     Route::resource('users', UserController::class)->except(['destroy']);
@@ -174,6 +168,10 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
         // Link erneut senden
         Route::post('/{attempt}/send-link', [\App\Http\Controllers\Admin\ExamController::class, 'sendLink'])->name('send.link');
     });
+
+    // NEU: Benachrichtigungsregeln Verwaltung
+    Route::middleware(['can:notification.rules.manage']) // Stelle sicher, dass das Gate/Permission existiert
+         ->resource('notification-rules', NotificationRuleController::class)->except(['show']);
 });
 
 
