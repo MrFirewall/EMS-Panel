@@ -18,6 +18,12 @@ use Illuminate\Queue\SerializesModels;
 class GeneralNotification extends Notification implements ShouldBroadcastNow, ShouldDispatchAfterCommit
 {
     use Queueable, SerializesModels; 
+    
+    /**
+     * Der Benutzer, der benachrichtigt wird (wird von toArray gesetzt).
+     * @var mixed
+     */
+    public $notifiable; // KORREKT: Diese Eigenschaft wird benötigt.
 
     /**
      * Der anzuzeigende Benachrichtigungstext.
@@ -69,9 +75,10 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
      *
      * @return array<int, \Illuminate\Broadcasting\Channel|\Illuminate\Broadcasting\PrivateChannel>
      */
-    public function broadcastOn($notifiable): array
+    public function broadcastOn(): array // KORREKTUR: Das Argument $notifiable wurde entfernt.
     {
         // Sendet die Benachrichtigung an den privaten Kanal des spezifischen Benutzers.
+        // $this->notifiable wurde kurz zuvor von der toArray-Methode gesetzt.
         return [
             new PrivateChannel('users.' . $this->notifiable->id),
         ];
@@ -95,6 +102,10 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
      */
     public function toArray($notifiable): array
     {
+        // KORREKTUR: Speichert den $notifiable in der public-Eigenschaft,
+        // damit broadcastOn() später darauf zugreifen kann.
+        $this->notifiable = $notifiable;
+
         // Die Notification-ID wird hier hinzugefügt, damit der Client sie
         // im Broadcast-Payload empfängt und zur Identifikation nutzen kann.
         return [
