@@ -256,17 +256,27 @@
     // ------------------------------------------------------------------------
     window.Pusher = Pusher;
 
-    // TODO: Ersetzen Sie diese Platzhalter durch Ihre tatsächlichen Laravel/Broadcaster-Konfigurationswerte
+    // KORRIGIERT: Host auf den aktuellen Domain-Namen setzen, um den Nginx-Proxy zu treffen.
+    // Die Ports und das Schema werden von der Umgebung übernommen.
+    const isHttps = window.location.protocol === 'https:';
+
     window.Echo = new Echo({
         broadcaster: 'pusher',
         key: '{{ env("REVERB_APP_KEY") }}', 
-        wsHost: '{{ env("REVERB_HOST") ?? request()->getHost() }}',
+        
+        // WICHTIGER FIX: Verwenden des tatsächlichen Hosts der Webseite, um den Proxy zu treffen.
+        wsHost: '{{ request()->getHost() }}', 
+        wssHost: '{{ request()->getHost() }}',
+
         wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
         wssPort: {{ env("REVERB_PORT") ?? 8080 }},
-        // forceTLS nur auf true setzen, wenn der Host explizit SSL (WSS) verwendet
-        forceTLS: ('{{ env("REVERB_SCHEME") }}' === 'https' || window.location.protocol === 'https:'),
+        
+        // TLS erzwingen, wenn die aktuelle Webseite HTTPS ist (was sie ist) ODER wenn die Umgebung
+        // es verlangt (was die sicherste Einstellung ist).
+        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
+
         disableStats: true,
-        // Authorizer für private Channel (notwendig für benutzer-spezifische Benachrichtigungen)
+        // Authorizer bleibt unverändert
         authorizer: (channel, options) => {
             return {
                 authorize: (socketId, callback) => {
@@ -280,9 +290,6 @@
                     })
                     .fail(error => {
                         console.error('Echo Authorization Failed:', error);
-                        // Falls die Autorisierung fehlschlägt, versuchen wir es nicht erneut,
-                        // verhindern aber, dass das Haupt-Dropdown schließt.
-                        // callback(true, error);
                     });
                 }
             };
