@@ -103,9 +103,10 @@
 
     {{-- Description Textarea --}}
     <div class="form-group">
-        <label for="description">Beschreibung (Optional)</label>
-        <textarea name="description" id="description" class="form-control @error('description') is-invalid @enderror" rows="3" placeholder="Kurze Beschreibung, wofür diese Regel dient...">{{ old('description', $notificationRule->description ?? '') }}</textarea>
-        @error('description')
+        {{-- KORREKTUR: Label for und Name/ID des Textarea --}}
+        <label for="event_description">Beschreibung (Optional)</label>
+        <textarea name="event_description" id="event_description" class="form-control @error('event_description') is-invalid @enderror" rows="3" placeholder="Kurze Beschreibung, wofür diese Regel dient...">{{ old('event_description', $notificationRule->event_description ?? '') }}</textarea>
+        @error('event_description')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
@@ -133,10 +134,10 @@
 {{-- JavaScript für Select2 und dynamische Identifier --}}
 {{-- Das Select2 JS wird jetzt im Hauptlayout geladen --}}
 @push('scripts')
+{{-- <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script> --}} {{-- Wird im Hauptlayout geladen --}}
 <script>
     $(document).ready(function() {
         // Initialisiere alle Select2-Felder mit Bootstrap 4 Theme
-        // Stellt sicher, dass Select2 bereits geladen ist
         if (typeof $.fn.select2 === 'function') {
             $('.select2').select2({
                 theme: 'bootstrap4',
@@ -147,20 +148,13 @@
             console.error("Select2 wurde nicht gefunden. Stelle sicher, dass es im Hauptlayout geladen wird.");
         }
 
-
-        // Datenquelle für die Identifier (aus PHP übergeben)
         const identifiers = @json($availableIdentifiers);
-        // KORREKTUR: Hole den initialen Wert direkt aus dem Select-Feld,
-        // da das PHP oben die Option bereits korrekt rendert.
         let currentIdentifierValue = $('#target_identifier').val();
 
-
-        // Funktion zum Aktualisieren der Identifier-Optionen
         function updateIdentifierOptions(selectedType) {
             const $identifierSelect = $('#target_identifier');
-            // Behalte den aktuell ausgewählten Wert, wenn möglich
             const previouslySelectedValue = $identifierSelect.val();
-            $identifierSelect.empty(); // Leere aktuelle Optionen
+            $identifierSelect.empty();
 
             let optionsData = [];
             let placeholderText = 'Bitte auswählen...';
@@ -176,49 +170,39 @@
                      placeholderText = 'Berechtigung auswählen...';
                     break;
                 case 'user':
-                    // Kombiniere Benutzer und spezielle Identifier
                     optionsData = { ...(identifiers['Benutzer'] || {}), ...(identifiers['Spezifisch'] || {}) };
                     placeholderText = 'Benutzer oder spezifisches Ziel auswählen...';
                     break;
                 default:
                     placeholderText = 'Zuerst Typ auswählen...';
-                    enableClear = false; // Kein Leeren erlauben, wenn Typ nicht gewählt
+                    enableClear = false;
             }
 
-            // Füge Platzhalter hinzu (wird von Select2 überschrieben, aber gut für Fallback)
              $identifierSelect.append(new Option(placeholderText, "", true, true)).prop('disabled', $.isEmptyObject(optionsData) && selectedType === '');
 
-
-            // Füge die neuen Optionen hinzu (gruppiert für Benutzer/Spezifisch)
              if (selectedType === 'user') {
-                 // Benutzer-Gruppe
                  if (!$.isEmptyObject(identifiers['Benutzer'])) {
                      const $userGroup = $('<optgroup label="Benutzer"></optgroup>');
                      $.each(identifiers['Benutzer'], function(id, name) {
-                         $userGroup.append(new Option(name + ' (ID: ' + id + ')', id, false, false)); // Vorauswahl wird später gesetzt
+                         $userGroup.append(new Option(name + ' (ID: ' + id + ')', id, false, false));
                      });
                      $identifierSelect.append($userGroup);
                  }
-                  // Spezifisch-Gruppe
                  if (!$.isEmptyObject(identifiers['Spezifisch'])) {
                      const $specificGroup = $('<optgroup label="Spezifisch"></optgroup>');
                      $.each(identifiers['Spezifisch'], function(key, label) {
-                         $specificGroup.append(new Option(label, key, false, false)); // Vorauswahl wird später gesetzt
+                         $specificGroup.append(new Option(label, key, false, false));
                      });
                      $identifierSelect.append($specificGroup);
                  }
-
              } else {
-                 // Füge Optionen für Rollen und Berechtigungen hinzu
                  $.each(optionsData, function(key, value) {
                      const optionValue = (selectedType === 'user') ? key : value;
                      const optionText = value;
-                     $identifierSelect.append(new Option(optionText, optionValue, false, false)); // Vorauswahl wird später gesetzt
+                     $identifierSelect.append(new Option(optionText, optionValue, false, false));
                  });
              }
 
-            // Select2 neu initialisieren oder aktualisieren
-            // Stelle sicher, dass Select2 bereits geladen ist
             if (typeof $.fn.select2 === 'function') {
                 $identifierSelect.select2({
                     theme: 'bootstrap4',
@@ -227,45 +211,32 @@
                 });
             }
 
-
-             // Versuche, den vorherigen Wert oder den 'old'/'current' Wert wieder auszuwählen
              let valueToSelect = previouslySelectedValue;
-             // Wenn der Typ geändert wurde ODER kein Wert vorher selektiert war, prüfe currentIdentifierValue
              if ($('#target_type').val() === selectedType && (!valueToSelect || valueToSelect === '')) {
                  valueToSelect = currentIdentifierValue;
              }
-             // Setze den Wert, wenn er in den neuen Optionen existiert
              if (valueToSelect && $identifierSelect.find("option[value='" + valueToSelect + "']").length) {
-                 $identifierSelect.val(valueToSelect).trigger('change.select2'); // Verwende change.select2, um Events auszulösen
+                 $identifierSelect.val(valueToSelect).trigger('change.select2');
              } else {
-                 // Wenn der alte Wert nicht mehr gültig ist, setze auf leer zurück
                  $identifierSelect.val(null).trigger('change.select2');
-                 // Aktualisiere currentIdentifierValue, damit es beim nächsten Typwechsel nicht stört
                  currentIdentifierValue = null;
              }
-
         }
 
-        // Event Listener für Änderungen am Target Type Dropdown
         $('#target_type').on('change', function() {
-             // Beim Ändern des Typs setzen wir currentIdentifierValue zurück,
-             // es sei denn, es ist der initiale Ladevorgang.
-             // Wir holen den Wert *bevor* wir updaten.
             currentIdentifierValue = $('#target_identifier').val();
             updateIdentifierOptions($(this).val());
         });
 
-        // Initialisiere die Identifier-Optionen beim Laden der Seite
         const initialType = $('#target_type').val();
         if (initialType) {
             updateIdentifierOptions(initialType);
         } else {
-            // Initial deaktivert, wenn kein Typ gewählt ist
             if (typeof $.fn.select2 === 'function') {
                 $('#target_identifier').prop('disabled', true).select2({
                     theme: 'bootstrap4',
                     placeholder: 'Zuerst Typ auswählen...',
-                    allowClear: false, // Hier kein Clear erlauben
+                    allowClear: false,
                 });
             }
         }

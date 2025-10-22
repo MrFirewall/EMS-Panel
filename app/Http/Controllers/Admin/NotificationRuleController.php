@@ -18,7 +18,10 @@ class NotificationRuleController extends Controller
     public function index()
     {
         $this->authorize('viewAny', NotificationRule::class);
-        $rules = NotificationRule::latest()->get();
+        // KORREKTUR: Verwende paginate() statt get() für DataTables View
+        $rules = NotificationRule::latest()->paginate(15); // Oder eine hohe Zahl, wenn du client-side Paging willst
+        // Wenn du DataTables verwendest und *alle* Daten laden willst:
+        // $rules = NotificationRule::latest()->get();
         return view('admin.notification-rules.index', compact('rules'));
     }
 
@@ -96,11 +99,12 @@ class NotificationRuleController extends Controller
         $availableActions = array_keys($this->getAvailableControllerActions());
         $availableTypes = array_keys($this->getTargetTypes());
 
+        // KORREKTUR: 'description' zu 'event_description' geändert
         return $request->validate([
             'controller_action' => ['required', 'string', Rule::in($availableActions)],
             'target_type' => ['required', 'string', Rule::in($availableTypes)],
             'target_identifier' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:255'],
+            'event_description' => ['nullable', 'string', 'max:255'], // Angepasst an DB-Feld
             'is_active' => ['nullable'],
         ]);
     }
@@ -149,8 +153,8 @@ class NotificationRuleController extends Controller
             'TrainingModuleController@update' => 'Ausbildungsmodul aktualisiert',
             'TrainingModuleController@destroy' => 'Ausbildungsmodul gelöscht',
             'TrainingModuleController@signUp' => 'Benutzer hat sich für Modul angemeldet (Antrag)',
-            'VacationController@store' => 'Urlaubsantrag gestellt', // NEU
-            'VacationController@updateStatus' => 'Urlaubsantrag bearbeitet (Genehmigt/Abgelehnt)', // NEU
+            'VacationController@store' => 'Urlaubsantrag gestellt',
+            'VacationController@updateStatus' => 'Urlaubsantrag bearbeitet (Genehmigt/Abgelehnt)',
             // --- Füge hier zukünftige Aktionen hinzu ---
         ];
     }
