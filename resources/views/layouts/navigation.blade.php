@@ -6,8 +6,22 @@
     // Neue Logik zur Prüfung, ob eine Prüfungs-Route aktiv ist (WICHTIG: Prüft auf beide Sub-Gruppen)
     $isExamManagementActive = Request::routeIs('admin.exams.index', 'admin.exams.show', 'admin.exams.create', 'admin.exams.edit') || Request::routeIs('admin.exams.attempts.*');
     
+    // NEU: Prüfung für Benachrichtigungsregeln
+    $isNotificationRulesActive = Request::routeIs('admin.notification-rules.*');
+
     // Haupt-Dropdown ist aktiv, wenn eine seiner Unterkategorien oder ein direkter Link aktiv ist
     $isFormsActive = $isEvaluationsActive || $isAusbildungAnmeldungActive || Request::routeIs('vacations.create');
+
+    // NEU/Optional: Haupt-Admin-Dropdown ist aktiv, wenn eine seiner Unterseiten aktiv ist (passen Sie dies ggf. an)
+    $isAdminActive = Request::routeIs('admin.announcements.*') ||
+                     Request::routeIs('admin.users.*') ||
+                     Request::routeIs('modules.*') || // Annahme: gehört logisch zu Admin
+                     $isExamManagementActive ||
+                     Request::routeIs('admin.roles.*') ||
+                     Request::routeIs('admin.permissions.index') ||
+                     Request::routeIs('admin.vacations.*') ||
+                     Request::routeIs('admin.logs.index') ||
+                     $isNotificationRulesActive; // Hinzugefügt
 @endphp
 
 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
@@ -116,8 +130,16 @@
     @endcanany
 
     {{-- ADMIN GRUPPE --}}
-    @can('admin.access')
+    {{-- Passe ggf. die Berechtigung 'admin.access' an --}}
+    @can('admin.access') 
     <li class="nav-header">ADMINISTRATION</li>
+        {{-- Haupt-Admin-Menüpunkt (optional, zum Ausklappen) --}}
+        {{-- <li class="nav-item has-treeview {{ $isAdminActive ? 'menu-open' : '' }}"> --}}
+        {{-- <a href="#" class="nav-link {{ $isAdminActive ? 'active' : '' }}"> --}}
+        {{--    <i class="nav-icon fas fa-cogs"></i><p>Administration <i class="right fas fa-angle-left"></i></p> --}}
+        {{-- </a> --}}
+        {{-- <ul class="nav nav-treeview"> --}}
+
         @can('announcements.view')
         <li class="nav-item">
             <a href="{{ route('admin.announcements.index') }}" class="nav-link {{ Request::routeIs('admin.announcements.*') ? 'active' : '' }}">
@@ -205,5 +227,19 @@
             </a>
         </li>
         @endcan
+
+        {{-- NEUER MENÜPUNKT: BENACHRICHTIGUNGSREGELN --}}
+        @can('manage notification rules')
+        <li class="nav-item">
+            <a href="{{ route('admin.notification-rules.index') }}" class="nav-link {{ $isNotificationRulesActive ? 'active' : '' }}">
+                <i class="nav-icon fas fa-cogs"></i> {{-- Oder fas fa-bell-slash / fas fa-sliders-h --}}
+                <p>Benachrichtigungsregeln</p>
+            </a>
+        </li>
+        @endcan
+
+        {{-- Ende der optionalen Haupt-Admin-Gruppe --}}
+        </ul> 
+        </li>
     @endcan
 </ul>

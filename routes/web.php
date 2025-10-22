@@ -23,6 +23,7 @@ use Lab404\Impersonate\Controllers\ImpersonateController;
 use App\Models\User; // Für die Test-Route benötigt
 use App\Notifications\GeneralNotification; // Für die Test-Route benötigt
 use Illuminate\Support\Facades\Auth; // Für die Test-Route benötigt
+use App\Http\Controllers\Admin\NotificationRuleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -129,7 +130,12 @@ Route::middleware('auth.cfx')->group(function () {
 */
 
 Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admin.')->group(function () {
-    
+    Route::middleware(['auth', 'can:notification.rules.manage']) // Stelle sicher, dass das Gate/Permission existiert
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+            Route::resource('notification-rules', NotificationRuleController::class)->except(['show']);
+    });
     // Management-Ressourcen
     Route::resource('announcements', AnnouncementController::class);
     Route::resource('users', UserController::class)->except(['destroy']);
