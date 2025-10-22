@@ -9,8 +9,8 @@ use Carbon\Carbon;
 class NotificationController extends Controller
 {
     /**
-     * Ruft ungelesene Benachrichtigungen für das Dropdown ab, gruppiert diese
-     * nach Typ (Icon) und gibt die hierarchische Struktur zurück.
+     * Fetches unread notifications for the dropdown, groups them by type (icon),
+     * and returns the hierarchical structure.
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -22,10 +22,10 @@ class NotificationController extends Controller
 
         $user = Auth::user();
 
-        // Hole alle ungelesenen Benachrichtigungen und sortiere sie nach Erstellung (neueste zuerst)
+        // Get all unread notifications and sort them by creation date (newest first)
         $notifications = $user->unreadNotifications->sortByDesc('created_at');
 
-        // Funktion zur Erzeugung eines spezifischen Gruppentextes
+        // Function to generate specific group text
         $getGroupText = function ($icon, $count) {
             $prefix = ($count > 1) ? "{$count} neue " : "Eine neue ";
             
@@ -51,19 +51,19 @@ class NotificationController extends Controller
             }
         };
 
-        // Gruppierung der Benachrichtigungen nach Icon-Typ
+        // Group notifications by icon type
         $groupedNotifications = $notifications
             ->groupBy(function($notification) {
-                // Verwenden Sie den Icon-Namen als Gruppierungsschlüssel.
+                // Use the icon name as the grouping key.
                 return $notification->data['icon'] ?? 'fas fa-bell';
             })
             ->map(function($group, $icon) use ($getGroupText) {
                 $count = $group->count();
                 
-                // Gruppentitel generieren (z.B. "3 neue Aufgaben")
+                // Generate group title (e.g., "3 neue Aufgaben")
                 $groupTitle = $getGroupText($icon, $count);
                 
-                // Map die individuellen Benachrichtigungen innerhalb der Gruppe
+                // Map individual notifications within the group
                 $individualItems = $group->map(function($notification) {
                     return [
                         'id'    => $notification->id,
@@ -77,12 +77,12 @@ class NotificationController extends Controller
                     'group_title' => $groupTitle,
                     'group_icon'  => $icon,
                     'group_count' => $count,
-                    'items'       => $individualItems, // Die Liste der einzelnen Benachrichtigungen
+                    'items'       => $individualItems, // List of individual notifications
                 ];
             })
             ->values();
 
-        // Rendere das Partial-View mit der hierarchischen Struktur
+        // Render the partial view with the hierarchical structure
         $html = view('layouts._notifications', ['groupedNotifications' => $groupedNotifications, 'totalCount' => $notifications->count()])->render();
 
         return response()->json([
@@ -91,10 +91,8 @@ class NotificationController extends Controller
         ]);
     }
     
-    // ... (index, markAllRead, markAsRead und destroy bleiben unverändert)
-
     /**
-     * Zeigt die Archiv-Seite mit allen Benachrichtigungen (gelesen und ungelesen).
+     * Displays the archive page with all notifications (read and unread).
      *
      * @return \Illuminate\View\View
      */
@@ -102,10 +100,10 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
 
-        // Hole alle Benachrichtigungen, paginiert
+        // Get all notifications, paginated
         $allNotifications = $user->notifications()->paginate(20);
 
-        // Hole nur die ungelesenen für den Zähler
+        // Get only unread ones for the counter
         $unreadCount = $user->unreadNotifications()->count();
 
         return view('notifications.index', [
@@ -115,7 +113,7 @@ class NotificationController extends Controller
     }
 
     /**
-     * Markiert alle ungelesenen Benachrichtigungen als gelesen.
+     * Marks all unread notifications as read.
      *
      * @return \Illuminate\Http\RedirectResponse
      */
@@ -123,37 +121,38 @@ class NotificationController extends Controller
     {
         Auth::user()->unreadNotifications->markAsRead();
 
-        return redirect()->back()->with('success', 'Alle Benachrichtigungen wurden als gelesen markiert.');
+        // Removed ->with('success', ...)
+        return redirect()->back(); 
     }
 
     /**
-     * Markiert eine einzelne ungelesene Benachrichtigung als gelesen und leitet ggf. zur Ziel-URL weiter.
+     * Marks a single unread notification as read and optionally redirects to the target URL.
      *
-     * @param string $id Die ID der zu markierenden Benachrichtigung.
+     * @param string $id The ID of the notification to mark.
      * @return \Illuminate\Http\RedirectResponse
      */
     public function markAsRead($id)
     {
-        // Finde die Benachrichtigung über die ID und stelle sicher, dass sie dem eingeloggten Benutzer gehört
+        // Find the notification by ID and ensure it belongs to the logged-in user
         $notification = Auth::user()->notifications()->where('id', $id)->first();
 
         if ($notification && $notification->unread()) {
             $notification->markAsRead();
             
-            // Wenn eine URL übergeben wurde, leite dorthin weiter
+            // If a URL was provided, redirect there
             if (isset($notification->data['url']) && $notification->data['url'] !== '#') {
                 return redirect($notification->data['url']);
             }
         }
         
-        // Wenn keine URL vorhanden oder Benachrichtigung nicht gefunden/gelesen, leite zurück
+        // If no URL or notification not found/read, redirect back
         return redirect()->back(); 
     }
 
     /**
-     * Löscht eine einzelne Benachrichtigung.
+     * Deletes a single notification.
      *
-     * @param string $id Die ID der zu löschenden Benachrichtigung.
+     * @param string $id The ID of the notification to delete.
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
@@ -161,6 +160,7 @@ class NotificationController extends Controller
         $notification = Auth::user()->notifications()->findOrFail($id);
         $notification->delete();
 
-        return redirect()->back()->with('success', 'Benachrichtigung gelöscht.');
+        // Removed ->with('success', ...)
+        return redirect()->back(); 
     }
 }
