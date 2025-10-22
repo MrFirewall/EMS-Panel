@@ -465,16 +465,20 @@
         // --------------------------------------------------------------------
         // ECHTE ECHTZEIT-LOGIK (Laravel Echo)
         // --------------------------------------------------------------------
-@auth
-const channel = window.Echo.private(`users.{{ Auth::id() }}`);
+        @auth
+        console.log('[DEBUG] Listener für GeneralNotification aktiviert.');
 
-channel.bind_global((event, data) => console.log('[GLOBAL EVENT]', event, data));
+        // Private Kanal für den eingeloggten Benutzer
+        const channel = window.Echo.private(`users.{{ Auth::id() }}`);
 
-channel.listen('.new.ems.notification', (e) => {
-    console.log('--- ECHTZEIT EVENT EMPFANGEN ---', e);
-    fetchNotifications();
-});
-@endauth
+        // Lauscht auf das Broadcast-Event (broadcastAs: 'new.ems.notification')
+        channel.listen('.new.ems.notification', (e) => {
+            console.log('--- ECHTZEIT EVENT EMPFANGEN ---', e);
+            // Dropdown aktualisieren
+            fetchNotifications();
+        });
+        @endauth
+
         // --------------------------------------------------------------------
 
     });
