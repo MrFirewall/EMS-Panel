@@ -3,12 +3,14 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; // NEU: Für Transaktionssicherheit
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
+// ShouldBroadcast und den BroadcastMessage Import entfernt, um Signature-Konflikte zu vermeiden
 
-class GeneralNotification extends Notification implements ShouldBroadcast, ShouldDispatchAfterCommit // ShouldDispatchAfterCommit hinzugefügt
+// Wir implementieren nur ShouldDispatchAfterCommit, um Transaktionssicherheit zu gewährleisten.
+// Laravel handhabt das Broadcasting automatisch, da 'broadcast' in via() enthalten ist.
+class GeneralNotification extends Notification implements ShouldDispatchAfterCommit 
 {
     use Queueable;
 
@@ -33,9 +35,10 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
     /**
      * Get the notification's delivery channels.
      *
-     * @return array<int, string>
+     * @param mixed $notifiable
+     * @return array
      */
-    public function via(object $notifiable): array
+    public function via($notifiable): array
     {
         // Wir speichern in der Datenbank UND senden per Broadcast
         return ['database', 'broadcast']; 
@@ -43,6 +46,8 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
 
     /**
      * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
+     *
+     * Dies wird automatisch von Laravel beim Broadcasting gesucht.
      *
      * @param mixed $notifiable
      * @return array
@@ -58,9 +63,10 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
     /**
      * Get the array representation of the notification (für die Datenbank).
      *
+     * @param mixed $notifiable
      * @return array<string, mixed>
      */
-    public function toDatabase(object $notifiable): array
+    public function toDatabase($notifiable): array
     {
         // Diese Daten werden in der 'data'-Spalte der 'notifications'-Tabelle gespeichert.
         return [
@@ -85,9 +91,10 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
     /**
      * Get the array representation of the notification (wird hier nicht genutzt).
      *
+     * @param mixed $notifiable
      * @return array<string, mixed>
      */
-    public function toArray(object $notifiable): array
+    public function toArray($notifiable): array
     {
         return [
             //
