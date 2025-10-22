@@ -2,12 +2,15 @@
 
 namespace App\Notifications;
 
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; // NEU: Für Transaktionssicherheit
+use Illuminate\Notifications\Notification;
+use Illuminate\Broadcasting\PrivateChannel;
+// ShouldBroadcast und den BroadcastMessage Import entfernt, um Signature-Konflikte zu vermeiden
 
-class GeneralNotification extends Notification implements ShouldDispatchAfterCommit
+// Wir implementieren nur ShouldDispatchAfterCommit, um Transaktionssicherheit zu gewährleisten.
+// Laravel handhabt das Broadcasting automatisch, da 'broadcast' in via() enthalten ist.
+class GeneralNotification extends Notification implements ShouldDispatchAfterCommit 
 {
     use Queueable;
 
@@ -15,6 +18,13 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
     protected $icon;
     protected $url;
 
+    /**
+     * Create a new notification instance.
+     *
+     * @param string $text Der Anzeigetext (z.B. "Neuer Urlaubsantrag")
+     * @param string $icon Eine FontAwesome-Icon-Klasse (z.B. "fas fa-plane")
+     * @param string $url Die URL, zu der man beim Klicken gelangt
+     */
     public function __construct(string $text, string $icon, string $url)
     {
         $this->text = $text;
@@ -22,32 +32,72 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
         $this->url = $url;
     }
 
+    /**
+     * Get the notification's delivery channels.
+     *
+     * @param mixed $notifiable
+     * @return array
+     */
     public function via($notifiable): array
     {
-        return ['database', 'broadcast'];
+        // Wir speichern in der Datenbank UND senden per Broadcast
+        return ['database', 'broadcast']; 
     }
 
-    // ✅ Correct signature
-    public function broadcastOn(): array
+    /**
+     * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
+     *
+     * Dies wird automatisch von Laravel beim Broadcasting gesucht.
+     *
+     * @param mixed $notifiable
+     * @return array
+     */
+    public function broadcastOn($notifiable) // PARAMETER WIEDER HERGESTELLT
     {
-        // $this->notifiable is automatically set by Laravel
+        // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
         return [
-            new PrivateChannel('users.' . $this->notifiable->id),
+            new PrivateChannel('users.' . $notifiable->id),
         ];
     }
-
+    
+    /**
+     * Get the array representation of the notification (für die Datenbank).
+     *
+     * @param mixed $notifiable
+     * @return array<string, mixed>
+     */
     public function toDatabase($notifiable): array
     {
+        // Diese Daten werden in der 'data'-Spalte der 'notifications'-Tabelle gespeichert.
         return [
             'text' => $this->text,
             'icon' => $this->icon,
             'url'  => $this->url,
         ];
     }
-
+    
+    /**
+     * Definiert die zu sendenden Daten für das Broadcasting.
+     *
+     * @param mixed $notifiable
+     * @return array
+     */
     public function toBroadcast($notifiable): array
     {
+        // Der toBroadcast-Output sollte die gleichen Daten wie toDatabase senden.
         return $this->toDatabase($notifiable);
     }
+    
+    /**
+     * Get the array representation of the notification (wird hier nicht genutzt).
+     *
+     * @param mixed $notifiable
+     * @return array<string, mixed>
+     */
+    public function toArray($notifiable): array
+    {
+        return [
+            //
+        ];
+    }
 }
-
