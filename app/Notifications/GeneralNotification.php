@@ -3,13 +3,12 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBroadcast; // Muss für Broadcasting implementiert werden
 use Illuminate\Notifications\Notification;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast; // Wichtig für Echtzeit
 use Illuminate\Notifications\Messages\BroadcastMessage;
-use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Broadcasting\PrivateChannel; // Für private Kanäle
+use Illuminate\Broadcasting\PrivateChannel; // Für private Benutzerkanäle
 
-class GeneralNotification extends Notification implements ShouldBroadcast // <- Hinzugefügt
+class GeneralNotification extends Notification implements ShouldBroadcast // ShouldBroadcast hinzugefügt
 {
     use Queueable;
 
@@ -38,12 +37,30 @@ class GeneralNotification extends Notification implements ShouldBroadcast // <- 
      */
     public function via(object $notifiable): array
     {
-        // Wir speichern in der Datenbank UND senden über den Broadcaster
-        return ['database', 'broadcast']; // <- Geändert
+        // Wir speichern in der Datenbank UND senden per Broadcast
+        return ['database', 'broadcast']; 
     }
 
     /**
-     * Get the array representation of the notification.
+     * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
+     *
+     * HINWEIS: Die Signatur MUSS kompatibel mit der Basisklasse sein, daher wird 
+     * der Typ 'object' für $notifiable weggelassen.
+     *
+     * @param mixed $notifiable
+     * @return array
+     */
+    public function broadcastOn($notifiable): array
+    {
+        // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
+        // Die Autorisierung dieses Kanals erfolgt in routes/channels.php.
+        return [
+            new PrivateChannel('users.' . $notifiable->id),
+        ];
+    }
+    
+    /**
+     * Get the array representation of the notification (für die Datenbank).
      *
      * @return array<string, mixed>
      */
@@ -56,34 +73,29 @@ class GeneralNotification extends Notification implements ShouldBroadcast // <- 
             'url'  => $this->url,
         ];
     }
-
-    /**
-     * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
-     *
-     * @param object $notifiable
-     * @return array
-     */
-    public function broadcastOn(object $notifiable): array
-    {
-        // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
-        // Die Autorisierung dieses Kanals erfolgt in routes/channels.php.
-        return [
-            new PrivateChannel('users.' . $notifiable->id),
-        ];
-    }
-
+    
     /**
      * Definiert die zu sendenden Daten für das Broadcasting.
+     * * Wir senden hier die gleichen Daten, damit der fetch-Aufruf weiß, was anzuzeigen ist.
+     * Wenn Sie dies nicht definieren, sendet Laravel den toArray()-Output.
      *
-     * Laravel verwendet standardmäßig die toArray()-Methode, aber wir können 
-     * explizit toBroadcast() definieren, um nur die notwendigen Daten zu senden,
-     * was wir hier tun, indem wir die gleichen Daten wie toDatabase() verwenden.
-     *
-     * @param object $notifiable
+     * @param mixed $notifiable
      * @return array
+     */
+    public function toBroadcast($notifiable): array
+    {
+        return $this->toDatabase($notifiable);
+    }
+    
+    /**
+     * Get the array representation of the notification (wird hier nicht genutzt).
+     *
+     * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
-        return $this->toDatabase($notifiable);
+        return [
+            //
+        ];
     }
 }
