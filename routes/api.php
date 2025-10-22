@@ -17,7 +17,7 @@ use App\Http\Controllers\NotificationController;
 
 // Routen, die eine Authentifizierung über das Web-Session-Cookie benötigen
 // (Da diese Routen per AJAX von der Frontend-Web-Anwendung aufgerufen werden)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth.cfx')->group(function () {
     
     // Benachrichtigungen abrufen (für das Navbar-Dropdown)
     // Wird alle 60 Sekunden vom Frontend aufgerufen
