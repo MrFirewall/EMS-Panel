@@ -1,6 +1,18 @@
 {{-- Die Variable $groupedNotifications enthält die Gruppen (Level 1) --}}
 {{-- Die Variable $totalCount wird vom Controller übergeben und enthält die GESAMTE Anzahl --}}
 
+{{-- Füge diesen Style-Block hinzu oder integriere die Klasse in deine CSS-Datei --}}
+<style>
+.notification-text-truncate {
+    display: inline-block; /* Wichtig für korrekte Breitenberechnung */
+    max-width: calc(100% - 70px); /* Ca. 100% minus Breite des Zeitstempels und Icons */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle; /* Stellt sicher, dass Text und Icon auf einer Linie sind */
+}
+</style>
+
 {{-- Benachrichtigungs-Header --}}
 <div class="d-flex justify-content-between align-items-center dropdown-header">
     {{-- Zeigt die Gesamtanzahl der Benachrichtigungen an --}}
@@ -50,10 +62,14 @@
             <form action="{{ route('notifications.markAsRead', $notification['id']) }}" method="POST" class="m-0 p-0 dropdown-item-form">
                 @csrf
                 {{-- Der Button/Link muss die gesamte Dropdown-Item-Fläche ausfüllen --}}
-                <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-left w-100 pl-4 py-2">
-                    {{-- Pl-4 (Padding-Left) rückt die Einzelnachrichten leicht ein, um die Hierarchie zu betonen --}}
-                    <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $notification['text'] }}
-                    <span class="float-right text-muted text-sm">{{ $notification['time'] }}</span>
+                {{-- KORREKTUR: Verwende Flexbox für bessere Kontrolle --}}
+                <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-left w-100 pl-4 py-2 d-flex justify-content-between align-items-center">
+                    {{-- Pl-4 (Padding-Left) rückt die Einzelnachrichten leicht ein --}}
+                    {{-- KORREKTUR: Füge die CSS-Klasse zum Text-Span hinzu --}}
+                    <span class="notification-text-truncate"> 
+                        <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $notification['text'] }}
+                    </span>
+                    <span class="text-muted text-sm ml-2">{{ $notification['time'] }}</span> {{-- ml-2 für etwas Abstand --}}
                 </button>
             </form>
         @endforeach
