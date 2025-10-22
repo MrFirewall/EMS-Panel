@@ -257,27 +257,27 @@
     window.Pusher = Pusher;
 
     // KORRIGIERT: Host auf den aktuellen Domain-Namen setzen, um den Nginx-Proxy zu treffen.
-    // Die Ports und das Schema werden von der Umgebung übernommen.
     const isHttps = window.location.protocol === 'https:';
+
+    console.log('[DEBUG] 1. Initialisierung Echo-Konfig.');
+    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${isHttps}`);
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
         key: '{{ env("REVERB_APP_KEY") }}', 
         
-        // WICHTIGER FIX: Verwenden des tatsächlichen Hosts der Webseite, um den Proxy zu treffen.
         wsHost: '{{ request()->getHost() }}', 
         wssHost: '{{ request()->getHost() }}',
 
         wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
         wssPort: {{ env("REVERB_PORT") ?? 8080 }},
         
-        // TLS erzwingen, wenn die aktuelle Webseite HTTPS ist (was sie ist) ODER wenn die Umgebung
-        // es verlangt (was die sicherste Einstellung ist).
         forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
         disableStats: true,
         // Authorizer bleibt unverändert
         authorizer: (channel, options) => {
+             console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
             return {
                 authorize: (socketId, callback) => {
                     $.post('/broadcasting/auth', {
@@ -286,14 +286,25 @@
                         channel_name: channel.name
                     })
                     .done(response => {
+                        console.log('[DEBUG] 3. Autorisierung erfolgreich:', response);
                         callback(false, response);
                     })
                     .fail(error => {
-                        console.error('Echo Authorization Failed:', error);
+                        console.error('[DEBUG] 3. Autorisierung FEHLGESCHLAGEN!', error);
+                        // Dies sollte nur passieren, wenn routes/channels.php fehlschlägt
+                        callback(true, error);
                     });
                 }
             };
         },
+    });
+    
+    // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
+    window.Echo.connector.pusher.connection.bind('state_change', function(states) {
+        console.warn(`[DEBUG] Reverb Statusänderung: ${states.current} (Vorher: ${states.previous})`);
+        if (states.current === 'connected') {
+            console.info('[DEBUG] WebSocket-Verbindung erfolgreich hergestellt und verbunden!');
+        }
     });
 
     // ------------------------------------------------------------------------
@@ -415,12 +426,15 @@
         $('#notification-list .collapse.show').each(function() {
             openGroups.push($(this).attr('id'));
         });
+        
+        console.log('[DEBUG] 4. Starte AJAX-Fetch für Benachrichtigungen. Offene Gruppen:', openGroups);
 
         $.ajax({
             url: fetchUrl,
             method: 'GET',
             dataType: 'json',
             success: function(response) {
+                console.log('[DEBUG] 5. AJAX-Fetch erfolgreich.', response);
                 const htmlContent = response.items_html;
                 
                 // Zähler aktualisieren
@@ -434,9 +448,10 @@
                 if (htmlContent) {
                     notificationList.html(htmlContent);
 
-                    // 2. Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
+                    // 6. Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
                     openGroups.forEach(function(id) {
                         $('#' + id).collapse('show');
+                        console.log(`[DEBUG] 6. Gruppe ${id} wiederhergestellt (show).`);
                     });
 
                 } else {
@@ -444,7 +459,7 @@
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Fehler beim Abrufen der Benachrichtigungen:', status, error);
+                console.error('[DEBUG] 5. AJAX-Fetch FEHLGESCHLAGEN:', status, error);
                 notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
             }
         });
@@ -462,7 +477,8 @@
         window.Echo.private(`users.{{ Auth::id() }}`) 
             // Nutzt die eingebaute Echo Notification-Methode für Laravel Notifications
             .notification((notification) => {
-                console.log('Echtzeit-Benachrichtigung über .notification() erhalten!', notification);
+                console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
+                console.log('[DEBUG] 7. Benachrichtigung über .notification() erhalten!', notification);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
                 fetchNotifications(); 
             });
