@@ -102,11 +102,21 @@
             background-color: #007bff;
             color: #fff;
         }
+        
+        /* NEUE REGEL: Größe des Benachrichtigungs-Badges anpassen */
+        .main-header .navbar-badge {
+            font-size: 0.75rem; /* Standardmäßig ist es oft 0.5em oder kleiner. Erhöhen Sie es. */
+            padding: 3px 6px;  /* Mehr Füllung für eine größere Klickfläche */
+            top: 6px;          /* Passt die vertikale Position im AdminLTE-Header an */
+            right: 3px;        /* Passt die horizontale Position an */
+            font-weight: 700;  /* Macht die Zahl dicker */
+        }
+
 
         /* Preloader: Option 3 (EKG-Linie) */
         .ekg-loader {
-            width: 20vw;      /* Breite ist 20% der Bildschirmbreite */
-            height: 10vw;     /* Höhe ist die Hälfte der Breite (2:1 Verhältnis) */
+            width: 20vw;      /* Breite ist 20% der Bildschirmbreite */
+            height: 10vw;     /* Höhe ist die Hälfte der Breite (2:1 Verhältnis) */
             max-width: 300px; /* Wird nie breiter als 300px */
             max-height: 150px;/* Wird nie höher als 150px */
             min-width: 120px; /* Wird nie schmaler als 120px */
@@ -364,7 +374,7 @@
 
                     // Dropdown-Liste mit dem HTML aus dem Partial füllen
                     if (htmlContent) {
-                       notificationList.html(htmlContent);
+                        notificationList.html(htmlContent);
                     } else {
                        // Fallback, wenn kein HTML zurückkommt (sollte nicht passieren)
                        notificationList.html('<li class="dropdown-item">Fehler beim Laden oder leere Antwort.</li>');
@@ -384,6 +394,19 @@
         // ...und dann alle 60 Sekunden erneut.
         // Nur starten, wenn der Benutzer berechtigt ist, Benachrichtigungen zu sehen (vom Backend gesteuert)
         setInterval(fetchNotifications, 1000); 
+    });
+
+    // WICHTIGER FIX: Verhindert, dass das Benachrichtigungs-Dropdown beim Klicken auf die Collapsible-Elemente schließt.
+    // Dies muss auf das gesamte Dropdown-Menü angewendet werden.
+    $(document).on('click', '#notification-dropdown .dropdown-menu', function (e) {
+        // Überprüft, ob das geklickte Element ein Toggle-Link für ein Collapse-Element ist
+        const isToggle = $(e.target).closest('a[data-toggle="collapse"]').length > 0;
+        
+        // Stoppt die Schließ-Logik für alle Klicks im Dropdown-Menü, außer es ist ein Formular/Link der
+        // das Fenster absichtlich schließen oder zu einer neuen Seite navigieren soll.
+        if (isToggle) {
+             e.stopPropagation();
+        }
     });
 </script>
 
