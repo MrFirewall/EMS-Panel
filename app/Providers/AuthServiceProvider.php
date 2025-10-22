@@ -28,6 +28,9 @@ use App\Policies\ExamAttemptPolicy;
 use App\Models\Exam;
 use App\Policies\ExamPolicy;
 
+use App\Models\NotificationRule;
+use App\Policies\NotificationRulePolicy;
+
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
  
@@ -47,6 +50,7 @@ class AuthServiceProvider extends ServiceProvider
         Evaluation::class => EvaluationPolicy::class,
         ExamAttempt::class => ExamAttemptPolicy::class,
         Exam::class => ExamPolicy::class,
+        NotificationRule::class => NotificationRulePolicy::class,
     ];
 
     /**
