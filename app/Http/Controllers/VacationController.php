@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 use App\Models\Vacation;
-use App\Models\User;
+use App\Models\User; // Für Typ-Hinting
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ActivityLog;
@@ -17,7 +18,7 @@ class VacationController extends Controller
     {
         // Aktionen, die jeder Mitarbeiter mit der Berechtigung ausführen kann
         $this->middleware('can:vacations.create')->only(['create', 'store']);
-        
+
         // Aktionen, die nur Administratoren mit der Berechtigung ausführen können
         $this->middleware('can:vacations.manage')->only(['index', 'updateStatus']);
     }
@@ -43,8 +44,11 @@ class VacationController extends Controller
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
+        /** @var User $requester */
+        $requester = Auth::user();
+
         $vacation = Vacation::create([
-            'user_id' => Auth::id(),
+            'user_id' => $requester->id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'reason' => $request->reason,
@@ -53,14 +57,24 @@ class VacationController extends Controller
 
         // Logging
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $requester->id,
             'log_type' => 'VACATION',
             'action' => 'REQUESTED',
             'target_id' => $vacation->id,
             'description' => "Urlaubsantrag ({$vacation->id}) für {$vacation->start_date} bis {$vacation->end_date} gestellt.",
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Urlaubsantrag erfolgreich eingereicht und zur Prüfung vorgemerkt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'VacationController@store',
+            triggeringUser: $requester, // Der Antragsteller ist der Auslöser
+            relatedModel: $vacation,
+            actorUser: $requester    // Der Antragsteller ist auch der Akteur
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('dashboard');
     }
 
     /**
@@ -83,22 +97,25 @@ class VacationController extends Controller
             'status' => ['required', 'in:approved,rejected'],
             'internal_notes' => ['nullable', 'string', 'max:500'],
         ]);
-        
+
+        /** @var User $approver */
+        $approver = Auth::user(); // Der Admin, der bearbeitet
         $newStatus = $request->status;
 
         // Aktualisiere den Status und den Bearbeiter
         $vacation->update([
             'status' => $newStatus,
-            'approved_by' => Auth::id(),
+            'approved_by' => $approver->id,
             'internal_notes' => $request->internal_notes,
         ]);
-        
-        $user = $vacation->user;
-        
+
+        /** @var User $user */
+        $user = $vacation->user; // Der User, dessen Antrag bearbeitet wurde
+
         if ($user) {
             // Metadaten im Benutzerprofil aktualisieren
-            $user->last_edited_at = now(); 
-            $user->last_edited_by = Auth::user()->name; 
+            $user->last_edited_at = now();
+            $user->last_edited_by = $approver->name;
             $user->save();
         }
 
@@ -108,17 +125,26 @@ class VacationController extends Controller
         $description = "Urlaubsantrag ({$vacation->id}) von '{$user->name}' wurde {$statusText}.";
 
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $approver->id,
             'log_type' => 'VACATION',
             'action' => $action,
             'target_id' => $vacation->id,
             'description' => $description,
         ]);
 
-        $message = ($newStatus === 'approved') 
-            ? 'Urlaubsantrag erfolgreich genehmigt.' 
-            : 'Urlaubsantrag erfolgreich abgelehnt.';
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        // Zusätzliche Daten für den Listener übergeben
+        $additionalData = ['status' => $newStatus]; // 'approved' oder 'rejected'
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'VacationController@updateStatus',
+            triggeringUser: $user, // Der User, dessen Antrag bearbeitet wurde
+            relatedModel: $vacation,
+            actorUser: $approver, // Der Admin, der bearbeitet hat
+            additionalData: $additionalData
+        );
+        // ---------------------------------
 
-        return back()->with('success', $message);
+        // Erfolgsmeldung entfernt
+        return back();
     }
 }

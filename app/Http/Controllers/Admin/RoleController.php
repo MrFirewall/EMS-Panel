@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ActivityLog; // NEU: Für das Logging
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 
 class RoleController extends Controller
 {
@@ -23,7 +24,7 @@ class RoleController extends Controller
         $this->middleware('can:roles.edit')->only('update');
         $this->middleware('can:roles.delete')->only('destroy');
     }
-    
+
     /**
      * Zeigt die Rollenliste und die Bearbeitungsansicht für die ausgewählte Rolle an.
      * @param Request $request
@@ -33,19 +34,21 @@ class RoleController extends Controller
     {
         // Alle Rollen laden und die Anzahl der Benutzer mitzählen
         $roles = Role::withCount('users')->get();
-        
+
         // Alle verfügbaren Berechtigungen laden, gruppiert nach dem Modul
         $permissions = Permission::all()->sortBy('name')->groupBy(function ($item) {
-            $parts = explode('-', $item->name, 2);
+            // Updated grouping logic to handle permissions without '-'
+            $parts = explode('.', $item->name, 2); // Split by '.'
             return $parts[0];
         });
-        
+
+
         $currentRole = null;
         $currentRolePermissions = [];
-        
+
         if ($request->has('role')) {
             $currentRole = Role::findById($request->query('role'));
-            
+
             if ($currentRole) {
                 $currentRolePermissions = $currentRole->permissions->pluck('name')->toArray();
             }
@@ -82,8 +85,16 @@ class RoleController extends Controller
             'description' => "Neue Rolle '{$role->name}' erstellt.",
         ]);
 
-        return redirect()->route('admin.roles.index', ['role' => $role->id])
-                         ->with('success', "Rolle '{$role->name}' erfolgreich erstellt.");
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\RoleController@store',
+            Auth::user(),   // Der Ersteller
+            $role,          // Die neue Rolle
+            Auth::user()    // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.roles.index', ['role' => $role->id]); // Ohne success
     }
 
     /**
@@ -95,16 +106,18 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         // KORREKTUR: Wir prüfen auf die Standard-Super-Admin Rolle (oder du passt es an deine unantastbare Rolle an)
-        if ($role->name === 'ems-director') { 
-            return back()->with('error', 'Die Standard Admin Rolle kann nicht geändert werden.');
+        if ($role->name === 'super-admin' || $role->name === 'ems-director') { // Füge hier alle "geschützten" Rollen hinzu
+            return back()->with('error', 'Diese Standardrolle kann nicht geändert werden.');
         }
+
 
         $validatedData = $request->validate([
             'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|exists:permissions,name',
         ]);
-        
+
+        $oldName = $role->name; // Alten Namen speichern für Log
         $oldPermissions = $role->permissions->pluck('name')->toArray();
 
         try {
@@ -118,13 +131,24 @@ class RoleController extends Controller
             $role->syncPermissions($permissionsToSync);
 
             DB::commit();
-            
+
             // LOGGING HINZUFÜGEN
-            $diff = array_merge(
-                array_diff($permissionsToSync, $oldPermissions),
-                array_diff($oldPermissions, $permissionsToSync)
-            );
-            $description = "Rolle '{$role->name}' aktualisiert. Permissions geändert: " . implode(', ', $diff);
+            $nameChanged = $oldName !== $role->name;
+            $newPermissions = $role->permissions->pluck('name')->toArray(); // Aktuelle holen
+            $addedPermissions = array_diff($newPermissions, $oldPermissions);
+            $removedPermissions = array_diff($oldPermissions, $newPermissions);
+
+            $description = "Rolle '{$oldName}' aktualisiert.";
+            if ($nameChanged) {
+                 $description .= " Neuer Name: '{$role->name}'.";
+            }
+             if (!empty($addedPermissions)) {
+                 $description .= " Berechtigungen hinzugefügt: " . implode(', ', $addedPermissions) . ".";
+             }
+             if (!empty($removedPermissions)) {
+                 $description .= " Berechtigungen entfernt: " . implode(', ', $removedPermissions) . ".";
+             }
+
 
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -134,13 +158,24 @@ class RoleController extends Controller
                 'description' => $description,
             ]);
 
+            // --- BENACHRICHTIGUNG VIA EVENT ---
+            PotentiallyNotifiableActionOccurred::dispatch(
+                'Admin\RoleController@update',
+                Auth::user(),   // Der Bearbeiter
+                $role,          // Die aktualisierte Rolle
+                Auth::user()    // Der Akteur
+            );
+            // ---------------------------------
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Fehler beim Aktualisieren der Rolle und Berechtigungen: ' . $e->getMessage());
+            // Optional: Fehler loggen
+            \Illuminate\Support\Facades\Log::error("Fehler beim Aktualisieren der Rolle {$role->id}: " . $e->getMessage());
+            return back()->with('error', 'Fehler beim Aktualisieren der Rolle und Berechtigungen.'); // Generische Fehlermeldung
         }
 
-        return redirect()->route('admin.roles.index', ['role' => $role->id])
-                         ->with('success', "Rolle '{$role->name}' und Berechtigungen erfolgreich aktualisiert.");
+
+        return redirect()->route('admin.roles.index', ['role' => $role->id]); // Ohne success
     }
 
     /**
@@ -150,26 +185,40 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        if ($role->name === 'ems-director' || $role->users()->count() > 0) {
-            $error = ($role->name === 'ems-director') 
-                ? 'Die Standard Admin Rolle kann nicht gelöscht werden.' 
-                : 'Rolle kann nicht gelöscht werden, da noch Benutzer zugewiesen sind.';
+        if ($role->name === 'super-admin' || $role->name === 'ems-director' || $role->users()->count() > 0) {
+            $error = 'Diese Rolle kann nicht gelöscht werden (Standardrolle oder Benutzer zugewiesen).';
+            if ($role->name === 'super-admin' || $role->name === 'ems-director') {
+                $error = 'Standardrollen können nicht gelöscht werden.';
+            } elseif ($role->users()->count() > 0) {
+                $error = 'Rolle kann nicht gelöscht werden, da noch Benutzer zugewiesen sind.';
+            }
             return back()->with('error', $error);
         }
 
         $roleName = $role->name;
+        $roleId = $role->id; // ID speichern, da Objekt nach delete() evtl. nicht mehr verfügbar
+        $deletedRoleData = $role->toArray(); // Kopie für Event
+
         $role->delete();
-        
+
         // LOGGING HINZUFÜGEN
         ActivityLog::create([
             'user_id' => Auth::id(),
             'log_type' => 'ROLE',
             'action' => 'DELETED',
-            'target_id' => $role->id,
+            'target_id' => $roleId, // Gespeicherte ID verwenden
             'description' => "Rolle '{$roleName}' gelöscht.",
         ]);
 
-        return redirect()->route('admin.roles.index')
-                         ->with('success', "Rolle '{$roleName}' wurde erfolgreich gelöscht.");
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\RoleController@destroy',
+            Auth::user(),               // Der Löschende
+            (object) $deletedRoleData,  // Übergabe als Objekt
+            Auth::user()                // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.roles.index'); // Ohne success
     }
 }

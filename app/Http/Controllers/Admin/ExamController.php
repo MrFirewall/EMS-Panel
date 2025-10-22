@@ -8,10 +8,12 @@ use App\Models\TrainingModule;
 use App\Models\ExamAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\ActivityLog; 
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\URL; // HINZUGEFÜGT
+use Illuminate\Support\Facades\URL;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
+use App\Models\User; // Für Typ-Hinting bei Events
 
 class ExamController extends Controller
 {
@@ -19,6 +21,12 @@ class ExamController extends Controller
     {
         // Policy-Prüfung für Exam CRUD
         $this->authorizeResource(Exam::class, 'exam');
+
+        // Zusätzliche Autorisierungen für Attempt-Methoden (Beispiele)
+        $this->middleware('can:viewAny,App\Models\ExamAttempt')->only('attemptsIndex');
+        $this->middleware('can:resetAttempt,attempt')->only('resetAttempt');
+        $this->middleware('can:setEvaluated,attempt')->only('setEvaluated');
+        $this->middleware('can:sendLink,attempt')->only('sendLink');
     }
 
     // Standard CRUD Methoden für 'exams' (index, create, store, etc.)
@@ -55,7 +63,7 @@ class ExamController extends Controller
                     'type' => $questionData['type'],
                 ]);
 
-                if ($questionData['type'] !== 'text_field') {
+                if ($questionData['type'] !== 'text_field' && isset($questionData['options'])) {
                     foreach ($questionData['options'] as $oIndex => $optionData) {
                         $isCorrect = false;
                         if ($questionData['type'] === 'single_choice') {
@@ -69,9 +77,19 @@ class ExamController extends Controller
             }
             return $exam;
         });
-        
+
         ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'CREATED', 'target_id' => $exam->id, 'description' => "Prüfung '{$exam->title}' wurde erstellt."]);
-        return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich erstellt!');
+
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\ExamController@store',
+            Auth::user(), // Der Ersteller
+            $exam,        // Die erstellte Prüfung
+            Auth::user()  // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.exams.index'); // Ohne success
     }
 
     public function show(Exam $exam)
@@ -80,23 +98,17 @@ class ExamController extends Controller
         return view('admin.exams.show', compact('exam'));
     }
 
-    /**
-     * KORRIGIERTE 'edit' METHODE
-     */
     public function edit(Exam $exam)
     {
         $exam->load('questions.options');
-        
-        // 1. Lade nur Module, die keine Prüfung haben, ODER das dieser Prüfung zugewiesene Modul
-        $modules = TrainingModule::whereDoesntHave('exam')
-                                   ->orWhere('id', $exam->training_module_id)
-                                   ->orderBy('name')
-                                   ->get();
 
-        // 2. Prüfe auf 'old input' (nach Validierungsfehler)
+        $modules = TrainingModule::whereDoesntHave('exam')
+                                  ->orWhere('id', $exam->training_module_id)
+                                  ->orderBy('name')
+                                  ->get();
+
         $initialData = old('questions');
 
-        // 3. Wenn kein 'old input' vorhanden ist, transformiere die Datenbankdaten
         if (!$initialData) {
             $initialData = $exam->questions->map(function ($q) {
                 $data = [
@@ -104,35 +116,29 @@ class ExamController extends Controller
                     'question_text' => $q->question_text,
                     'type' => $q->type,
                     'options' => $q->options->map(function($o) {
-                        return [ 
-                            'id' => $o->id, 
-                            'option_text' => $o->option_text, 
-                            'is_correct' => (bool)$o->is_correct // Sorge für echtes true/false
+                        return [
+                            'id' => $o->id,
+                            'option_text' => $o->option_text,
+                            'is_correct' => (bool)$o->is_correct
                         ];
                     })->all()
                 ];
-                
-                // Für Single-Choice den korrekten Index finden, den JS benötigt
+
                 if ($q->type === 'single_choice') {
-                    $correctIndex = $q->options->search(function($o) { 
-                        return $o->is_correct; 
+                    $correctIndex = $q->options->search(function($o) {
+                        return $o->is_correct;
                     });
-                    $data['correct_option'] = $correctIndex !== false ? $correctIndex : null; 
+                    $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
                 }
                 return $data;
             })->all();
         }
 
-        // 4. Wandle die Daten in einen sauberen JSON-String um
         $questionsJson = json_encode($initialData ?? []);
 
-        // 5. Übergib die Variablen an die View
         return view('admin.exams.edit', compact('exam', 'modules', 'questionsJson'));
     }
 
-    /**
-     * Aktualisiert eine bestehende Prüfung mit robusterer Logik.
-     */
     public function update(Request $request, Exam $exam)
     {
         $validated = $this->validateExamRequest($request, $exam);
@@ -153,7 +159,6 @@ class ExamController extends Controller
                 );
                 $submittedQuestionIds[] = $question->id;
 
-                // KORRIGIERT: Prüfe, ob 'options' überhaupt existiert, bevor die Schleife gestartet wird.
                 if ($questionData['type'] !== 'text_field' && isset($questionData['options'])) {
                     $submittedOptionIds = [];
                     foreach ($questionData['options'] as $oIndex => $optionData) {
@@ -171,117 +176,139 @@ class ExamController extends Controller
                     }
                     $question->options()->whereNotIn('id', $submittedOptionIds)->delete();
                 } else {
-                    // Wenn Typ 'text_field' ist oder keine Optionen gesendet wurden, alle alten Optionen löschen
                     $question->options()->delete();
                 }
             }
-            // Lösche Fragen, die nicht mehr im Formular vorhanden waren
             $exam->questions()->whereNotIn('id', $submittedQuestionIds)->delete();
         });
 
         ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'UPDATED', 'target_id' => $exam->id, 'description' => "Prüfung '{$exam->title}' wurde aktualisiert."]);
-        return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich aktualisiert!');
+
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\ExamController@update',
+            Auth::user(), // Der Bearbeiter
+            $exam,        // Die aktualisierte Prüfung
+            Auth::user()  // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.exams.index'); // Ohne success
     }
 
     public function destroy(Exam $exam)
     {
         $examTitle = $exam->title;
         $examId = $exam->id;
+        $deletedExamData = $exam->toArray(); // Kopie für Event
         $exam->delete();
 
         ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'DELETED', 'target_id' => $examId, 'description' => "Prüfung '{$examTitle}' wurde gelöscht."]);
-        return redirect()->route('admin.exams.index')->with('success', 'Prüfung erfolgreich gelöscht.');
+
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\ExamController@destroy',
+            Auth::user(),               // Der Löschende
+            (object) $deletedExamData, // Übergabe als Objekt
+            Auth::user()                // Der Akteur
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.exams.index'); // Ohne success
     }
-    
-    // NEUE METHODEN FÜR EXAM ATTEMPTS START
-    
-    /**
-     * Zeigt eine Übersicht aller Prüfungsversuche (ExamAttempts)
-     * zur Verwaltung an (zum Nachverfolgen und Bewerten).
-     */
+
+    // =========================================================
+    // METHODEN FÜR EXAM ATTEMPTS
+    // =========================================================
+
     public function attemptsIndex()
     {
-        // Lädt alle Versuche und die zugehörigen Prüfungs- und Benutzerdaten.
-        // Sortiert nach dem letzten Update, um die aktuellsten Versuche oben zu sehen.
         $attempts = ExamAttempt::with(['exam.trainingModule', 'user'])
-                              ->orderBy('updated_at', 'desc')
-                              ->paginate(25); // Paginierung für große Datenmengen
-
-        // WICHTIG: Erstellen Sie eine neue View namens 'admin.exams.attempts-index'
+                                ->orderBy('updated_at', 'desc')
+                                ->paginate(25);
         return view('admin.exams.attempts-index', compact('attempts'));
     }
 
-    /**
-     * Setzt einen Prüfungsversuch auf "in_progress" zurück.
-     * Nützlich für Admin-Korrekturen oder Neustarts.
-     */
     public function resetAttempt(ExamAttempt $attempt)
     {
-        $this->authorize('resetAttempt', $attempt); 
-        
         DB::transaction(function () use ($attempt) {
-            $attempt->answers()->delete(); 
+            $attempt->answers()->delete();
             $attempt->update([
                 'status' => 'in_progress',
                 'completed_at' => null,
                 'score' => null,
                 'flags' => null,
             ]);
-            
+
             ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'RESET', 'target_id' => $attempt->id, 'description' => "Prüfungsversuch #{$attempt->id} von {$attempt->user->name} wurde zurückgesetzt."]);
         });
 
-        return back()->with('success', 'Prüfungsversuch erfolgreich zurückgesetzt. Der Link ist wieder aktiv.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\ExamController@resetAttempt',
+            $attempt->user, // Der betroffene User
+            $attempt,       // Der Prüfungsversuch
+            Auth::user()    // Der Admin, der zurückgesetzt hat
+        );
+        // ---------------------------------
+
+        return back(); // Ohne success
     }
-    
-    /**
-     * Setzt den Status eines Versuchs auf 'evaluated' (bestanden/nicht bestanden).
-     * @param Request $request Enthält das Ergebnis (z.B. pass_mark)
-     * @param ExamAttempt $attempt Der zu bewertende Versuch.
-     */
+
     public function setEvaluated(Request $request, ExamAttempt $attempt)
     {
-        $this->authorize('setEvaluated', $attempt); 
-
-        // Validierung, um sicherzustellen, dass ein Ergebnis-Score gesendet wird
         $validated = $request->validate([
             'score' => 'required|integer|min:0|max:100',
         ]);
-        
-        $status = $validated['score'] >= $attempt->exam->pass_mark ? 'evaluated' : 'submitted'; // Hält submitted, wenn es nicht bestanden wurde, falls weitere manuelle Bewertung erforderlich ist
-        
-        $isPassed = $status === 'evaluated';
+
+        // KORREKTUR: Status auf 'evaluated' setzen, egal ob bestanden oder nicht, da manuell bewertet
+        $status = 'evaluated';
+        $isPassed = $validated['score'] >= $attempt->exam->pass_mark;
+        $resultText = $isPassed ? 'Bestanden' : 'Nicht bestanden';
 
         $attempt->update([
             'status' => $status,
             'score' => $validated['score'],
         ]);
 
-        $message = "Prüfungsversuch #{$attempt->id} von {$attempt->user->name} wurde manuell bewertet: " . ($isPassed ? 'Bestanden.' : 'Nicht bestanden.');
+        $message = "Prüfungsversuch #{$attempt->id} von {$attempt->user->name} wurde manuell bewertet: {$resultText} ({$validated['score']}%).";
         ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'EVALUATED', 'target_id' => $attempt->id, 'description' => $message]);
 
-        return back()->with('success', $message);
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\ExamController@setEvaluated',
+            $attempt->user, // Der betroffene User
+            $attempt,       // Der Prüfungsversuch
+            Auth::user()    // Der Admin, der bewertet hat
+        );
+        // ---------------------------------
+
+        return back(); // Ohne success
     }
-    
-    /**
-     * Erstellt einen Link, den der Admin manuell an den Prüfling senden kann.
-     */
+
     public function sendLink(ExamAttempt $attempt)
     {
-        $this->authorize('sendLink', $attempt);
-        
-        // Generiert den sicheren Link
         $secureUrl = route('exams.take', ['uuid' => $attempt->uuid]);
-        
-        // In einem echten System würde hier eine E-Mail oder Discord-Nachricht gesendet.
-        // Hier geben wir nur die URL zurück, damit der Admin sie kopieren kann.
-        
-        return back()->with('success', 'Der Prüfungslink wurde zur Zwischenablage kopiert (oder bereitgestellt):')
-                     ->with('secure_url', $secureUrl);
+
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        // Hier könnte man den Admin benachrichtigen, dass der Link neu generiert wurde,
+        // oder direkt den Prüfling (je nach Regelwerk)
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\ExamController@sendLink',
+            $attempt->user, // Der betroffene User
+            $attempt,       // Der Prüfungsversuch
+            Auth::user()    // Der Admin, der den Link generiert hat
+        );
+        // ---------------------------------
+
+        // Gib die URL zurück, damit der Admin sie kopieren kann.
+        return back()->with('secure_url', $secureUrl); // Ohne success-Nachricht, nur die URL
     }
-    
-    // NEUE METHODEN FÜR EXAM ATTEMPTS ENDE
-    
+
+    // =========================================================
+    // VALIDIERUNG
+    // =========================================================
+
     private function validateExamRequest(Request $request, ?Exam $exam = null): array
     {
         $moduleIdRule = 'required|exists:training_modules,id';
@@ -296,16 +323,11 @@ class ExamController extends Controller
             'questions.*.id' => 'nullable|integer|exists:questions,id',
             'questions.*.question_text' => 'required|string',
             'questions.*.type' => 'required|in:single_choice,multiple_choice,text_field',
-            
-            // --- KORREKTUR: DIESE ZEILEN HINZUFÜGEN ---
-            // Erlaube diese Felder, damit sie 'validate()' passieren.
-            // Die 'after()'-Methode prüft dann die Details.
             'questions.*.options' => 'nullable|array',
             'questions.*.options.*.id' => 'nullable',
             'questions.*.options.*.option_text' => 'nullable',
             'questions.*.options.*.is_correct' => 'nullable',
             'questions.*.correct_option' => 'nullable',
-            // --- ENDE DER KORREKTUR ---
         ];
 
         $validator = Validator::make($request->all(), $baseRules);
@@ -319,8 +341,7 @@ class ExamController extends Controller
                     $validator->errors()->add("questions.{$key}.options", "Für eine Auswahlfrage werden mindestens 2 Antwortmöglichkeiten benötigt.");
                     continue;
                 }
-                
-                // (Der Rest Ihrer 'after'-Logik ist korrekt)
+
                 foreach($question['options'] as $optKey => $option) {
                     if(empty($option['option_text'])) {
                         $validator->errors()->add("questions.{$key}.options.{$optKey}.option_text", "Der Antworttext darf nicht leer sein.");
@@ -339,7 +360,7 @@ class ExamController extends Controller
                 }
             }
         });
-        
+
         return $validator->validate();
     }
 }

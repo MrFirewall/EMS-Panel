@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
+use App\Models\ActivityLog;
+use App\Models\Citizen;
 use App\Models\Report;
 use App\Models\User; // Hinzugefügt für die Suche
-use App\Models\Citizen; // ANNAHME: Du hast ein Citizen-Model
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ActivityLog;
 
 class ReportController extends Controller
 {
@@ -27,9 +28,11 @@ class ReportController extends Controller
         $query = Report::with('user')->latest();
 
         // Nur Admins dürfen alle Berichte sehen, andere nur ihre eigenen
+        // Annahme: 'viewAny' prüft, ob der User alle sehen darf
         if (Auth::user()->cannot('viewAny', Report::class)) {
-            $query->where('user_id', Auth::id());
+             $query->where('user_id', Auth::id());
         }
+
 
         // Suchfunktion
         if ($request->filled('search')) {
@@ -75,8 +78,10 @@ class ReportController extends Controller
             'attending_staff.*' => 'exists:users,id',
         ]);
 
-        $validatedData['user_id'] = Auth::id();
-        
+        /** @var User $creator */
+        $creator = Auth::user();
+        $validatedData['user_id'] = $creator->id;
+
         // Versuche, den Bürger anhand des Namens zu finden
         $citizen = Citizen::where('name', $validatedData['patient_name'])->first();
         if ($citizen) {
@@ -84,20 +89,30 @@ class ReportController extends Controller
         }
 
         $report = Report::create($validatedData);
-        
+
         if ($request->has('attending_staff')) {
             $report->attendingStaff()->attach($request->input('attending_staff'));
         }
         // Logging
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $creator->id,
             'log_type' => 'REPORT',
             'action' => 'CREATED',
             'target_id' => $report->id,
             'description' => "Einsatzbericht '{$report->title}' erstellt (Patient: {$report->patient_name}).",
         ]);
 
-        return redirect()->route('reports.index')->with('success', 'Einsatzbericht erfolgreich erstellt!');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'ReportController@store',
+            triggeringUser: $citizen ?? (object)['name' => $report->patient_name], // Citizen oder Dummy-Objekt
+            relatedModel: $report,
+            actorUser: $creator
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('reports.index');
     }
 
     /**
@@ -105,14 +120,18 @@ class ReportController extends Controller
      */
     public function show(Report $report)
     {
+        // Policy prüft hier implizit 'view'
+        $report->load(['user', 'citizen', 'attendingStaff']); // Lade Relationen
         return view('reports.show', compact('report'));
     }
+
 
     /**
      * Zeigt das Formular zum Bearbeiten eines Berichts an.
      */
     public function edit(Report $report)
     {
+        // Policy prüft implizit 'update'
         $templates = config('report_templates', []);
         $citizens = Citizen::orderBy('name')->get(); // Bürgerliste laden
         $allStaff = User::orderBy('name')->get(); // Alle Mitarbeiter laden
@@ -126,6 +145,7 @@ class ReportController extends Controller
      */
     public function update(Request $request, Report $report)
     {
+         // Policy prüft implizit 'update'
         $validatedData = $request->validate([
             'title' => 'required|string|max:255',
             'patient_name' => 'required|string|max:255',
@@ -136,6 +156,9 @@ class ReportController extends Controller
             'attending_staff.*' => 'exists:users,id',
         ]);
 
+        /** @var User $editor */
+        $editor = Auth::user();
+
         // Versuche, den Bürger anhand des Namens zu finden
         $citizen = Citizen::where('name', $validatedData['patient_name'])->first();
         $validatedData['citizen_id'] = $citizen ? $citizen->id : null; // Setze ID oder null
@@ -145,14 +168,24 @@ class ReportController extends Controller
 
         // Logging
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $editor->id,
             'log_type' => 'REPORT',
             'action' => 'UPDATED',
             'target_id' => $report->id,
             'description' => "Einsatzbericht '{$report->title}' ({$report->id}) aktualisiert.",
         ]);
 
-        return redirect()->route('reports.index')->with('success', 'Einsatzbericht erfolgreich aktualisiert!');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'ReportController@update',
+            triggeringUser: $citizen ?? (object)['name' => $report->patient_name],
+            relatedModel: $report,
+            actorUser: $editor
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('reports.index');
     }
 
     /**
@@ -160,21 +193,37 @@ class ReportController extends Controller
      */
     public function destroy(Report $report)
     {
+        // Policy prüft implizit 'delete'
+        /** @var User $deleter */
+        $deleter = Auth::user();
         $reportTitle = $report->title;
         $reportId = $report->id;
+        $patientName = $report->patient_name; // Namen für Event speichern
 
         $report->delete();
-        
+
         // Logging
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $deleter->id,
             'log_type' => 'REPORT',
             'action' => 'DELETED',
             'target_id' => $reportId, // Use the stored ID after deletion
             'description' => "Einsatzbericht '{$reportTitle}' ({$reportId}) gelöscht.",
         ]);
 
-        return redirect()->route('reports.index')->with('success', 'Einsatzbericht gelöscht!');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'ReportController@destroy',
+            // Hier gibt es kein direktes Citizen-Objekt mehr als Trigger, wir nehmen den Namen
+            triggeringUser: (object)['name' => $patientName],
+            relatedModel: null, // Modell existiert nicht mehr
+            actorUser: $deleter,
+            additionalData: ['title' => $reportTitle, 'patient_name' => $patientName] // Zusätzliche Daten
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('reports.index');
     }
 }
 

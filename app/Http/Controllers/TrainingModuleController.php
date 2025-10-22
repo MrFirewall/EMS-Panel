@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\TrainingModule;
 use App\Models\ActivityLog;
+use App\Models\User; // Für Benachrichtigungslogik
+use App\Notifications\GeneralNotification; // Für Benachrichtigungslogik
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification; // Für Benachrichtigungslogik
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 
 class TrainingModuleController extends Controller
 {
@@ -17,6 +21,9 @@ class TrainingModuleController extends Controller
     {
         // This automatically maps methods like index() to viewAny(), create() to create(), etc.
         $this->authorizeResource(TrainingModule::class, 'module');
+
+        // Middleware für die signUp Methode (nur eingeloggte User dürfen)
+        $this->middleware('auth')->only('signUp'); // Stellt sicher, dass nur eingeloggte User die Methode aufrufen
     }
 
     /**
@@ -54,18 +61,30 @@ class TrainingModuleController extends Controller
             'category' => 'nullable|string|max:100',
         ]);
 
+        /** @var User $creator */
+        $creator = Auth::user();
         $module = TrainingModule::create($validated);
-        
+
         // Log the activity
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $creator->id,
             'log_type' => 'TRAINING_MODULE',
             'action' => 'CREATED',
             'target_id' => $module->id,
             'description' => "Ausbildungsmodul '{$module->name}' wurde erstellt.",
         ]);
 
-        return redirect()->route('modules.index')->with('success', 'Ausbildungsmodul erfolgreich erstellt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'TrainingModuleController@store',
+            triggeringUser: null, // Kein spezifischer User "betroffen", Admin erstellt es
+            relatedModel: $module,
+            actorUser: $creator
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('modules.index');
     }
 
     /**
@@ -107,18 +126,30 @@ class TrainingModuleController extends Controller
             'category' => 'nullable|string|max:100',
         ]);
 
+        /** @var User $editor */
+        $editor = Auth::user();
         $module->update($validated);
-        
+
         // Log the activity
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $editor->id,
             'log_type' => 'TRAINING_MODULE',
             'action' => 'UPDATED',
             'target_id' => $module->id,
             'description' => "Ausbildungsmodul '{$module->name}' wurde aktualisiert.",
         ]);
 
-        return redirect()->route('modules.index')->with('success', 'Ausbildungsmodul erfolgreich aktualisiert.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'TrainingModuleController@update',
+            triggeringUser: null,
+            relatedModel: $module,
+            actorUser: $editor
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('modules.index');
     }
 
     /**
@@ -129,7 +160,9 @@ class TrainingModuleController extends Controller
      */
     public function destroy(TrainingModule $module)
     {
-        // Store details for the log before deleting
+        /** @var User $deleter */
+        $deleter = Auth::user();
+        // Store details for the log and event before deleting
         $moduleName = $module->name;
         $moduleId = $module->id;
 
@@ -137,14 +170,73 @@ class TrainingModuleController extends Controller
 
         // Log the activity
         ActivityLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $deleter->id,
             'log_type' => 'TRAINING_MODULE',
             'action' => 'DELETED',
-            'target_id' => $moduleId,
+            'target_id' => $moduleId, // Use stored ID
             'description' => "Ausbildungsmodul '{$moduleName}' wurde gelöscht.",
         ]);
 
-        return redirect()->route('modules.index')->with('success', 'Ausbildungsmodul erfolgreich gelöscht.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'TrainingModuleController@destroy',
+            triggeringUser: null,
+            relatedModel: null, // Model existiert nicht mehr
+            actorUser: $deleter,
+            additionalData: ['name' => $moduleName] // Name für den Listener übergeben
+        );
+        // ---------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('modules.index');
+    }
+
+    /**
+     * Meldet den aktuell eingeloggten Benutzer für das angegebene Modul an.
+     * (Verschoben aus TrainingAssignmentController, da dies die User-Aktion ist)
+     *
+     * @param TrainingModule $module
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function signUp(TrainingModule $module)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Policy-Prüfung (Beispiel: Kann der User sich anmelden?)
+        $this->authorize('signUp', $module); // Eigene Policy-Methode erstellen
+
+        // Verhindere doppelte Anmeldung
+        if ($module->users()->where('user_id', $user->id)->exists()) {
+             // Keine Erfolgs-/Fehlermeldung nötig, einfach zurückleiten
+             return redirect()->back();
+        }
+
+        // Benutzer anmelden (Status 'angemeldet')
+        $module->users()->attach($user->id, ['status' => 'angemeldet', 'assigned_at' => now()]);
+
+        // Optional: Logeintrag
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'log_type' => 'TRAINING_SIGNUP',
+            'action' => 'SIGNED_UP',
+            'target_id' => $module->id,
+            'description' => "{$user->name} hat sich für das Modul '{$module->name}' angemeldet (Antrag).",
+        ]);
+
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        // Dies entspricht dem 'EvaluationController@store' für Modulanmeldung
+        // Wir verwenden einen eigenen Action Key
+        PotentiallyNotifiableActionOccurred::dispatch(
+            action: 'TrainingModuleController@signUp', // Eigene Action
+            triggeringUser: $user, // Der User, der sich anmeldet
+            relatedModel: $module,
+            actorUser: $user // Der User ist auch der Akteur
+        );
+        // ------------------------------------
+
+        // Keine Erfolgsmeldung nötig
+        return redirect()->back();
     }
 }
- 
+

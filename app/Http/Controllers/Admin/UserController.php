@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\ServiceRecord;
 use App\Models\Evaluation;
-use App\Models\ExamAttempt; // NEU: Importiert, um Prüfungsversuche zu laden
+use App\Models\ExamAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
 use App\Models\ActivityLog;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 
 class UserController extends Controller
 {
@@ -185,7 +186,7 @@ class UserController extends Controller
         }
         $validatedData['rank'] = $highestRankName;
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
-        
+
         do {
             $newEmployeeId = rand(10000, 99999);
         } while (User::where('employee_id', $newEmployeeId)->exists());
@@ -194,7 +195,7 @@ class UserController extends Controller
         $validatedData['hire_date'] = now();
         $validatedData['last_edited_by'] = Auth::user()->name;
         $validatedData['last_edited_at'] = now();
-        
+
         $user = User::create($validatedData);
         $user->syncRoles($selectedRoles);
 
@@ -206,9 +207,18 @@ class UserController extends Controller
             'description' => "Neuer Mitarbeiter '{$user->name}' ({$user->id}) angelegt.",
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'Mitarbeiter erfolgreich angelegt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\UserController@store',
+            $user,        // Der neue Benutzer
+            $user,        // Das zugehörige Modell
+            Auth::user()  // Der Admin, der die Aktion durchführt
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.users.index'); // Ohne success
     }
-    
+
     /**
      * Zeigt das Profil eines spezifischen Benutzers (Admin-Ansicht).
      * Der View 'profile.show' wird hier wiederverwendet.
@@ -217,31 +227,31 @@ class UserController extends Controller
     {
         // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
         $user->load([
-            'examinations', 
-            'trainingModules', 
+            'examinations',
+            'trainingModules',
             'vacations',
-            'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(), 
+            'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
         ]);
-        
-        // 1. Prüfungsversuche laden (Behebt den 'Undefined variable $examAttempts' Fehler)
+
+        // 1. Prüfungsversuche laden
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam.trainingModule')
-                                    ->latest('completed_at')
-                                    ->get();
-                                    
-        // 2. Weitere Variablen laden, die der View erwartet (Stunden, Records, Counts)
+                                   ->with('exam.trainingModule')
+                                   ->latest('completed_at')
+                                   ->get();
+
+        // 2. Weitere Variablen laden, die der View erwartet
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
-        $evaluationCounts = $this->calculateEvaluationCounts($user); 
+        $evaluationCounts = $this->calculateEvaluationCounts($user);
 
         // Annahme: Diese Methoden existieren im User Model
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
 
 
-        return view('profile.show', compact( // WICHTIG: Nutzt den allgemeinen 'profile.show' View
-            'user', 
-            'serviceRecords', 
-            'examAttempts', // VARIABLE HINZUGEFÜGT
+        return view('profile.show', compact(
+            'user',
+            'serviceRecords',
+            'examAttempts',
             'evaluationCounts',
             'hourData',
             'weeklyHours'
@@ -272,7 +282,7 @@ class UserController extends Controller
             $counts['erhalten'][$type] = $receivedCounts->get($type, 0);
             $counts['verfasst'][$type] = $authoredCounts->get($type, 0);
         }
-        
+
         return $counts;
     }
 
@@ -312,8 +322,8 @@ class UserController extends Controller
         foreach ($newlyAddedRoles as $addedRole) {
             if (!in_array($addedRole, $managableRoleNames)) {
                 return redirect()->back()
-                    ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
-                    ->withInput();
+                        ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
+                        ->withInput();
             }
         }
         if ($user->hasRole($this->superAdminRole)) {
@@ -326,11 +336,10 @@ class UserController extends Controller
         $oldStatus = $user->status;
         $newStatus = $validatedData['status'];
 
-        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert']; // Status, die als "nicht aktiv" gelten
-        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase'];   // Status, die eine (Wieder-)Einstellung bedeuten
+        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert'];
+        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase'];
 
         if (in_array($oldStatus, $inactiveStatuses) && in_array($newStatus, $activeStatuses)) {
-            // Wenn der User reaktiviert wird, setze das Einstellungsdatum auf den heutigen Tag.
             $validatedData['hire_date'] = now();
         }
         $newRank = 'praktikant';
@@ -343,12 +352,18 @@ class UserController extends Controller
         }
         $validatedData['rank'] = $newRank;
 
+        // Clone User object BEFORE update to pass old state to event if needed
+        $userBeforeUpdate = clone $user;
+
         $user->syncRoles($submittedRoleNames);
         $user->syncPermissions($request->permissions ?? []);
-        
+
         $validatedData['last_edited_at'] = now();
         $validatedData['last_edited_by'] = Auth::user()->name;
         $user->update($validatedData);
+
+        // Reload roles relationship to reflect changes for the event
+        $user->load('roles');
 
         $description = "Benutzerprofil von '{$user->name}' ({$user->id}) aktualisiert.";
         if ($oldRank !== $newRank) {
@@ -357,7 +372,7 @@ class UserController extends Controller
         if ($oldStatus !== $validatedData['status']) {
             $description .= " Status geändert: {$oldStatus} -> {$validatedData['status']}.";
         }
-        
+
         ActivityLog::create([
             'user_id' => Auth::id(), 'log_type' => 'USER_RECORD', 'action' => 'UPDATED',
             'target_id' => $user->id, 'description' => $description,
@@ -368,18 +383,28 @@ class UserController extends Controller
             ServiceRecord::create(['user_id' => $user->id, 'author_id' => Auth::id(), 'type' => $recordType, 'content' => "Rang geändert von '{$oldRank}' zu '{$newRank}'."]);
         }
 
-        return redirect()->route('admin.users.index')->with('success', 'Mitarbeiter erfolgreich aktualisiert.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\UserController@update',
+            $user,                    // Der aktualisierte Benutzer
+            $user,                    // Das zugehörige Modell
+            Auth::user(),             // Der Admin, der die Aktion durchführt
+            ['old_rank' => $oldRank, 'old_status' => $oldStatus] // Optional: Alter Zustand
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.users.index'); // Ohne success
     }
-    
+
     public function addRecord(Request $request, User $user)
     {
         $request->validate(['type' => 'required|string', 'content' => 'required|string']);
-        
-        ServiceRecord::create([
-            'user_id' => $user->id, 'author_id' => Auth::id(), 
+
+        $record = ServiceRecord::create([
+            'user_id' => $user->id, 'author_id' => Auth::id(),
             'type' => $request->type, 'content' => $request->content
         ]);
-        
+
         $user->update(['last_edited_at' => now(), 'last_edited_by' => Auth::user()->name]);
 
         ActivityLog::create([
@@ -388,6 +413,16 @@ class UserController extends Controller
             'description' => "Eintrag (Typ: {$request->type}) zur Personalakte von '{$user->name}' hinzugefügt.",
         ]);
 
-        return redirect()->route('admin.users.show', $user)->with('success', 'Eintrag zur Personalakte hinzugefügt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'Admin\UserController@addRecord',
+            $user,        // Der Benutzer, dessen Akte bearbeitet wird
+            $record,      // Der neue Akteneintrag als zugehöriges Modell
+            Auth::user()  // Der Admin, der die Aktion durchführt
+        );
+        // ---------------------------------
+
+        return redirect()->route('admin.users.show', $user); // Ohne success
     }
 }
+

@@ -6,6 +6,7 @@ use App\Models\Citizen;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 
 class CitizenController extends Controller
 {
@@ -42,7 +43,6 @@ class CitizenController extends Controller
             'phone_number' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            // --- VALIDIERUNG FÜR NEUE FELDER ---
             'blood_type' => 'nullable|string|max:10',
             'allergies' => 'nullable|string',
             'preexisting_conditions' => 'nullable|string',
@@ -60,12 +60,20 @@ class CitizenController extends Controller
             'description' => "Patientenakte für '{$citizen->name}' erstellt.",
         ]);
 
-        return redirect()->route('citizens.show', $citizen)->with('success', 'Patientenakte erfolgreich erstellt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'CitizenController@store', // Action Name
+            $citizen,                  // Der erstellte Bürger (als triggering User/Context)
+            $citizen,                  // Das zugehörige Modell
+            Auth::user()               // Der Ersteller (Admin/Mitarbeiter)
+        );
+        // ---------------------------------
+
+        return redirect()->route('citizens.show', $citizen); // Ohne success
     }
 
     public function show(Citizen $citizen)
     {
-        // Lade alle relevanten medizinischen Daten per Eager Loading
         $citizen->load(['reports' => function ($query) {
             $query->latest();
         }, 'prescriptions.user']);
@@ -86,7 +94,6 @@ class CitizenController extends Controller
             'phone_number' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            // --- VALIDIERUNG FÜR NEUE FELDER ---
             'blood_type' => 'nullable|string|max:10',
             'allergies' => 'nullable|string',
             'preexisting_conditions' => 'nullable|string',
@@ -94,8 +101,11 @@ class CitizenController extends Controller
             'emergency_contact_phone' => 'nullable|string|max:50',
         ]);
 
+        // Clone Citizen object BEFORE update to pass old state if needed (optional)
+        // $citizenBeforeUpdate = clone $citizen;
+
         $citizen->update($validated);
-        
+
         ActivityLog::create([
             'user_id' => Auth::id(),
             'log_type' => 'CITIZEN',
@@ -104,13 +114,31 @@ class CitizenController extends Controller
             'description' => "Patientenakte für '{$citizen->name}' aktualisiert.",
         ]);
 
-        return redirect()->route('citizens.show', $citizen)->with('success', 'Patientenakte erfolgreich aktualisiert.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'CitizenController@update', // Action Name
+            $citizen,                   // Der aktualisierte Bürger
+            $citizen,                   // Das zugehörige Modell
+            Auth::user(),               // Der Bearbeiter
+            // ['old_data' => $citizenBeforeUpdate->toArray()] // Optional: Alter Zustand
+        );
+        // ---------------------------------
+
+        return redirect()->route('citizens.show', $citizen); // Ohne success
     }
 
     public function destroy(Citizen $citizen)
     {
         $citizenName = $citizen->name;
         $citizenId = $citizen->id;
+
+        // Erstelle ein temporäres Objekt mit den relevanten Daten für das Event
+        $deletedData = (object) [
+            'id' => $citizenId,
+            'name' => $citizenName,
+            // Füge hier ggf. weitere Felder hinzu, die der Listener benötigt
+        ];
+
         $citizen->delete();
 
         ActivityLog::create([
@@ -121,6 +149,15 @@ class CitizenController extends Controller
             'description' => "Patientenakte für '{$citizenName}' ({$citizenId}) gelöscht.",
         ]);
 
-        return redirect()->route('citizens.index')->with('success', 'Patientenakte gelöscht.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'CitizenController@destroy', // Action Name
+            null,                       // Kein spezifischer triggering User mehr vorhanden
+            $deletedData,               // Temporäres Objekt mit alten Daten
+            Auth::user()                // Der Löschende
+        );
+        // ---------------------------------
+
+        return redirect()->route('citizens.index'); // Ohne success
     }
 }

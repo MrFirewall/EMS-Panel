@@ -2,21 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog; // Wichtig: Model importieren
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
+use App\Models\User; // User hinzufügen für Typ-Hinting
 
 class DutyStatusController extends Controller
 {
     public function toggle(Request $request)
     {
+        /** @var User $user */ // Type hint for static analysis
         $user = Auth::user();
-        
+
         // Status umkehren
         $user->on_duty = !$user->on_duty;
         $user->save();
 
-        // NEU: Aktivität basierend auf dem neuen Status loggen
         if ($user->on_duty) {
             // Der Benutzer hat den Dienst angetreten
             ActivityLog::create([
@@ -26,6 +28,7 @@ class DutyStatusController extends Controller
                 'description' => 'Benutzer hat den Dienst angetreten.',
             ]);
             $status_text = 'Im Dienst';
+            $actionIdentifier = 'DutyStatusController@toggle.on_duty'; // Spezifischer Identifier
         } else {
             // Der Benutzer hat den Dienst beendet
             ActivityLog::create([
@@ -35,7 +38,17 @@ class DutyStatusController extends Controller
                 'description' => 'Benutzer hat den Dienst beendet.',
             ]);
             $status_text = 'Außer Dienst';
+            $actionIdentifier = 'DutyStatusController@toggle.off_duty'; // Spezifischer Identifier
         }
+
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        PotentiallyNotifiableActionOccurred::dispatch(
+            $actionIdentifier, // Spezifischer Name für an/abmelden
+            $user,             // Der Benutzer, der den Status ändert
+            $user,             // Das zugehörige Modell
+            $user              // Der auslösende Benutzer ist hier derselbe
+        );
+        // ---------------------------------
 
         // Erfolgreiche Antwort mit neuem Status zurückgeben
         return response()->json([

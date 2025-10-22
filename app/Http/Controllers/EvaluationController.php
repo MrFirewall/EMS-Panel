@@ -6,10 +6,11 @@ use App\Models\Evaluation;
 use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\TrainingModule;
-use App\Notifications\GeneralNotification; // Import hinzugefügt
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Notification; // Import hinzugefügt
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
+use App\Notifications\GeneralNotification; // Wird für Fallback nicht mehr direkt benötigt, kann aber bleiben
+use Illuminate\Support\Facades\Notification; // Wird für Fallback nicht mehr direkt benötigt, kann aber bleiben
 
 class EvaluationController extends Controller
 {
@@ -43,7 +44,7 @@ class EvaluationController extends Controller
 
         // 1. Lade NUR offene Anträge, die eine Aktion erfordern
         $offeneAntraegeQuery = Evaluation::where('status', 'pending')
-                                        ->whereIn('evaluation_type', $applicationTypes);
+                                           ->whereIn('evaluation_type', $applicationTypes);
 
         // 2. Lade NUR reguläre Bewertungen, unabhängig von ihrem Status
         $evaluationsQuery = Evaluation::whereIn('evaluation_type', $evaluationTypes);
@@ -189,21 +190,21 @@ class EvaluationController extends Controller
         $validated = $request->validate($validationRules);
 
         $data = [
-            'evaluator_id' => Auth::id(),
+            'evaluator_id' => Auth::id(), // Der Ersteller der Bewertung/des Antrags
             'evaluation_type' => $validated['evaluation_type'],
             'evaluation_date' => $validated['evaluation_date'],
             'period' => $validated['period'],
             'json_data' => $validated['data'] ?? [],
-            'description' => $validated['description'] ?? null, // Nullable Beschreibung sicherstellen
+            'description' => $validated['description'] ?? null,
         ];
 
         $logDescription = '';
         $module = null; // Variable für das Modul definieren
 
         if (in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
-            $module = TrainingModule::find($validated['target_module_id']); // Modul hier laden
+            $module = TrainingModule::find($validated['target_module_id']);
             $data['user_id'] = Auth::id(); // Antragsteller ist der eingeloggte User
-            $data['target_name'] = Auth::user()->name; // Name des Antragstellers
+            $data['target_name'] = Auth::user()->name;
             $data['json_data']['module_name'] = $module->name;
             $data['json_data']['module_id'] = $module->id;
 
@@ -211,7 +212,7 @@ class EvaluationController extends Controller
             $logDescription = "{$logAction} für '{$module->name}' von {$data['target_name']} eingereicht.";
 
         } elseif ($evaluationType === 'praktikant') {
-            $data['user_id'] = null; // Kein spezifischer User
+            $data['user_id'] = null;
             $data['target_name'] = $validated['target_name'];
             $logDescription = "Neue Bewertung für Praktikant/in '{$data['target_name']}' ({$evaluationType}) erstellt.";
 
@@ -225,33 +226,28 @@ class EvaluationController extends Controller
         $evaluation = Evaluation::create($data);
 
         ActivityLog::create([
-             'user_id' => Auth::id(), // Der Ersteller des Logs (kann Admin oder User sein)
+             'user_id' => Auth::id(), // Der Ersteller des Logs
              'log_type' => 'EVALUATION',
              'action' => 'CREATED',
              'target_id' => $evaluation->id,
              'description' => $logDescription,
         ]);
 
-        // --- BENACHRICHTIGUNG BEI ANTRAG ---
-        // Nur benachrichtigen, wenn es ein Modul- oder Prüfungsantrag ist
-        if ($module && in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
-            $antragsteller = Auth::user();
-            $antragArt = ($evaluationType === 'modul_anmeldung') ? 'Modulanmeldung' : 'Prüfungsanmeldung';
-
-            // KORREKTUR: Filtere alle Benutzer nach der Berechtigung
-            $berechtigteBenutzer = User::all()->filter(function ($user) {
-                // Ersetze 'receive application notifications' mit dem Namen deiner tatsächlichen Berechtigung
-                return $user->can('evaluations.view.all');
-            });
-
-            if ($berechtigteBenutzer->isNotEmpty()) {
-                Notification::send($berechtigteBenutzer, new GeneralNotification(
-                    "Neuer Antrag ({$antragArt}) für '{$module->name}' von {$antragsteller->name}.", // Nachrichtentext
-                    'fas fa-file-signature text-warning', // Icon (Beispiel)
-                    route('admin.forms.evaluations.show', $evaluation->id) // URL zum Antrag/Evaluation
-                ));
-            }
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        // Nur bei Anträgen auslösen
+        if (in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
+             PotentiallyNotifiableActionOccurred::dispatch(
+                'EvaluationController@store', // Action Name
+                Auth::user(),                 // Der Antragsteller (triggering user)
+                $evaluation,                  // Die erstellte Evaluation als zugehöriges Modell
+                Auth::user()                  // Der ausführende Benutzer (ist hier derselbe)
+             );
         }
+        // Bei anderen Bewertungstypen könnte hier ein anderes Event ausgelöst werden,
+        // z.B. um den bewerteten Mitarbeiter zu informieren.
+        // else {
+        //     PotentiallyNotifiableActionOccurred::dispatch('EvaluationController@store.created_evaluation', ...);
+        // }
         // ------------------------------------
 
         // Erfolgsmeldung entfernt
@@ -260,7 +256,6 @@ class EvaluationController extends Controller
 
     public function show(Evaluation $evaluation)
     {
-        // Die show-Methode ist bereits korrekt und bleibt unverändert.
         $this->authorize('view', $evaluation);
 
         $evaluation->load(['user', 'evaluator']);

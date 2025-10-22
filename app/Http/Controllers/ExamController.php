@@ -2,234 +2,271 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Exam;
 use App\Models\Evaluation;
-use App\Models\ExamAttempt;
-use App\Models\Option;
-use App\Models\TrainingModule;
 use App\Models\User;
-// use App\Models\TrainingModuleUser; // <--- ENTFERNT: Dieses Model existiert nicht
+use App\Models\ActivityLog;
+use App\Models\TrainingModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Illuminate\Support\Str;
-use App\Models\ActivityLog;
+use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
+use App\Notifications\GeneralNotification; // Wird für Fallback nicht mehr direkt benötigt, kann aber bleiben
+use Illuminate\Support\Facades\Notification; // Wird für Fallback nicht mehr direkt benötigt, kann aber bleiben
 
-class ExamController extends Controller
+class EvaluationController extends Controller
 {
-    /**
-     * Generiert einen neuen, einmaligen Prüfungsversuch und einen sicheren Link dazu.
-     * Nur für Ausbilder/Admins.
-     */
-    public function generateLink(Request $request)
+    // Statische Arrays für Konsistenz
+    public static array $grades = ['Sehr Gut', 'Gut', 'Befriedigend', 'Ausreichend', 'Mangelhaft', 'Ungenügend', 'Nicht feststellbar'];
+    public static array $periods = ['00 - 06 Uhr', '06 - 12 Uhr', '12 - 18 Uhr', '18 - 00 Uhr'];
+
+    public static array $typeLabels = [
+        'azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten',
+        'anmeldung', 'modul_anmeldung', 'pruefung_anmeldung'
+    ];
+
+    public function __construct()
     {
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'module_id' => 'required|exists:training_modules,id',
-            'evaluation_id' => 'required|exists:evaluations,id',
+        // Policy-basierte Autorisierung wird jetzt direkt in den Methoden aufgerufen
+    }
+
+    /**
+     * Zeigt die Übersichtsseite für alle Formulare/Bewertungen an.
+     * ÜBERARBEITET: Trennt jetzt logisch zwischen Anträgen und Bewertungen.
+     */
+    public function index()
+    {
+        $this->authorize('viewAny', Evaluation::class);
+
+        $canViewAll = Auth::user()->can('evaluations.view.all');
+
+        // Definiere klar, was Anträge und was Bewertungen sind
+        $applicationTypes = ['modul_anmeldung', 'pruefung_anmeldung'];
+        $evaluationTypes = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung'];
+
+        // 1. Lade NUR offene Anträge, die eine Aktion erfordern
+        $offeneAntraegeQuery = Evaluation::where('status', 'pending')
+                                           ->whereIn('evaluation_type', $applicationTypes);
+
+        // 2. Lade NUR reguläre Bewertungen, unabhängig von ihrem Status
+        $evaluationsQuery = Evaluation::whereIn('evaluation_type', $evaluationTypes);
+
+
+        // Wenn der User kein Admin ist, nur die eigenen relevanten Einträge anzeigen
+        if (!$canViewAll) {
+            $userId = Auth::id();
+            // Benutzer sehen nur ihre eigenen offenen Anträge
+            $offeneAntraegeQuery->where('user_id', $userId);
+
+            // Benutzer sehen Bewertungen, die sie erhalten ODER erstellt haben
+            $evaluationsQuery->where(function ($query) use ($userId) {
+                $query->where('user_id', $userId)
+                      ->orWhere('evaluator_id', $userId);
+            });
+        }
+
+        $offeneAntraege = $offeneAntraegeQuery->with('user')->latest()->get();
+        // WICHTIG: Die Variable heißt jetzt '$evaluations'
+        $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->latest()->paginate(10);
+
+        $counts = $this->getEvaluationCounts();
+
+        // Übergibt die neuen, klar benannten Variablen an die View
+        return view('forms.evaluations.index', compact('offeneAntraege', 'evaluations', 'counts', 'canViewAll'));
+    }
+
+    /**
+     * Zählt die verschiedenen Formulartypen für die Übersichtsseite.
+     */
+    private function getEvaluationCounts()
+    {
+        // Diese Methode funktioniert weiterhin korrekt und bleibt unverändert.
+        $currentUserId = Auth::id();
+        $counts = ['verfasst' => [], 'erhalten' => [], 'gesamt' => []];
+
+        foreach (self::$typeLabels as $type) {
+            $counts['verfasst'][$type] = 0;
+            $counts['erhalten'][$type] = 0;
+            $counts['gesamt'][$type] = 0;
+        }
+
+        $allEvaluations = Evaluation::all();
+
+        foreach ($allEvaluations as $evaluation) {
+            $type = $evaluation->evaluation_type;
+            if (!isset($counts['gesamt'][$type])) continue;
+            $counts['gesamt'][$type]++;
+            if ($evaluation->evaluator_id === $currentUserId) $counts['verfasst'][$type]++;
+            if ($evaluation->user_id === $currentUserId) $counts['erhalten'][$type]++;
+        }
+        return $counts;
+    }
+
+    // =========================================================================
+    // FORMULAR-ANSICHTEN
+    // =========================================================================
+
+    public function azubi()
+    {
+        $this->authorize('create', Evaluation::class);
+        $users = User::role('emt-trainee')->orderBy('name')->get();
+        return view('forms.evaluations.azubi', ['users' => $users, 'evaluationType' => 'azubi']);
+    }
+
+    public function praktikant()
+    {
+        $this->authorize('create', Evaluation::class);
+        return view('forms.evaluations.praktikant', ['users' => collect(), 'evaluationType' => 'praktikant']);
+    }
+
+    public function leitstelle()
+    {
+        $this->authorize('create', Evaluation::class);
+        $users = User::orderBy('name')->get();
+        return view('forms.evaluations.leitstelle', ['users' => $users, 'evaluationType' => 'leitstelle']);
+    }
+
+    public function mitarbeiter()
+    {
+        $this->authorize('create', Evaluation::class);
+        $exemptRoles = ['emt-trainee', 'praktikant'];
+        $users = User::whereDoesntHave('roles', function ($query) use ($exemptRoles) {
+            $query->whereIn('name', $exemptRoles);
+        })->orderBy('name')->get();
+        return view('forms.evaluations.mitarbeiter', ['users' => $users, 'evaluationType' => 'mitarbeiter']);
+    }
+
+    public function modulAnmeldung()
+    {
+        $this->authorize('create', Evaluation::class);
+        $existingModuleIds = Auth::user()->trainingModules()->pluck('training_module_id');
+        $availableModules = TrainingModule::whereNotIn('id', $existingModuleIds)->orderBy('name')->get();
+
+        return view('forms.evaluations.modul_anmeldung', [
+            'evaluationType' => 'modul_anmeldung',
+            'modules' => $availableModules
+        ]);
+    }
+
+    public function pruefungsAnmeldung()
+    {
+        $this->authorize('create', Evaluation::class);
+        $modulesInTraining = Auth::user()->trainingModules()
+            ->wherePivotIn('status', ['angemeldet', 'in_ausbildung'])
+            ->orderBy('name')->get();
+
+        return view('forms.evaluations.pruefung_anmeldung', [
+            'evaluationType' => 'pruefung_anmeldung',
+            'modules' => $modulesInTraining
+        ]);
+    }
+
+    // =========================================================================
+    // DATEN SPEICHERN & DETAILANSICHT
+    // =========================================================================
+
+    public function store(Request $request)
+    {
+        $this->authorize('create', Evaluation::class);
+
+        $evaluationType = $request->input('evaluation_type');
+
+        $validationRules = [
+            'evaluation_type' => 'required|in:' . implode(',', self::$typeLabels),
+            'description' => 'nullable|string',
+            'evaluation_date' => 'required|date',
+            'period' => 'required|string',
+            'data' => 'nullable|array',
+        ];
+
+        if (in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
+            $validationRules['target_module_id'] = 'required|exists:training_modules,id';
+        } elseif ($evaluationType === 'praktikant') {
+            $validationRules['target_name'] = 'required|string|max:255';
+            $validationRules['data.*'] = 'required|string';
+        } else {
+            $validationRules['user_id'] = 'required|exists:users,id';
+            $validationRules['data.*'] = 'required|string';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        $data = [
+            'evaluator_id' => Auth::id(), // Der Ersteller der Bewertung/des Antrags
+            'evaluation_type' => $validated['evaluation_type'],
+            'evaluation_date' => $validated['evaluation_date'],
+            'period' => $validated['period'],
+            'json_data' => $validated['data'] ?? [],
+            'description' => $validated['description'] ?? null,
+        ];
+
+        $logDescription = '';
+        $module = null; // Variable für das Modul definieren
+
+        if (in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
+            $module = TrainingModule::find($validated['target_module_id']);
+            $data['user_id'] = Auth::id(); // Antragsteller ist der eingeloggte User
+            $data['target_name'] = Auth::user()->name;
+            $data['json_data']['module_name'] = $module->name;
+            $data['json_data']['module_id'] = $module->id;
+
+            $logAction = ($evaluationType === 'modul_anmeldung') ? 'Antrag auf Modulanmeldung' : 'Antrag auf Prüfungsanmeldung';
+            $logDescription = "{$logAction} für '{$module->name}' von {$data['target_name']} eingereicht.";
+
+        } elseif ($evaluationType === 'praktikant') {
+            $data['user_id'] = null;
+            $data['target_name'] = $validated['target_name'];
+            $logDescription = "Neue Bewertung für Praktikant/in '{$data['target_name']}' ({$evaluationType}) erstellt.";
+
+        } else {
+            $data['user_id'] = $validated['user_id']; // Der bewertete User
+            $targetUser = User::find($data['user_id']);
+            $data['target_name'] = $targetUser->name;
+            $logDescription = "Neue Bewertung für '{$data['target_name']}' ({$evaluationType}) erstellt.";
+        }
+
+        $evaluation = Evaluation::create($data);
+
+        ActivityLog::create([
+             'user_id' => Auth::id(), // Der Ersteller des Logs
+             'log_type' => 'EVALUATION',
+             'action' => 'CREATED',
+             'target_id' => $evaluation->id,
+             'description' => $logDescription,
         ]);
 
-        $module = TrainingModule::find($validated['module_id']);
-        $user = User::find($validated['user_id']);
-        $evaluation = Evaluation::find($validated['evaluation_id']);
-
-        if (!$module->exam) {
-            return back()->with('error', 'Für dieses Modul ist keine Prüfung hinterlegt.');
+        // --- BENACHRICHTIGUNG VIA EVENT ---
+        // Nur bei Anträgen auslösen
+        if (in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
+             PotentiallyNotifiableActionOccurred::dispatch(
+                'EvaluationController@store', // Action Name
+                Auth::user(),                 // Der Antragsteller (triggering user)
+                $evaluation,                  // Die erstellte Evaluation als zugehöriges Modell
+                Auth::user()                  // Der ausführende Benutzer (ist hier derselbe)
+             );
         }
+        // Bei anderen Bewertungstypen könnte hier ein anderes Event ausgelöst werden,
+        // z.B. um den bewerteten Mitarbeiter zu informieren.
+        // else {
+        //     PotentiallyNotifiableActionOccurred::dispatch('EvaluationController@store.created_evaluation', ...);
+        // }
+        // ------------------------------------
 
-        $this->authorize('generateExamLink', ExamAttempt::class);
-
-        // Erstelle einen neuen Prüfungsversuch
-        $attempt = ExamAttempt::create([
-            'exam_id' => $module->exam->id,
-            'user_id' => $user->id,
-            'started_at' => now(),
-            'status' => 'in_progress',
-        ]);
-
-        // Markiere den Antrag als "erledigt"
-        $evaluation->update(['status' => 'processed']);
-
-        // Generiere die sichere URL
-        $secureUrl = route('exams.take', ['uuid' => $attempt->uuid]);
-
-        // Optional: Sende Benachrichtigung an den Prüfer/Admin
-        // Notification::send(Auth::user(), new ExamLinkGeneratedNotification($user, $secureUrl));
-
-        return back()->with('success', 'Prüfungslink erfolgreich generiert! Senden Sie diesen Link an den Prüfling:')
-                     ->with('secure_url', $secureUrl);
+        // Erfolgsmeldung entfernt
+        return redirect()->route('forms.evaluations.index');
     }
 
-    /**
-     * Zeigt die Prüfungsseite an, die über die sichere UUID aufgerufen wird.
-     */
-    public function take(string $uuid)
+    public function show(Evaluation $evaluation)
     {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        
-        // Stellt sicher, dass nur der zugewiesene User den Test machen kann.
-        if (Auth::id() !== $attempt->user_id) {
-            abort(403, 'Sie sind nicht berechtigt, diese Prüfung abzulegen.');
-        }
-        
-        if ($attempt->status !== 'in_progress') {
-             // PRÜFUNG IST ABGESCHLOSSEN, WEITERLEITUNG AUF DIE GENERISCHE BESTÄTIGUNGSSEITE
-             return redirect()->route('exams.submitted')->with('info', 'Diese Prüfung wurde bereits abgeschlossen und zur Bewertung eingereicht.');
-        }
+        $this->authorize('view', $evaluation);
 
-        $attempt->load('exam.questions.options');
-        return view('exams.take', compact('attempt'));
-    }
+        $evaluation->load(['user', 'evaluator']);
 
-    /**
-     * Handles the submission of an exam.
-     */
-    public function submit(Request $request, $uuid)
-    {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
+        $evaluationData = is_array($evaluation->json_data)
+            ? $evaluation->json_data
+            : json_decode($evaluation->json_data, true);
 
-        // Use the policy to authorize the action
-        $this->authorize('submit', $attempt);
+        $targetName = $evaluation->target_name ?? $evaluation->user?->name ?? 'Unbekannt';
 
-        $answers = $request->input('answers', []);
-        $correctAnswers = 0;
-        
-        // Eager load questions and options to perform fewer database queries
-        $questions = $attempt->exam->questions()->with('options')->get()->keyBy('id');
-
-        DB::transaction(function () use ($answers, $attempt, &$correctAnswers, $questions) {
-            foreach ($answers as $questionId => $submittedAnswer) {
-                $question = $questions->get($questionId);
-                if (!$question) continue; // Skip if a submitted answer doesn't match a question
-
-                switch ($question->type) {
-                    case 'single_choice':
-                        $option = $question->options->find($submittedAnswer);
-                        $isCorrect = $option && $option->is_correct;
-                        if ($isCorrect) {
-                            $correctAnswers++;
-                        }
-
-                        $attempt->answers()->create([
-                            'question_id' => $questionId,
-                            'option_id' => $submittedAnswer,
-                            'is_correct_at_time_of_answer' => $isCorrect,
-                        ]);
-                        break;
-
-                    case 'multiple_choice':
-                        // Ensure submittedAnswer is an array for safety
-                        $submittedAnswerIds = collect(is_array($submittedAnswer) ? $submittedAnswer : []);
-
-                        // Get the IDs of all correct options for this question
-                        $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
-
-                        // The answer is correct if the submitted IDs match the correct IDs exactly
-                        $isCorrect = $submittedAnswerIds->sort()->values()->all() == $correctOptionIds->sort()->values()->all(); 
-                        if ($isCorrect) {
-                            $correctAnswers++;
-                        }
-
-                        // Save each submitted option individually for review
-                        foreach ($submittedAnswerIds as $optionId) {
-                            // HINZUGEFÜGTE LOGIK: Prüfen Sie die Korrektheit der spezifischen Option
-                            $option = $question->options->firstWhere('id', $optionId);
-                            $isOptionCorrect = $option && $option->is_correct;
-                            
-                            $attempt->answers()->create([
-                                'question_id' => $questionId,
-                                'option_id' => $optionId,
-                                'is_correct_at_time_of_answer' => $isOptionCorrect, 
-                            ]);
-                        }
-                        break;
-
-                    case 'text_field':
-                        // Text answers are not automatically scored
-                        $attempt->answers()->create([
-                            'question_id' => $questionId,
-                            'option_id' => null,
-                            'text_answer' => $submittedAnswer,
-                            'is_correct_at_time_of_answer' => 0, 
-                        ]);
-                        break;
-                }
-            }
-
-            // Calculate score based only on questions that can be auto-graded
-            $scorableQuestionsCount = $questions->whereIn('type', ['single_choice', 'multiple_choice'])->count();
-            $score = ($scorableQuestionsCount > 0) ? round(($correctAnswers / $scorableQuestionsCount) * 100) : 0;
-            
-            $attempt->update([
-                'completed_at' => now(),
-                'status' => 'submitted',
-                'score' => $score,
-            ]);
-        });
-        
-        // ZIEL 1: Leitet den Prüfling auf die generische Bestätigungsseite um
-        return redirect()->route('exams.submitted');
-    }
-
-    /**
-     * ZEIGT die Ergebnisseite an - NUR FÜR TRAINER/ADMINS (Ziel 2)
-     */
-    public function result(string $uuid)
-    {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        // Stellt sicher, dass NUR Admins oder der Besitzer die Ergebnisseite sehen
-        $this->authorize('viewResult', $attempt); 
-        
-        // Wenn der User kein Admin ist, leiten wir ihn trotzdem auf die generische Seite um.
-        if (Auth::id() !== $attempt->user_id && !Auth::user()->hasRole('Super-Admin') && !Auth::user()->can('evaluations.view.all')) {
-            return redirect()->route('exams.submitted')->with('error', 'Die Ergebnisseite ist nur für Prüfer zugänglich.');
-        }
-
-        return view('exams.result', compact('attempt'));
-    }
-    
-    /**
-     * NEU: Schließt die Bewertung ab und setzt den Modulstatus (Ziel 3)
-     */
-    public function finalizeEvaluation(Request $request, string $uuid)
-    {
-        $attempt = ExamAttempt::where('uuid', $uuid)->firstOrFail();
-        
-        // KORREKTUR DES FEHLERS: Policy muss 'setEvaluated' aufrufen
-        $this->authorize('setEvaluated', $attempt); 
-
-        $validated = $request->validate([
-            'final_score' => 'required|integer|min:0|max:100',
-            'status_result' => 'required|in:bestanden,nicht_bestanden',
-        ]);
-        
-        $isPassed = $validated['status_result'] === 'bestanden';
-
-        DB::transaction(function () use ($attempt, $validated, $isPassed) {
-            // 1. Prüfungsversuch auf finalen Status setzen
-            $attempt->update([
-                'score' => $validated['final_score'],
-                'status' => 'evaluated',
-            ]);
-
-            // 2. Zugehöriges Trainingsmodul-User-Mapping aktualisieren
-            // KORRIGIERTE LOGIK: Aktualisiere die Pivot-Tabelle über die users()-Relation des Moduls
-            $module = $attempt->exam->trainingModule;
-            
-            if ($module) {
-                 $module->users()->updateExistingPivot($attempt->user_id, [
-                    'status' => $validated['status_result'],
-                    'completed_at' => now()->toDateString(),
-                    'notes' => 'Abgeschlossen durch Prüfung: ' . $attempt->exam->title,
-                ]);
-            }
-            
-            // Logeintrag (optional, aber gut)
-             $actionDesc = "Prüfung '{$attempt->exam->title}' von {$attempt->user->name} wurde als '{$validated['status_result']}' bewertet. Score: {$validated['final_score']}%";
-             ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'EVALUATED', 'target_id' => $attempt->id, 'description' => $actionDesc]);
-        });
-
-        return redirect()->route('admin.exams.attempts.index')->with('success', "Prüfung finalisiert: Status für {$attempt->user->name} auf '{$validated['status_result']}' gesetzt.");
+        return view('forms.evaluations.show', compact('evaluation', 'evaluationData', 'targetName'));
     }
 }
+
