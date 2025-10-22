@@ -63,7 +63,7 @@ class CitizenController extends Controller
         // --- BENACHRICHTIGUNG VIA EVENT ---
         PotentiallyNotifiableActionOccurred::dispatch(
             'CitizenController@store', // Action Name
-            $citizen,                  // Der erstellte Bürger (als triggering User/Context)
+            Auth::user(),                  // Der erstellte Bürger (als triggering User/Context)
             $citizen,                  // Das zugehörige Modell
             Auth::user()               // Der Ersteller (Admin/Mitarbeiter)
         );
@@ -117,7 +117,7 @@ class CitizenController extends Controller
         // --- BENACHRICHTIGUNG VIA EVENT ---
         PotentiallyNotifiableActionOccurred::dispatch(
             'CitizenController@update', // Action Name
-            $citizen,                   // Der aktualisierte Bürger
+            Auth::user(),                  // Der aktualisierte Bürger
             $citizen,                   // Das zugehörige Modell
             Auth::user(),               // Der Bearbeiter
             // ['old_data' => $citizenBeforeUpdate->toArray()] // Optional: Alter Zustand
@@ -152,7 +152,7 @@ class CitizenController extends Controller
         // --- BENACHRICHTIGUNG VIA EVENT ---
         PotentiallyNotifiableActionOccurred::dispatch(
             'CitizenController@destroy', // Action Name
-            null,                       // Kein spezifischer triggering User mehr vorhanden
+            Auth::user(),                       // Kein spezifischer triggering User mehr vorhanden
             $deletedData,               // Temporäres Objekt mit alten Daten
             Auth::user()                // Der Löschende
         );
