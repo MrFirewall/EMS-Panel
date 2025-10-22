@@ -138,7 +138,7 @@
                     [0, 'desc']
                 ],
                 "language": {
-                    "url": "https://cdn.datatables.net/plug-ins/2.0.8/i18n/de-DE.json"
+                    "url": "{{ asset('js/i18n/de-DE.json') }}"
                 },
 
                 // Optional: Füge eine Spalte mit erweiterten Details hinzu

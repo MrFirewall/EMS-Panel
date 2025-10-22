@@ -112,7 +112,7 @@
     $(function () {
       $("#usersTable").DataTable({
         "language": {
-            "url": "https://cdn.datatables.net/plug-ins/2.0.8/i18n/de-DE.json"
+            "url": "{{ asset('js/i18n/de-DE.json') }}"
         },
         "order": [[1, 'desc']] , // Standardmäßig nach Personalnummer absteigend sortieren
         "responsive": {
