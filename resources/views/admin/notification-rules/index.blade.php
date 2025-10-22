@@ -3,10 +3,6 @@
 @section('title', 'Benachrichtigungsregeln Verwalten')
 
 {{-- Füge DataTables CSS im Head-Bereich deines Layouts hinzu oder hier: --}}
-@push('styles')
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.bootstrap4.min.css">
-@endpush
 
 @section('content')
     {{-- AdminLTE Content Header --}}
@@ -110,10 +106,6 @@
 
 {{-- Füge DataTables JS am Ende deines Layouts hinzu oder hier: --}}
 @push('scripts')
-    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/3.0.2/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/3.0.2/js/responsive.bootstrap4.min.js"></script>
 
     <script>
         $(function () {
