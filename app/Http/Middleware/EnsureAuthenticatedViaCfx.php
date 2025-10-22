@@ -5,47 +5,53 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+// Log facade can be removed if not used elsewhere in the file, but it's fine to leave it.
+use Illuminate\Support\Facades\Log; 
 
 class EnsureAuthenticatedViaCfx
 {
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     */
     public function handle(Request $request, Closure $next)
     {
-        Log::debug('--- [Auth Debug] Middleware gestartet für: ' . $request->fullUrl() . ' ---');
-
+        // Check if the user is authenticated at all.
         if (!Auth::check()) {
-            Log::debug('[Auth Debug] Auth::check() ist FALSCH. Leite zu Login weiter.');
             return redirect()->route('login');
         }
 
-        Log::debug('[Auth Debug] Auth::check() ist WAHR. User ID: ' . Auth::id());
-        
         // ========================================================================
-        // NEUE, ROBUSTE PRÜFUNG:
-        // Wir prüfen direkt in der Session, ob der Schlüssel des Impersonators
-        // gesetzt ist. Dies ist die zuverlässigste Methode.
+        // Check if the user is currently impersonating someone else.
+        // This checks the session key used by the impersonation library.
         // ========================================================================
         $impersonatorId = session(app('impersonate')->getSessionKey());
         $isImpersonating = $impersonatorId !== null;
         
-        Log::debug('[Auth Debug] Session-Schlüssel für Impersonator vorhanden? ' . ($isImpersonating ? 'JA (ID: ' . $impersonatorId . ')' : 'NEIN'));
-        
         if ($isImpersonating) {
-            Log::debug('[Auth Debug] Prüfung 1 (Session Key) erfolgreich. Lasse Request durch.');
+            // If impersonating, allow the request.
             return $next($request);
         }
 
-        // PRÜFUNG 2: Ist es ein normaler, über CFX authentifizierter Login?
+        // ========================================================================
+        // Check if the user was authenticated via the standard CFX login flow.
+        // This relies on a session variable set during the CFX callback.
+        // ========================================================================
         $isCfxAuthenticated = session('is_cfx_authenticated') === true;
-        Log::debug('[Auth Debug] session(\'is_cfx_authenticated\')? ' . ($isCfxAuthenticated ? 'JA' : 'NEIN'));
         
         if ($isCfxAuthenticated) {
-            Log::debug('[Auth Debug] Prüfung 2 erfolgreich. Lasse Request durch.');
+            // If authenticated via CFX, allow the request.
             return $next($request);
         }
 
-        // FALLBACK: Wenn BEIDE Prüfungen fehlschlagen, ist die Session ungültig.
-        Log::warning('[Auth Debug] FALLBACK! Keine der Prüfungen war erfolgreich. User wird ausgeloggt.');
+        // ========================================================================
+        // FALLBACK: If neither impersonating nor authenticated via CFX,
+        // the session is considered invalid or expired for protected routes.
+        // Log the user out and redirect to login.
+        // ========================================================================
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -53,4 +59,3 @@ class EnsureAuthenticatedViaCfx
         return redirect()->route('login')->with('error', 'Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.');
     }
 }
-

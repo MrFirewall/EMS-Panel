@@ -336,7 +336,7 @@
         } 
         
         if (validationErrors.length > 0) {
-            const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join(''); // Korrektur: Template String für HTML
+            const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join('');
             Swal.fire({
                 icon: 'error',
                 title: 'Validierungsfehler!',
@@ -355,32 +355,23 @@
 
     const isHttps = window.location.protocol === 'https:';
 
-    const reverbKey = '{{ config("broadcasting.connections.reverb.key") }}';
-    const reverbPort = '{{ config("broadcasting.connections.reverb.options.port") }}';
-    const reverbScheme = '{{ config("broadcasting.connections.reverb.options.scheme") }}';
-
-    console.log(`[DEBUG] 1. Initialisierung Echo-Konfig.`);
-    // KORREKTUR: Lies die ÖFFENTLICHEN .env-Variablen
-    console.log(`[DEBUG] Host: {{ env('REVERB_HOST') }}, Port: {{ env('REVERB_PORT') }}, TLS: ${isHttps}`);
-
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env("REVERB_APP_KEY") }}', // <-- KORREKT (verwendet env())
+        key: '{{ env("REVERB_APP_KEY") }}', 
         
-        wsHost: '{{ env("REVERB_HOST") }}', // <-- KORREKT (verwendet env())
-        wssHost: '{{ env("REVERB_HOST") }}', // <-- KORREKT (verwendet env())
+        wsHost: '{{ env("REVERB_HOST") }}', 
+        wssHost: '{{ env("REVERB_HOST") }}',
 
-        wsPort: {{ env("REVERB_PORT") ?? 443 }}, // <-- KORREKT (verwendet env())
-        wssPort: {{ env("REVERB_PORT") ?? 443 }}, // <-- KORREKT (verwendet env())
+        wsPort: {{ env("REVERB_PORT") ?? 443 }}, 
+        wssPort: {{ env("REVERB_PORT") ?? 443 }},
         
-        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'), // KORREKT
+        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
         path: '/app',
 
         disableStats: true,
         
         authorizer: (channel, options) => {
-             console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
             return {
                 authorize: (socketId, callback) => {
                     $.post('/broadcasting/auth', {
@@ -389,11 +380,10 @@
                         channel_name: channel.name
                     })
                     .done(response => {
-                        console.log('[DEBUG] 3. Autorisierung erfolgreich:', response);
                         callback(false, response);
                     })
                     .fail(error => {
-                        console.error('[DEBUG] 3. Autorisierung FEHLGESCHLAGEN!', error.responseJSON || error);
+                        console.error('Laravel Echo Authorisierung fehlgeschlagen:', error.responseJSON || error);
                         callback(true, error);
                     });
                 }
@@ -401,12 +391,14 @@
         },
     });
     
-    // Globaler Listener für Statusänderungen
-    window.Echo.connector.pusher.connection.bind('state_change', function(states) {
-        console.warn(`[DEBUG] Reverb Statusänderung: ${states.current} (Vorher: ${states.previous})`);
-        if (states.current === 'connected') {
-            console.info('[DEBUG] WebSocket-Verbindung erfolgreich hergestellt und verbunden!');
-        }
+    // Optional: Listener für Verbindungsfehler (kann für Produktionslogging nützlich sein)
+    window.Echo.connector.pusher.connection.bind('error', function(err) {
+      console.error("Pusher Verbindungsfehler:", err);
+    });
+
+    // Optional: Bestätigung bei erfolgreicher Verbindung
+    window.Echo.connector.pusher.connection.bind('connected', function() {
+      console.info("WebSocket-Verbindung erfolgreich hergestellt.");
     });
 
 
@@ -418,20 +410,17 @@
         const notificationList = $('#notification-list');
         const fetchUrl = '{{ route("api.notifications.fetch") }}'; 
         
-        // 1. Zustand speichern: IDs aller geöffneten Collapse-Gruppen sammeln
+        // Zustand speichern: IDs aller geöffneten Collapse-Gruppen sammeln
         let openGroups = [];
         $('#notification-list .collapse.show').each(function() {
             openGroups.push($(this).attr('id'));
         });
         
-        console.log('[DEBUG] 4. Starte AJAX-Fetch für Benachrichtigungen. Offene Gruppen:', openGroups);
-
         $.ajax({
             url: fetchUrl,
             method: 'GET',
             dataType: 'json',
             success: function(response) {
-                console.log('[DEBUG] 5. AJAX-Fetch erfolgreich.', response);
                 const htmlContent = response.items_html;
                 
                 // Zähler aktualisieren
@@ -445,10 +434,9 @@
                 if (htmlContent) {
                     notificationList.html(htmlContent);
 
-                    // 6. Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
+                    // Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
                     openGroups.forEach(function(id) {
-                        $(`#${id}`).collapse('show'); // Korrektur: Template String für ID-Selektor
-                        console.log(`[DEBUG] 6. Gruppe ${id} wiederhergestellt (show).`);
+                        $(`#${id}`).collapse('show');
                     });
 
                 } else {
@@ -456,7 +444,7 @@
                 }
             },
             error: function(xhr, status, error) {
-                console.error('[DEBUG] 5. AJAX-Fetch FEHLGESCHLAGEN:', status, error);
+                console.error('Fehler beim Laden der Benachrichtigungen via AJAX:', status, error);
                 notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
             }
         });
@@ -471,12 +459,9 @@
         // --------------------------------------------------------------------
         @auth
         // Lauscht auf den privaten Kanal des eingeloggten Benutzers
-        console.log('[DEBUG] 7. Listener für Benachrichtigungen auf privatem Kanal aktiviert.');
         window.Echo.private(`users.{{ Auth::id() }}`) 
             // Lauscht auf den im Backend definierten broadcastAs-Namen
             .listen('.new.ems.notification', (e) => { 
-                console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
-                console.log('[DEBUG] 8. Benachrichtigung über .listen() erhalten!', e);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
                 fetchNotifications(); 
             });
