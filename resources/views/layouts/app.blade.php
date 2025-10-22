@@ -355,20 +355,24 @@
 
     const isHttps = window.location.protocol === 'https:';
 
-    console.log('[DEBUG] 1. Initialisierung Echo-Konfig.');
-    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${isHttps}`);
+    const reverbKey = '{{ config("broadcasting.connections.reverb.key") }}';
+    const reverbPort = '{{ config("broadcasting.connections.reverb.options.port") }}';
+    const reverbScheme = '{{ config("broadcasting.connections.reverb.options.scheme") }}';
+
+    console.log(`[DEBUG] 1. Initialisierung Echo-Konfig.`);
+    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: ${reverbPort}, TLS: ${isHttps}`);
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env("REVERB_APP_KEY") }}', 
+        key: reverbKey, // Korrekt
         
         wsHost: '{{ request()->getHost() }}', 
         wssHost: '{{ request()->getHost() }}',
 
-        wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
-        wssPort: {{ env("REVERB_PORT") ?? 8080 }},
+        wsPort: reverbPort, // Korrekt
+        wssPort: reverbPort, // Korrekt
         
-        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
+        forceTLS: isHttps || (reverbScheme === 'https'), // Korrekt
 
         path: '/app',
 
