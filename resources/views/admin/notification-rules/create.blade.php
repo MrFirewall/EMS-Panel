@@ -31,7 +31,7 @@
                          <h3 class="card-title">Regeldetails</h3>
                      </div>
                      {{-- Include form partial --}}
-                     @include('admin.notification_rules._form', ['notificationRule' => null])
+                     @include('admin.notification-rules._form', ['notificationRule' => null])
                  </div>
              </form>
          </div>

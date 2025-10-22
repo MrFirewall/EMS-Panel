@@ -32,7 +32,7 @@
                          <h3 class="card-title">Regel #{{ $notificationRule->id }} Details</h3>
                      </div>
                       {{-- Include form partial --}}
-                     @include('admin.notification_rules._form', ['notificationRule' => $notificationRule])
+                     @include('admin.notification-rules._form', ['notificationRule' => $notificationRule])
                  </div>
              </form>
          </div>
