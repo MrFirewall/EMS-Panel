@@ -5,8 +5,7 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // WICHTIG: ÄNDERUNG auf NOW
-use Illuminate\Notifications\Messages\BroadcastMessage; 
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; 
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; 
 
 class GeneralNotification extends Notification implements ShouldBroadcastNow, ShouldDispatchAfterCommit
@@ -26,10 +25,11 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
 
     public function via($notifiable): array
     {
-        // BroadcastNow ignoriert die Queue und sendet sofort
+        // ShouldBroadcastNow sendet sofort und ignoriert die Queue.
         return ['database', 'broadcast'];
     }
 
+    // Wir verwenden die leere Signatur, die den Fatal Error endlich gelöst hat.
     public function broadcastOn(): array
     {
         // Wir verwenden die Notification-ID für den Kanal.
@@ -47,27 +47,15 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
         return 'new.ems.notification';
     }
     
-    /**
-     * Definiert die zu sendenden Daten für das Broadcasting.
-     *
-     * @param mixed $notifiable
-     * @return array
-     */
-    public function toBroadcast($notifiable): array
-    {
-        return [
-            'id' => $this->id, // Wichtig für den Fetch
-            'text' => $this->text, 
-            'icon' => $this->icon, 
-            'url'  => $this->url,
-        ];
-    }
-
+    // WICHTIGE ÄNDERUNG: toBroadcast entfernt, toArray wird stattdessen für Broadcasts verwendet.
+    // Dies zwingt Laravel zur robustesten Standard-Broadcast-Logik.
     public function toArray($notifiable): array
     {
+        // Wir fügen die ID hier ein, da der Broadcast die Daten als Payload sendet.
         return [
-            'text' => $this->text,
-            'icon' => $this->icon,
+            'id' => $this->id, // Wichtig für den Fetch/Client-Identifikation
+            'text' => $this->text, 
+            'icon' => $this->icon, 
             'url'  => $this->url,
         ];
     }
