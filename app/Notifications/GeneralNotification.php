@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; // NEU: Für Transaktionssicherheit
 use Illuminate\Notifications\Notification;
-// use Illuminate\Notifications\Messages\BroadcastMessage; // ENTFERNT, da nicht direkt verwendet
-use Illuminate\Broadcasting\PrivateChannel; // Für private Benutzerkanäle
+use Illuminate\Broadcasting\PrivateChannel;
 
-class GeneralNotification extends Notification implements ShouldBroadcast // ShouldBroadcast hinzugefügt
+class GeneralNotification extends Notification implements ShouldBroadcast, ShouldDispatchAfterCommit // ShouldDispatchAfterCommit hinzugefügt
 {
     use Queueable;
 
@@ -44,16 +44,12 @@ class GeneralNotification extends Notification implements ShouldBroadcast // Sho
     /**
      * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
      *
-     * HINWEIS: Die Signatur MUSS kompatibel mit der Basisklasse sein, daher wird 
-     * der Typ 'object' für $notifiable weggelassen.
-     *
      * @param mixed $notifiable
      * @return array
      */
     public function broadcastOn($notifiable): array
     {
         // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
-        // Die Autorisierung dieses Kanals erfolgt in routes/channels.php.
         return [
             new PrivateChannel('users.' . $notifiable->id),
         ];
@@ -76,8 +72,6 @@ class GeneralNotification extends Notification implements ShouldBroadcast // Sho
     
     /**
      * Definiert die zu sendenden Daten für das Broadcasting.
-     * * Wir senden hier die gleichen Daten, damit der fetch-Aufruf weiß, was anzuzeigen ist.
-     * Wenn Sie dies nicht definieren, sendet Laravel den toArray()-Output.
      *
      * @param mixed $notifiable
      * @return array
