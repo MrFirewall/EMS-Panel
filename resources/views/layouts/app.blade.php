@@ -125,6 +125,13 @@
                 stroke-dashoffset: 0;
             }
         }
+        .main-header .navbar-badge {
+            font-size: 0.75rem; /* Standardmäßig ist es oft 0.5em oder kleiner. Erhöhen Sie es. */
+            padding: 3px 6px;  /* Mehr Füllung für eine größere Klickfläche */
+            top: 6px;          /* Passt die vertikale Position im AdminLTE-Header an */
+            right: 3px;        /* Passt die horizontale Position an */
+            font-weight: 700;  /* Macht die Zahl dicker */
+        }
     </style>
     @stack('styles')
 </head>
