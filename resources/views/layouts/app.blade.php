@@ -16,6 +16,11 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.bootstrap4.min.css">
 
+    {{-- SELECT2 CSS HINZUGEFÜGT --}}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
+
+
     {{-- Custom Styles & Dark Mode Fixes --}}
     <style>
         /* Preloader */
@@ -42,7 +47,7 @@
                 stroke-dashoffset: 0;
             }
         }
-        
+
         /* Dark Mode: List Group */
         .dark-mode .list-group-item {
             background-color: #343a40;
@@ -57,7 +62,7 @@
             color: #adb5bd !important;
         }
 
-        /* Dark Mode: Select2 Overrides */
+        /* Dark Mode: Select2 Overrides (Hier behalten oder in eigene CSS auslagern) */
         .dark-mode .select2-container--bootstrap4 .select2-selection,
         .dark-mode .select2-dropdown {
             background-color: #343a40;
@@ -77,6 +82,13 @@
             background-color: #007bff;
             color: #fff;
         }
+         .dark-mode .select2-container--bootstrap4 .select2-results__option {
+             color: #dee2e6;
+         }
+         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+             color: #fff;
+         }
+
 
         /* Select2: Multi-Select Tag Styling (Standard & Dark Mode) */
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
@@ -105,7 +117,7 @@
             color: #fff;
             text-decoration: none;
         }
-        
+
         /* Navbar: Notification Badge Size */
         .main-header .navbar-badge {
             font-size: 0.75rem;
@@ -154,35 +166,39 @@
                     <div class="dropdown-item">Lade Benachrichtigungen...</div>
                 </div>
             </li>
-            
+
             {{-- User Dropdown --}}
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
-                    <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
-                    <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
+                    @if(Auth::check()) {{-- Sicherstellen, dass der Benutzer eingeloggt ist --}}
+                        <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
+                        <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
+                    @endif
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                    <li class="user-header bg-primary">
-                        <img src="{{ Auth::user()->avatar }}" class="img-circle elevation-2" alt="User Image">
-                        <p>
-                            {{ Auth::user()->name }}
-                            <small>{{ Auth::user()->rank ?? 'Mitarbeiter' }}</small>
-                        </p>
-                    </li>
-                    <li class="user-footer">
-                        <a href="#" class="btn btn-default btn-flat float-right"
-                           onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                            Abmelden
-                        </a>
-                        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                            @csrf
-                        </form>
-                    </li>
+                    @if(Auth::check()) {{-- Sicherstellen, dass der Benutzer eingeloggt ist --}}
+                        <li class="user-header bg-primary">
+                            <img src="{{ Auth::user()->avatar }}" class="img-circle elevation-2" alt="User Image">
+                            <p>
+                                {{ Auth::user()->name }}
+                                <small>{{ Auth::user()->rank ?? 'Mitarbeiter' }}</small>
+                            </p>
+                        </li>
+                        <li class="user-footer">
+                            <a href="#" class="btn btn-default btn-flat float-right"
+                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                Abmelden
+                            </a>
+                            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                                @csrf
+                            </form>
+                        </li>
+                    @endif
                 </ul>
             </li>
         </ul>
     </nav>
-    
+
     {{-- MAIN SIDEBAR --}}
     <aside class="main-sidebar sidebar-dark-primary elevation-4" id="mainSidebar">
         <a href="{{ route('dashboard') }}" class="brand-link">
@@ -192,7 +208,7 @@
 
         <div class="sidebar">
             <nav class="mt-2">
-                @include('layouts.navigation') 
+                @include('layouts.navigation')
             </nav>
         </div>
     </aside>
@@ -205,7 +221,7 @@
             </div>
         </div>
     </div>
-    
+
     {{-- FOOTER --}}
     <footer class="main-footer">
         <div class="float-right d-none d-sm-inline">Version 1.0</div>
@@ -236,10 +252,14 @@
 <script src="https://cdn.datatables.net/responsive/3.0.2/js/responsive.bootstrap4.min.js"></script>
 
 {{-- SWEETALERT2 --}}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{{-- SELECT2 JS HINZUGEFÜGT --}}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 
 {{-- ECHO & PUSHER DEPENDENCIES (FÜR ECHTZEIT) --}}
-<script src="https://js.pusher.com/7.0/pusher.min.js"></script> 
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.0/echo.iife.min.js"></script>
 
 <script>
@@ -262,32 +282,32 @@
             const navbar = document.getElementById('mainNavbar');
             const sidebar = document.getElementById('mainSidebar');
             const toggleIcon = document.getElementById('darkModeToggle').querySelector('i');
-            
+
             if (theme === 'dark') {
                 body.classList.add('dark-mode');
-                
+
                 navbar.classList.add('navbar-dark');
                 navbar.classList.remove('navbar-white', 'navbar-light');
-                
-                sidebar.classList.add('sidebar-dark-primary'); 
+
+                sidebar.classList.add('sidebar-dark-primary');
                 sidebar.classList.remove('sidebar-light-primary');
-                
+
                 toggleIcon.classList.replace('fa-moon', 'fa-sun');
             } else {
                 body.classList.remove('dark-mode');
-                
+
                 navbar.classList.add('navbar-white', 'navbar-light');
                 navbar.classList.remove('navbar-dark');
-                
+
                 sidebar.classList.add('sidebar-light-primary');
                 sidebar.classList.remove('sidebar-dark-primary');
-                
+
                 toggleIcon.classList.replace('fa-sun', 'fa-moon');
             }
         }
-        
+
         applyTheme(getPreferredTheme());
-        
+
         document.getElementById('darkModeToggle').addEventListener('click', (e) => {
             e.preventDefault();
             const currentTheme = getStoredTheme() === 'dark' ? 'light' : 'dark';
@@ -304,14 +324,14 @@
         const doc = new DOMParser().parseFromString(str, "text/html");
         return doc.documentElement.textContent;
     }
-    
+
     function showSweetAlert(type, message) {
         setTimeout(() => {
             if (typeof Swal === 'undefined') return;
             let title = type === 'success' ? 'Erfolg!' : 'Fehler!';
             let timer = type === 'success' ? 3000 : 5000;
             const decodedMessage = decodeHtml(message);
-            
+
             Swal.fire({
                 toast: true,
                 position: 'top-end',
@@ -323,18 +343,18 @@
             });
         }, 50);
     }
-    
+
     $(document).ready(function() {
         const successMessage = '{{ session("success") }}'.trim();
         const errorMessage = '{{ session("error") }}'.trim();
         const validationErrors = @json($errors->all() ?? []);
-        
+
         if (successMessage.length > 0) {
             showSweetAlert('success', successMessage);
         } else if (errorMessage.length > 0) {
             showSweetAlert('error', errorMessage);
-        } 
-        
+        }
+
         if (validationErrors.length > 0) {
             const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join('');
             Swal.fire({
@@ -357,20 +377,20 @@
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env("REVERB_APP_KEY") }}', 
-        
-        wsHost: '{{ env("REVERB_HOST") }}', 
+        key: '{{ env("REVERB_APP_KEY") }}',
+
+        wsHost: '{{ env("REVERB_HOST") }}',
         wssHost: '{{ env("REVERB_HOST") }}',
 
-        wsPort: {{ env("REVERB_PORT") ?? 443 }}, 
+        wsPort: {{ env("REVERB_PORT") ?? 443 }},
         wssPort: {{ env("REVERB_PORT") ?? 443 }},
-        
+
         forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
         path: '/app',
 
         disableStats: true,
-        
+
         authorizer: (channel, options) => {
             return {
                 authorize: (socketId, callback) => {
@@ -390,7 +410,7 @@
             };
         },
     });
-    
+
     // Optional: Listener für Verbindungsfehler (kann für Produktionslogging nützlich sein)
     window.Echo.connector.pusher.connection.bind('error', function(err) {
       console.error("Pusher Verbindungsfehler:", err);
@@ -408,21 +428,21 @@
     function fetchNotifications() {
         const notificationCount = $('#notification-count');
         const notificationList = $('#notification-list');
-        const fetchUrl = '{{ route("api.notifications.fetch") }}'; 
-        
+        const fetchUrl = '{{ route("api.notifications.fetch") }}';
+
         // Zustand speichern: IDs aller geöffneten Collapse-Gruppen sammeln
         let openGroups = [];
         $('#notification-list .collapse.show').each(function() {
             openGroups.push($(this).attr('id'));
         });
-        
+
         $.ajax({
             url: fetchUrl,
             method: 'GET',
             dataType: 'json',
             success: function(response) {
                 const htmlContent = response.items_html;
-                
+
                 // Zähler aktualisieren
                 if (response.count > 0) {
                     notificationCount.text(response.count).show();
@@ -459,11 +479,11 @@
         // --------------------------------------------------------------------
         @auth
         // Lauscht auf den privaten Kanal des eingeloggten Benutzers
-        window.Echo.private(`users.{{ Auth::id() }}`) 
+        window.Echo.private(`users.{{ Auth::id() }}`)
             // Lauscht auf den im Backend definierten broadcastAs-Namen
-            .listen('.new.ems.notification', (e) => { 
+            .listen('.new.ems.notification', (e) => {
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
-                fetchNotifications(); 
+                fetchNotifications();
             });
         @endauth
         // --------------------------------------------------------------------

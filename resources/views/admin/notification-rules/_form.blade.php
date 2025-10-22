@@ -1,11 +1,9 @@
 {{-- Dieses Partial wird von create.blade.php und edit.blade.php verwendet --}}
 {{-- Die Variable $notificationRule ist in 'edit' gesetzt, in 'create' ist sie null --}}
 
-{{-- Füge Select2 CSS hinzu, falls noch nicht im Hauptlayout geladen --}}
+{{-- Select2 CSS wird jetzt im Hauptlayout geladen --}}
 @push('styles')
-    {{-- KORREKTUR: Markdown entfernt --}}
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    {{-- KORREKTUR: Markdown entfernt und Version fixiert (ersetze x.x.x ggf. durch eine spezifische Version) --}}
+    {{-- Theme für Bootstrap 4 --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
     <style>
         /* Style Anpassungen für Select2 im Dark Mode */
@@ -133,17 +131,22 @@
 </div>
 
 {{-- JavaScript für Select2 und dynamische Identifier --}}
+{{-- Das Select2 JS wird jetzt im Hauptlayout geladen --}}
 @push('scripts')
-{{-- KORREKTUR: Markdown entfernt --}}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
         // Initialisiere alle Select2-Felder mit Bootstrap 4 Theme
-        $('.select2').select2({
-            theme: 'bootstrap4',
-            placeholder: $(this).data('placeholder') || 'Bitte auswählen...',
-            allowClear: Boolean($(this).data('allow-clear')),
-        });
+        // Stellt sicher, dass Select2 bereits geladen ist
+        if (typeof $.fn.select2 === 'function') {
+            $('.select2').select2({
+                theme: 'bootstrap4',
+                placeholder: $(this).data('placeholder') || 'Bitte auswählen...',
+                allowClear: Boolean($(this).data('allow-clear')),
+            });
+        } else {
+            console.error("Select2 wurde nicht gefunden. Stelle sicher, dass es im Hauptlayout geladen wird.");
+        }
+
 
         // Datenquelle für die Identifier (aus PHP übergeben)
         const identifiers = @json($availableIdentifiers);
@@ -215,11 +218,15 @@
              }
 
             // Select2 neu initialisieren oder aktualisieren
-            $identifierSelect.select2({
-                 theme: 'bootstrap4',
-                 placeholder: placeholderText,
-                 allowClear: enableClear,
-            });
+            // Stelle sicher, dass Select2 bereits geladen ist
+            if (typeof $.fn.select2 === 'function') {
+                $identifierSelect.select2({
+                    theme: 'bootstrap4',
+                    placeholder: placeholderText,
+                    allowClear: enableClear,
+                });
+            }
+
 
              // Versuche, den vorherigen Wert oder den 'old'/'current' Wert wieder auszuwählen
              let valueToSelect = previouslySelectedValue;
@@ -254,11 +261,13 @@
             updateIdentifierOptions(initialType);
         } else {
             // Initial deaktivert, wenn kein Typ gewählt ist
-             $('#target_identifier').prop('disabled', true).select2({
-                 theme: 'bootstrap4',
-                 placeholder: 'Zuerst Typ auswählen...',
-                 allowClear: false, // Hier kein Clear erlauben
-             });
+            if (typeof $.fn.select2 === 'function') {
+                $('#target_identifier').prop('disabled', true).select2({
+                    theme: 'bootstrap4',
+                    placeholder: 'Zuerst Typ auswählen...',
+                    allowClear: false, // Hier kein Clear erlauben
+                });
+            }
         }
     });
 </script>
