@@ -370,6 +370,8 @@
         
         forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
+        path: '/app'
+
         disableStats: true,
         
         authorizer: (channel, options) => {
@@ -467,7 +469,7 @@
         console.log('[DEBUG] 7. Listener für Benachrichtigungen auf privatem Kanal aktiviert.');
         window.Echo.private(`users.{{ Auth::id() }}`) 
             // Lauscht auf den im Backend definierten broadcastAs-Namen
-            .listen('.new.ems.notification', (e) => { 
+            .listen('new.ems.notification', (e) => { 
                 console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
                 console.log('[DEBUG] 8. Benachrichtigung über .listen() erhalten!', e);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
