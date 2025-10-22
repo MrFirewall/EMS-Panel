@@ -470,7 +470,7 @@
         console.log('[DEBUG] 7. Listener für .App.Notifications.GeneralNotification aktiviert.');
         window.Echo.private(`users.{{ Auth::id() }}`) 
             // FINALER FIX: Lauscht auf den vollen Klassennamen, um den Namespace-Konflikt zu vermeiden
-            .listen('.App\\Notifications\\GeneralNotification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
+            .listen('.new.ems.notification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
                 console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
                 console.log('[DEBUG] 8. Benachrichtigung über .listen() erhalten!', e);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
