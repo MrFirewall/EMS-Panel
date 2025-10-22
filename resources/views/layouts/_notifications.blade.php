@@ -32,8 +32,7 @@
        data-toggle="collapse" 
        role="button" 
        aria-expanded="false" 
-       aria-controls="{{ $collapseId }}"
-       onclick="event.stopPropagation()"> {{-- WICHTIGE KORREKTUR: Verhindert, dass das Haupt-Dropdown schließt --}}
+       aria-controls="{{ $collapseId }}"> {{-- KORREKTUR: onclick entfernt, damit Collapse funktioniert --}}
         <span>
             <i class="{{ $group['group_icon'] }} mr-2"></i> {{ $group['group_title'] }}
         </span>
@@ -42,7 +41,7 @@
     </a>
 
     {{-- Level 2: Einzelne Benachrichtigungen innerhalb der Gruppe (Collapsable Area) --}}
-    <div class="collapse" id="{{ $collapseId }}">
+    <div class="collapse" id="{{ $collapseId }}" onclick="event.stopPropagation()"> {{-- KORREKTUR: stopPropagation auf den Collapse-Container verschoben --}}
         @foreach ($group['items'] as $notification)
             {{-- Kleinere Trennlinie für die Übersichtlichkeit --}}
             <div class="dropdown-divider my-0"></div>
