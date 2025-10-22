@@ -39,13 +39,6 @@ class ActivityLog extends Model
      */
     public function getCreatorNameAttribute(): string
     {
-        // Wenn der Log-Typ DUTY_START oder DUTY_END ist, gib "System" zurück.
-        if (in_array($this->log_type, ['DUTY_START', 'DUTY_END'])) {
-            return 'System';
-        }
-
-        // Andernfalls, gib den Namen des verknüpften Benutzers zurück.
-        // Falls kein Benutzer verknüpft ist (z.B. user_id ist null), gib einen Fallback-Wert an.
         return $this->user->name ?? 'Unbekannt';
     }
 }
