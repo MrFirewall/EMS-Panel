@@ -20,7 +20,10 @@ use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\ExamController; // NEU
 use App\Http\Controllers\NotificationController; // NEU (Benötigt für die API)
 use Lab404\Impersonate\Controllers\ImpersonateController;
-
+// NEU: Imports für die Test-Route
+use App\Models\User;
+use App\Notifications\GeneralNotification;
+use Illuminate\Support\Facades\Auth;
 /*
 |--------------------------------------------------------------------------
 | Öffentliche Routen & Authentifizierung
