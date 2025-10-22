@@ -100,6 +100,22 @@ Route::middleware('auth.cfx')->group(function () {
     Route::post('/exams/finalize/{uuid}', [ExamController::class, 'finalizeEvaluation'])->name('exams.finalize');
     
     Route::resource('modules', TrainingModuleController::class); // NEU: Hier korrekt platziert
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEU: Benachrichtigungs-Archiv und Aktionen
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        // Archiv-Seite
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        
+        // Aktion: Alle als gelesen markieren
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllRead'])->name('markAllRead');
+        
+        // Aktion: Einzelne löschen
+        Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
+    });
 });
 
 
@@ -193,3 +209,4 @@ Route::get('/test-notification', function() {
 
     return "Test-Benachrichtigung an '{$user->name}' gesendet! Aktualisieren Sie das Dashboard.";
 })->middleware('auth.cfx'); // Wichtig: Muss auch geschützt sein
+
