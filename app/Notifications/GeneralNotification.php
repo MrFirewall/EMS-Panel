@@ -5,60 +5,101 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; 
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; 
 
+/**
+ * Eine allgemeine Benachrichtigung, die an die Datenbank gesendet und sofort 
+ * über einen Broadcast-Treiber (z.B. Reverb/Pusher) an den Client gepusht wird.
+ *
+ * Implementiert ShouldDispatchAfterCommit, um Race Conditions bei DB-Transaktionen zu vermeiden.
+ */
 class GeneralNotification extends Notification implements ShouldBroadcastNow, ShouldDispatchAfterCommit
 {
-    use Queueable;
+    use Queueable; 
 
-    protected string $text;
-    protected string $icon;
-    protected string $url;
-    protected int $userId;
+    /**
+     * Der anzuzeigende Benachrichtigungstext.
+     * @var string
+     */
+    protected $text;
+    
+    /**
+     * Das Font Awesome Icon für die Anzeige im Frontend.
+     * @var string
+     */
+    protected $icon;
+    
+    /**
+     * Die URL, auf die der Benutzer bei Klick weitergeleitet wird.
+     * @var string
+     */
+    protected $url;
 
-    public function __construct(int $userId, string $text, string $icon, string $url)
+    /**
+     * Erstellt eine neue Benachrichtigungsinstanz.
+     *
+     * @param string $text Der Benachrichtigungstext.
+     * @param string $icon Das zu verwendende Icon (z.B. 'fas fa-ambulance').
+     * @param string $url Die Ziel-URL der Benachrichtigung.
+     */
+    public function __construct(string $text, string $icon, string $url)
     {
-        $this->userId = $userId; // User-ID für private Channels
         $this->text = $text;
         $this->icon = $icon;
         $this->url = $url;
     }
 
     /**
-     * Welche Kanäle verwendet werden.
+     * Holt die Benachrichtigungskanäle.
+     *
+     * @param  mixed  $notifiable
+     * @return array<int, string>
      */
     public function via($notifiable): array
     {
+        // 'database' speichert die Benachrichtigung persistent.
+        // 'broadcast' sendet sie über den WebSocket-Treiber.
         return ['database', 'broadcast'];
     }
 
     /**
-     * Channels für Broadcasts (Laravel 12-kompatibel)
+     * Holt die Kanäle, auf denen die Benachrichtigung übertragen werden soll.
+     *
+     * @return array<int, \Illuminate\Broadcasting\Channel|\Illuminate\Broadcasting\PrivateChannel>
      */
     public function broadcastOn(): array
     {
+        // Sendet die Benachrichtigung an den privaten Kanal des spezifischen Benutzers.
         return [
-            new PrivateChannel('users.' . $this->userId),
+            new PrivateChannel('users.' . $this->notifiable->id),
         ];
     }
-
+    
     /**
-     * Broadcast-Eventname
+     * Setzt den eindeutigen Broadcast-Namen.
+     *
+     * @return string
      */
     public function broadcastAs(): string
     {
         return 'new.ems.notification';
     }
-
+    
     /**
-     * Payload für Broadcast & Datenbank
+     * Holt die Array-Repräsentation der Benachrichtigung (für Datenbank und Broadcast).
+     *
+     * @param  mixed  $notifiable
+     * @return array<string, mixed>
      */
     public function toArray($notifiable): array
     {
+        // Die Notification-ID wird hier hinzugefügt, damit der Client sie
+        // im Broadcast-Payload empfängt und zur Identifikation nutzen kann.
         return [
-            'text' => $this->text,
-            'icon' => $this->icon,
+            'id'   => $this->id, 
+            'text' => $this->text, 
+            'icon' => $this->icon, 
             'url'  => $this->url,
         ];
     }

@@ -7,17 +7,43 @@
 
     <title>@yield('title', 'EMS Panel')</title>
 
+    {{-- AdminLTE & FONT DEPENDENCIES --}}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
 
+    {{-- DATATABLES DEPENDENCIES --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.bootstrap4.min.css">
+
+    {{-- Custom Styles & Dark Mode Fixes --}}
     <style>
+        /* Preloader */
         .preloader {
-            background-color: #343a40; /* Dunkler Hintergrund für den Preloader, verhindert "Aufblitzen" */
+            background-color: #343a40; /* Dunkler Hintergrund, verhindert "Aufblitzen" */
+        }
+        .ekg-loader {
+            width: 20vw;
+            height: 10vw;
+            max-width: 300px;
+            max-height: 150px;
+            min-width: 120px;
+            min-height: 60px;
+        }
+        .ekg-loader path {
+            stroke: #007bff;
+            stroke-width: 4;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s linear infinite;
+        }
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
         }
         
+        /* Dark Mode: List Group */
         .dark-mode .list-group-item {
             background-color: #343a40;
             border-color: #454d55;
@@ -31,44 +57,36 @@
             color: #adb5bd !important;
         }
 
-        /* Stellt sicher, dass Select2-Felder im Dark Mode den dunklen Hintergrund und die passende Schriftfarbe erhalten */
-        .dark-mode .select2-container--bootstrap4 .select2-selection {
+        /* Dark Mode: Select2 Overrides */
+        .dark-mode .select2-container--bootstrap4 .select2-selection,
+        .dark-mode .select2-dropdown {
             background-color: #343a40;
             border-color: #6c757d;
         }
-        /* Stellt sicher, dass der Text im Auswahlfeld weiß ist */
         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
             color: #fff;
         }
-        /* Färbt den Dropdown-Pfeil weiß */
         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b {
             border-color: #fff transparent transparent transparent;
         }
-        /* Stil für die ausgewählten Tags in der Mehrfachauswahl */
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
-            background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit */
+        .dark-mode .select2-search--dropdown .select2-search__field {
+            background-color: #454d55;
             color: #fff;
         }
+        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        /* Select2: Multi-Select Tag Styling (Standard & Dark Mode) */
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
-            background-color: #007bff; /* Primärfarbe für bessere Sichtbarkeit */
+            background-color: #007bff;
             color: #fff !important;
         }
-        /* Verbessertes Styling für das "X" zum Entfernen eines Tags */
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
-            color: #ffffff;
-            text-shadow: 0 1px 0 #495057;
-            font-size: 1.5rem;
-            line-height: 1;
-            opacity: .5;
-            background-color: transparent;
-            border: 0;
-            float: left;
-            padding-right: 3px;
-            padding-left: 3px;
-            margin-right: 1px;
-            margin-left: 3px;
-            font-weight: 700;
-        }.select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit im Dark Mode */
+        }
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
             color: #fff !important;
             text-shadow: 0 1px 0 #495057;
             font-size: 1.5rem;
@@ -87,53 +105,14 @@
             color: #fff;
             text-decoration: none;
         }
-        /* Stil für das Dropdown-Menü selbst */
-        .dark-mode .select2-dropdown {
-            background-color: #343a40;
-            border-color: #6c757d;
-        }
-        /* Stil für das Suchfeld im Dropdown */
-        .dark-mode .select2-search--dropdown .select2-search__field {
-            background-color: #454d55;
-            color: #fff;
-        }
-        /* Stil für die hervorgehobene Option in der Liste */
-        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
-            background-color: #007bff;
-            color: #fff;
-        }
         
-        /* NEUE REGEL: Größe des Benachrichtigungs-Badges anpassen */
+        /* Navbar: Notification Badge Size */
         .main-header .navbar-badge {
-            font-size: 0.75rem; /* Standardmäßig ist es oft 0.5em oder kleiner. Erhöhen Sie es. */
-            padding: 3px 6px;  /* Mehr Füllung für eine größere Klickfläche */
-            top: 6px;          /* Passt die vertikale Position im AdminLTE-Header an */
-            right: 3px;        /* Passt die horizontale Position an */
-            font-weight: 700;  /* Macht die Zahl dicker */
-        }
-
-
-        /* Preloader: Option 3 (EKG-Linie) */
-        .ekg-loader {
-            width: 20vw;      /* Breite ist 20% der Bildschirmbreite */
-            height: 10vw;     /* Höhe ist die Hälfte der Breite (2:1 Verhältnis) */
-            max-width: 300px; /* Wird nie breiter als 300px */
-            max-height: 150px;/* Wird nie höher als 150px */
-            min-width: 120px; /* Wird nie schmaler als 120px */
-            min-height: 60px; /* Wird nie kleiner als 60px */
-        }
-        .ekg-loader path {
-            stroke: #007bff;
-            stroke-width: 4;
-            stroke-dasharray: 1000;
-            stroke-dashoffset: 1000;
-            animation: draw 2s linear infinite;
-        }
-
-        @keyframes draw {
-            to {
-                stroke-dashoffset: 0;
-            }
+            font-size: 0.75rem;
+            padding: 3px 6px;
+            top: 6px;
+            right: 3px;
+            font-weight: 700;
         }
     </style>
     @stack('styles')
@@ -141,12 +120,14 @@
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
 <div class="wrapper">
 
-<div class="preloader flex-column justify-content-center align-items-center">
-    <svg class="ekg-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 65">
-        <path fill="none" d="M0,32.5 h20 l5,-20 l5,40 l5,-30 l5,10 h60"/>
-    </svg>
-</div>
+    {{-- PRELOADER --}}
+    <div class="preloader flex-column justify-content-center align-items-center">
+        <svg class="ekg-loader" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 65">
+            <path fill="none" d="M0,32.5 h20 l5,-20 l5,40 l5,-30 l5,10 h60"/>
+        </svg>
+    </div>
 
+    {{-- NAVBAR --}}
     <nav class="main-header navbar navbar-expand navbar-white navbar-light" id="mainNavbar">
         <ul class="navbar-nav">
             <li class="nav-item">
@@ -155,24 +136,26 @@
         </ul>
 
         <ul class="navbar-nav ml-auto">
+            {{-- Dark Mode Toggle --}}
             <li class="nav-item">
                 <a class="nav-link" id="darkModeToggle" href="#" role="button">
                     <i class="fas fa-moon"></i>
                 </a>
             </li>
 
-            {{-- BENACHRICHTIGUNGS-DROPDOWN --}}
+            {{-- Notification Dropdown --}}
             <li class="nav-item dropdown" id="notification-dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#">
                     <i class="far fa-bell"></i>
                     <span class="badge badge-warning navbar-badge" id="notification-count" style="display: none;"></span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" id="notification-list">
-                    {{-- Der Inhalt wird per JavaScript geladen und nutzt layouts._notifications --}}
+                    {{-- Content is loaded via JavaScript --}}
                     <div class="dropdown-item">Lade Benachrichtigungen...</div>
                 </div>
             </li>
             
+            {{-- User Dropdown --}}
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
                     <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
@@ -199,6 +182,8 @@
             </li>
         </ul>
     </nav>
+    
+    {{-- MAIN SIDEBAR --}}
     <aside class="main-sidebar sidebar-dark-primary elevation-4" id="mainSidebar">
         <a href="{{ route('dashboard') }}" class="brand-link">
             <i class="fas fa-ambulance brand-image img-circle elevation-3" style="opacity: .8"></i>
@@ -212,21 +197,26 @@
         </div>
     </aside>
 
+    {{-- CONTENT WRAPPER --}}
     <div class="content-wrapper">
         <div class="content">
-            <div class="container-fluid pt-3"> {{-- Padding Top für Abstand --}}
+            <div class="container-fluid pt-3">
                 @yield('content')
             </div>
         </div>
     </div>
+    
+    {{-- FOOTER --}}
     <footer class="main-footer">
         <div class="float-right d-none d-sm-inline">Version 1.0</div>
         <strong>Copyright &copy; 2025 EMS Panel.</strong> All rights reserved.
     </footer>
 </div>
+
+{{-- JAVASCRIPT --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
-{{-- NEU: AJAX CSRF Setup --}}
+{{-- AJAX CSRF Setup --}}
 <script>
     // Stellt das CSRF-Token für alle jQuery-AJAX-Anfragen ein
     $.ajaxSetup({
@@ -235,14 +225,17 @@
         }
     });
 </script>
-{{-- ENDE NEU --}}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/js/adminlte.min.js"></script>
+
+{{-- DATATABLES JS --}}
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap4.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.2/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/3.0.2/js/responsive.bootstrap4.min.js"></script>
+
+{{-- SWEETALERT2 --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
 
 {{-- ECHO & PUSHER DEPENDENCIES (FÜR ECHTZEIT) --}}
@@ -251,7 +244,7 @@
 
 <script>
     // ------------------------------------------------------------------------
-    // THEME-LOGIK (Wiederhergestellt)
+    // THEME-LOGIK
     // ------------------------------------------------------------------------
     (() => {
         'use strict'
@@ -305,18 +298,20 @@
 
 
     // ------------------------------------------------------------------------
-    // SWEETALERT2 INTEGRATION (Wiederhergestellt)
+    // SWEETALERT2 INTEGRATION
     // ------------------------------------------------------------------------
     function decodeHtml(str) {
         const doc = new DOMParser().parseFromString(str, "text/html");
         return doc.documentElement.textContent;
     }
+    
     function showSweetAlert(type, message) {
         setTimeout(() => {
             if (typeof Swal === 'undefined') return;
             let title = type === 'success' ? 'Erfolg!' : 'Fehler!';
             let timer = type === 'success' ? 3000 : 5000;
             const decodedMessage = decodeHtml(message);
+            
             Swal.fire({
                 toast: true,
                 position: 'top-end',
@@ -328,17 +323,20 @@
             });
         }, 50);
     }
+    
     $(document).ready(function() {
         const successMessage = '{{ session("success") }}'.trim();
         const errorMessage = '{{ session("error") }}'.trim();
         const validationErrors = @json($errors->all() ?? []);
+        
         if (successMessage.length > 0) {
             showSweetAlert('success', successMessage);
         } else if (errorMessage.length > 0) {
             showSweetAlert('error', errorMessage);
         } 
+        
         if (validationErrors.length > 0) {
-            const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join('');
+            const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join(''); // Korrektur: Template String für HTML
             Swal.fire({
                 icon: 'error',
                 title: 'Validierungsfehler!',
@@ -355,7 +353,6 @@
     // ------------------------------------------------------------------------
     window.Pusher = Pusher;
 
-    // Host wird von Laravel übernommen
     const isHttps = window.location.protocol === 'https:';
 
     console.log('[DEBUG] 1. Initialisierung Echo-Konfig.');
@@ -374,7 +371,7 @@
         forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
         disableStats: true,
-        // Authorizer bleibt unverändert
+        
         authorizer: (channel, options) => {
              console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
             return {
@@ -389,7 +386,7 @@
                         callback(false, response);
                     })
                     .fail(error => {
-                        console.error('[DEBUG] 3. Autorisierung FEHLGESCHLAGEN!', error);
+                        console.error('[DEBUG] 3. Autorisierung FEHLGESCHLAGEN!', error.responseJSON || error);
                         callback(true, error);
                     });
                 }
@@ -397,7 +394,7 @@
         },
     });
     
-    // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
+    // Globaler Listener für Statusänderungen
     window.Echo.connector.pusher.connection.bind('state_change', function(states) {
         console.warn(`[DEBUG] Reverb Statusänderung: ${states.current} (Vorher: ${states.previous})`);
         if (states.current === 'connected') {
@@ -406,9 +403,9 @@
     });
 
 
+    // ------------------------------------------------------------------------
     // JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig)
-    
-    // Holt Benachrichtigungen vom Server und stellt den Zustand der Collapse-Gruppen wieder her.
+    // ------------------------------------------------------------------------
     function fetchNotifications() {
         const notificationCount = $('#notification-count');
         const notificationList = $('#notification-list');
@@ -443,7 +440,7 @@
 
                     // 6. Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
                     openGroups.forEach(function(id) {
-                        $('#' + id).collapse('show');
+                        $(`#${id}`).collapse('show'); // Korrektur: Template String für ID-Selektor
                         console.log(`[DEBUG] 6. Gruppe ${id} wiederhergestellt (show).`);
                     });
 
@@ -459,7 +456,7 @@
     }
 
     $(document).ready(function() {
-        // Führe die Funktion sofort beim Laden der Seite aus, um den initialen Zustand zu setzen
+        // Führe die Funktion sofort beim Laden der Seite aus
         fetchNotifications();
 
         // --------------------------------------------------------------------
@@ -467,10 +464,10 @@
         // --------------------------------------------------------------------
         @auth
         // Lauscht auf den privaten Kanal des eingeloggten Benutzers
-        console.log('[DEBUG] 7. Listener für .App.Notifications.GeneralNotification aktiviert.');
+        console.log('[DEBUG] 7. Listener für Benachrichtigungen auf privatem Kanal aktiviert.');
         window.Echo.private(`users.{{ Auth::id() }}`) 
-            // FINALER FIX: Lauscht auf den vollen Klassennamen, um den Namespace-Konflikt zu vermeiden
-            .listen('.App\\Notifications\\GeneralNotification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
+            // Lauscht auf den im Backend definierten broadcastAs-Namen
+            .listen('.new.ems.notification', (e) => { 
                 console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
                 console.log('[DEBUG] 8. Benachrichtigung über .listen() erhalten!', e);
                 // Lädt das Dropdown nur, wenn ein Event eintrifft
@@ -483,13 +480,9 @@
 
     // FIX: Verhindert, dass das Haupt-Dropdown-Menü schließt, wenn auf Toggle- oder Content-Elemente der Untergruppen geklickt wird.
     $(document).on('click', '#notification-dropdown .dropdown-menu', function (e) {
-        // Überprüft, ob das geklickte Element (oder ein Elternteil) ein Link für eine Collapse-Gruppe ist
         const isToggle = $(e.target).closest('a[data-toggle="collapse"]').length > 0;
-        // Überprüft, ob das geklickte Element innerhalb einer Collapse-Gruppe liegt
         const isContent = $(e.target).closest('.collapse').length > 0;
 
-        // Nur wenn es ein Toggle-Klick ist oder ein Klick auf den Inhalt einer geöffneten Gruppe,
-        // stoppen wir die Weitergabe des Events, um das Haupt-Dropdown offen zu halten.
         if (isToggle || isContent) {
              e.stopPropagation();
         }
