@@ -79,8 +79,8 @@ return [
                 'options' => [
                     'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
                     'port' => env('REVERB_SERVER_PORT', '8080'),
-                    'scheme' => env('REVERB_SCHEME', 'https'),
-                    'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                    'scheme' => 'http',  // <-- KORREKTUR (Interne API-Calls sind http)
+                    'useTLS' => false, // <-- KORREKTUR (Interne API-Calls sind nicht verschlüsselt)
                 ],
                 'allowed_origins' => ['*'],
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
