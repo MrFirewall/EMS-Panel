@@ -212,21 +212,18 @@ Route::get('/test-notification', function() {
     // Die toDatabase-Methode speichert den Eintrag.
     // Die broadcastOn-Methode sendet den Event über Reverb.
     $user->notify(new GeneralNotification(
-        (int) $user->id,
         'Test 1: Fehler gefunden',
         'fas fa-exclamation-triangle text-danger',
         route('dashboard')
     ));
 
     $user->notify(new GeneralNotification(
-        (int) $user->id,
         'Test 2: Neue Akte erstellt',
         'fas fa-file-alt text-info',
         route('dashboard')
     ));
 
     $user->notify(new GeneralNotification(
-        (int) $user->id,
         'Test 3: Mitarbeiter angemeldet',
         'fas fa-user-plus text-success',
         route('dashboard')
