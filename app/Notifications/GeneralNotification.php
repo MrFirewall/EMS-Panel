@@ -6,15 +6,13 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Broadcasting\PrivateChannel;
-// Hinzufügen des InteractsWithBroadcasting Trait
-use Illuminate\Notifications\CastsNotifications; 
 
-// Wir implementieren nur ShouldDispatchAfterCommit, um Transaktionssicherheit zu gewährleisten.
+// Wichtig: ShouldBroadcast wird durch die via-Methode impliziert, daher nur die Verträge
+// und Traits, die unbedingt notwendig sind.
 class GeneralNotification extends Notification implements ShouldDispatchAfterCommit
 {
-    // Die Basisklasse Illuminate\Notifications\Notification verwendet bereits den Notifiable-Trait.
-    // Wir entfernen ShouldBroadcast, da dies durch die via-Methode impliziert wird.
-    use Queueable, CastsNotifications; 
+    // CastsNotifications entfernt, da es in dieser Version nicht gefunden wird
+    use Queueable; 
 
     protected $text;
     protected $icon;
@@ -26,7 +24,7 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
         $this->icon = $icon;
         $this->url = $url;
     }
-    
+
     /**
      * Get the notification's delivery channels.
      *
@@ -45,9 +43,7 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
      */
     public function broadcastOn(): array
     {
-        // Wir verwenden $this->notifiable, da die FatalError-Probleme nur durch den Parameter ausgelöst wurden.
-        // Wenn $this->notifiable hier null ist, liegt ein Problem in der Basisklasse vor.
-        // ANNAHME: Der notifiable ist jetzt durch das Notification-System korrekt gesetzt.
+        // $this->notifiable wird automatisch gesetzt.
         return [
             new PrivateChannel('users.' . $this->notifiable->id),
         ];
@@ -56,7 +52,7 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
     /**
      * Setzt den Broadcast-Namen auf einen einfachen, eindeutigen String.
      * Echo kann diesen leichter identifizieren.
-     * * @return string
+     * @return string
      */
     public function broadcastAs(): string
     {
@@ -66,21 +62,14 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
     /**
      * Definiert die zu sendenden Daten für das Broadcasting.
      *
-     * Wir senden die Datenbankdaten, da diese bereits die Icon/Text/URL-Struktur enthalten.
-     *
      * @param mixed $notifiable
      * @return array
      */
     public function toBroadcast($notifiable): array
     {
         // Wir senden alle Daten, die wir in die DB schreiben, direkt über den Broadcast.
-        return [
-            'id' => $this->id,
-            'text' => $this->text,
-            'icon' => $this->icon,
-            'url' => $this->url,
-            // Die Benachrichtigungs-ID (UUID) ist entscheidend für den Fetch.
-        ];
+        // Das Frontend fetcht die ID, aber wir senden alle nützlichen Daten mit.
+        return $this->toDatabase($notifiable);
     }
 
     /**
@@ -98,9 +87,9 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
         ];
     }
     
-    // toArray und toBroadcast sind jetzt getrennt, um beide Kanäle korrekt zu bedienen.
+    // toArray ist nicht zwingend für Broadcast/Database nötig, bleibt aber als Standard-Methode
     public function toArray($notifiable): array
     {
-        return [];
+        return $this->toDatabase($notifiable);
     }
 }
