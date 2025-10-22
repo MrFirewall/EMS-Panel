@@ -458,12 +458,11 @@
         // ECHTE ECHTZEIT-LOGIK (Laravel Echo)
         // --------------------------------------------------------------------
         @auth
+        // Neuer Block: Nutzt die eingebaute Notification-Methode
         window.Echo.private(`users.{{ Auth::id() }}`) 
-            // Lauscht auf den Standard-Event-Namen, den Laravel Notifications broadcasten
-            .listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (e) => {
-                console.log('Echtzeit-Benachrichtigung erhalten!');
-                // Lädt das Dropdown nur, wenn ein Event eintrifft
-                fetchNotifications(); 
+            .notification((notification) => {
+                console.log('Echtzeit-Benachrichtigung über .notification() erhalten!', notification);
+                fetchNotifications();
             });
         @endauth
         // --------------------------------------------------------------------
