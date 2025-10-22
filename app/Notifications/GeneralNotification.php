@@ -5,7 +5,8 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; 
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // WICHTIG: ÄNDERUNG auf NOW
+use Illuminate\Notifications\Messages\BroadcastMessage; 
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; 
 
 class GeneralNotification extends Notification implements ShouldBroadcastNow, ShouldDispatchAfterCommit
@@ -25,11 +26,10 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
 
     public function via($notifiable): array
     {
-        // ShouldBroadcastNow sendet sofort und ignoriert die Queue.
+        // BroadcastNow ignoriert die Queue und sendet sofort
         return ['database', 'broadcast'];
     }
 
-    // Wir verwenden die leere Signatur, die den Fatal Error endlich gelöst hat.
     public function broadcastOn(): array
     {
         // Wir verwenden die Notification-ID für den Kanal.
@@ -47,15 +47,27 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
         return 'new.ems.notification';
     }
     
-    // WICHTIGE ÄNDERUNG: toBroadcast entfernt, toArray wird stattdessen für Broadcasts verwendet.
-    // Dies zwingt Laravel zur robustesten Standard-Broadcast-Logik.
-    public function toArray($notifiable): array
+    /**
+     * Definiert die zu sendenden Daten für das Broadcasting.
+     *
+     * @param mixed $notifiable
+     * @return array
+     */
+    public function toBroadcast($notifiable): array
     {
-        // Wir fügen die ID hier ein, da der Broadcast die Daten als Payload sendet.
         return [
-            'id' => $this->id, // Wichtig für den Fetch/Client-Identifikation
+            'id' => $this->id, // Wichtig für den Fetch
             'text' => $this->text, 
             'icon' => $this->icon, 
+            'url'  => $this->url,
+        ];
+    }
+
+    public function toArray($notifiable): array
+    {
+        return [
+            'text' => $this->text,
+            'icon' => $this->icon,
             'url'  => $this->url,
         ];
     }
