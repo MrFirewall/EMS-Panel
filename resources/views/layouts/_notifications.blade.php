@@ -32,7 +32,8 @@
        data-toggle="collapse" 
        role="button" 
        aria-expanded="false" 
-       aria-controls="{{ $collapseId }}">
+       aria-controls="{{ $collapseId }}"
+       onclick="event.stopPropagation()"> {{-- WICHTIGE KORREKTUR: Verhindert, dass das Haupt-Dropdown schließt --}}
         <span>
             <i class="{{ $group['group_icon'] }} mr-2"></i> {{ $group['group_title'] }}
         </span>
