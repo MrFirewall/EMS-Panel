@@ -5,6 +5,7 @@ namespace App\Notifications;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
+use Illuminate\Bus\Queueable;
 
 class GeneralNotification extends Notification implements ShouldDispatchAfterCommit
 {
