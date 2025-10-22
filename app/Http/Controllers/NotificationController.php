@@ -9,7 +9,8 @@ use Carbon\Carbon;
 class NotificationController extends Controller
 {
     /**
-     * Ruft ungelesene Benachrichtigungen für das Dropdown ab und gruppiert diese nach Typ (Icon).
+     * Ruft ungelesene Benachrichtigungen für das Dropdown ab, gruppiert diese
+     * nach Typ (Icon) und gibt die hierarchische Struktur zurück.
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -21,47 +22,76 @@ class NotificationController extends Controller
 
         $user = Auth::user();
 
-        // Hole alle ungelesenen Benachrichtigungen
-        $notifications = $user->unreadNotifications;
+        // Hole alle ungelesenen Benachrichtigungen und sortiere sie nach Erstellung (neueste zuerst)
+        $notifications = $user->unreadNotifications->sortByDesc('created_at');
+
+        // Funktion zur Erzeugung eines spezifischen Gruppentextes
+        $getGroupText = function ($icon, $count) {
+            $prefix = ($count > 1) ? "{$count} neue " : "Eine neue ";
+            
+            switch ($icon) {
+                case 'fas fa-file-alt':
+                    return $prefix . (($count > 1) ? 'Einträge in Personalakten' : 'Aktenergänzung');
+                case 'fas fa-user-plus':
+                    return $prefix . (($count > 1) ? 'Mitarbeiteranmeldungen' : 'Mitarbeiteranmeldung');
+                case 'fas fa-exclamation-triangle':
+                    return $prefix . (($count > 1) ? 'Warnungen oder Fehler' : 'Warnmeldung');
+                case 'fas fa-comment':
+                    return $prefix . (($count > 1) ? 'Kommentare/Nachrichten' : 'Nachricht');
+                case 'fas fa-clipboard-list':
+                    return $prefix . (($count > 1) ? 'Aufgaben/Checklisten' : 'Aufgabe');
+                case 'fas fa-sign-out-alt':
+                    return $prefix . (($count > 1) ? 'Austritte/Kündigungen' : 'Austrittsmeldung');
+                case 'fas fa-birthday-cake':
+                    return $prefix . (($count > 1) ? 'Geburtstage' : 'Geburtstag');
+                case 'fas fa-check-circle':
+                    return $prefix . (($count > 1) ? 'Bestätigungen' : 'Bestätigung');
+                default:
+                    return $prefix . (($count > 1) ? 'Meldungen' : 'Meldung');
+            }
+        };
 
         // Gruppierung der Benachrichtigungen nach Icon-Typ
-        $groupedItems = $notifications
+        $groupedNotifications = $notifications
             ->groupBy(function($notification) {
                 // Verwenden Sie den Icon-Namen als Gruppierungsschlüssel.
                 return $notification->data['icon'] ?? 'fas fa-bell';
             })
-            ->map(function($group, $icon) {
+            ->map(function($group, $icon) use ($getGroupText) {
                 $count = $group->count();
-                $first = $group->first(); // Verwende die erste Benachrichtigung für URL/ID/Zeit
                 
-                // Formatiere den Text basierend auf der Gruppengröße
-                // Wenn mehr als eine Benachrichtigung im Icon-Typ, fasse zusammen.
-                $text = $count > 1 
-                    ? "{$count} neue Meldungen dieses Typs"
-                    : ($first->data['text'] ?? 'Unbekannte Benachrichtigung');
+                // Gruppentitel generieren (z.B. "3 neue Aufgaben")
+                $groupTitle = $getGroupText($icon, $count);
+                
+                // Map die individuellen Benachrichtigungen innerhalb der Gruppe
+                $individualItems = $group->map(function($notification) {
+                    return [
+                        'id'    => $notification->id,
+                        'text'  => $notification->data['text'] ?? 'Unbekannte Benachrichtigung',
+                        'url'   => $notification->data['url'] ?? '#',
+                        'time'  => $notification->created_at->diffForHumans(null, true, true),
+                    ];
+                })->values();
 
                 return [
-                    // Wichtig: ID der ersten Benachrichtigung für den Markierungsklick (markAsRead)
-                    'id'    => $first->id, 
-                    'text'  => $text,
-                    'icon'  => $icon,
-                    'url'   => $first->data['url'] ?? '#', 
-                    // Zeige die Zeit der neuesten Benachrichtigung im Dropdown
-                    'time'  => $first->created_at->diffForHumans(null, true, true),
-                    'count' => $count, // Anzahl der Elemente in dieser Gruppe
+                    'group_title' => $groupTitle,
+                    'group_icon'  => $icon,
+                    'group_count' => $count,
+                    'items'       => $individualItems, // Die Liste der einzelnen Benachrichtigungen
                 ];
             })
-            ->values(); // Setze die Schlüssel zurück (optional, aber sauber)
+            ->values();
 
-        // Rendere das Partial-View mit den gruppierten Elementen
-        $html = view('layouts._notifications', ['notifications' => $groupedItems])->render();
+        // Rendere das Partial-View mit der hierarchischen Struktur
+        $html = view('layouts._notifications', ['groupedNotifications' => $groupedNotifications, 'totalCount' => $notifications->count()])->render();
 
         return response()->json([
-            // Wir geben die Gesamtzahl der ungelesenen Benachrichtigungen (nicht der Gruppen) zurück
             'count'      => $notifications->count(), 
             'items_html' => $html
         ]);
     }
+    
+    // ... (index, markAllRead, markAsRead und destroy bleiben unverändert)
 
     /**
      * Zeigt die Archiv-Seite mit allen Benachrichtigungen (gelesen und ungelesen).
