@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; 
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; 
+use Illuminate\Queue\SerializesModels;
 
 /**
  * Eine allgemeine Benachrichtigung, die an die Datenbank gesendet und sofort 
@@ -16,7 +17,7 @@ use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
  */
 class GeneralNotification extends Notification implements ShouldBroadcastNow, ShouldDispatchAfterCommit
 {
-    use Queueable; 
+    use Queueable, SerializesModels; 
 
     /**
      * Der anzuzeigende Benachrichtigungstext.
