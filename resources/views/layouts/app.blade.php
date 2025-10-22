@@ -351,32 +351,33 @@
 
 
     // ------------------------------------------------------------------------
-    // ECHO INITIALISIERUNG
+    // ECHO INITIALISIERUNG (Korrigiert für Reverb hinter HTTPS)
     // ------------------------------------------------------------------------
     window.Pusher = Pusher;
 
-    // Host wird von Laravel übernommen
-    const isHttps = window.location.protocol === 'https:';
+    // Wir respektieren die Einstellung aus der .env und zwingen kein TLS,
+    // nur weil die Seite über HTTPS läuft.
+    const useTls = '{{ env("REVERB_SCHEME") }}' === 'https';
 
     console.log('[DEBUG] 1. Initialisierung Echo-Konfig.');
-    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${isHttps}`);
+    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${useTls}`);
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env("REVERB_APP_KEY") }}', 
-        
-        wsHost: '{{ request()->getHost() }}', 
+        key: '{{ env("REVERB_APP_KEY") }}',
+
+        wsHost: '{{ request()->getHost() }}',
         wssHost: '{{ request()->getHost() }}',
 
-        wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
+        wsPort: {{ env("REVERB_PORT") ?? 8080 }},
         wssPort: {{ env("REVERB_PORT") ?? 8080 }},
-        
-        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
+        forceTLS: useTls,
+        encrypted: useTls,
         disableStats: true,
-        // Authorizer bleibt unverändert
+
         authorizer: (channel, options) => {
-             console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
+            console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
             return {
                 authorize: (socketId, callback) => {
                     $.post('/broadcasting/auth', {
@@ -396,6 +397,7 @@
             };
         },
     });
+
     
     // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
     window.Echo.connector.pusher.connection.bind('state_change', function(states) {
