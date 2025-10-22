@@ -69,7 +69,7 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
      *
      * @return array<int, \Illuminate\Broadcasting\Channel|\Illuminate\Broadcasting\PrivateChannel>
      */
-    public function broadcastOn(): array
+    public function broadcastOn($notifiable): array
     {
         // Sendet die Benachrichtigung an den privaten Kanal des spezifischen Benutzers.
         return [
