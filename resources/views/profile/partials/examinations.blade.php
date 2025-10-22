@@ -1,29 +1,76 @@
 <div class="card card-primary card-outline mb-4">
-    <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-award me-2"></i> Prüfungen</h3>
-    </div>
-    <div class="card-body p-0">
-        <table class="table table-sm mb-0 table-striped">
-            <thead>
+<div class="card-header">
+<h3 class="card-title"><i class="fas fa-file-signature me-2"></i> Prüfungsergebnisse & Einstufungen</h3>
+</div>
+<div class="card-body p-0">
+<table class="table table-sm mb-0 table-striped">
+<thead>
+<tr>
+<th>Typ</th>
+<th>Titel</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+{{-- Anzeige der automatisierten Prüfungsversuche --}}
+@forelse($examAttempts as $attempt)
+@php
+// Standardwerte für laufende oder eingereichte Prüfungen
+$statusColor = 'bg-secondary';
+$statusText = 'Zur Bewertung';
+
+                    if ($attempt->status === 'submitted') {
+                        $statusColor = 'bg-warning';
+                        $statusText = 'Eingereicht';
+                    }
+                    
+                    if ($attempt->status === 'evaluated') {
+                        // Status aus der users_module Pivot-Tabelle abrufen
+                        $moduleUser = $attempt->user->trainingModules->where('id', $attempt->exam->training_module_id)->first();
+                        $finalStatus = $moduleUser->pivot->status ?? 'evaluated'; // Holt 'bestanden' / 'nicht_bestanden'
+
+                        if ($finalStatus === 'bestanden') {
+                            $statusColor = 'bg-success';
+                            $statusText = 'Bestanden';
+                        } elseif ($finalStatus === 'nicht_bestanden') {
+                            $statusColor = 'bg-danger';
+                            $statusText = 'Nicht bestanden';
+                        }
+                    }
+                @endphp
                 <tr>
-                    <th>Datum</th>
-                    <th>Neuer Rang</th>
-                    <th>Ausbilder</th>
+                    <td><span class="badge {{ $statusColor }} text-sm">Prüfung</span></td>
+                    <td>
+                        <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
+                    </td>
+                    <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
+                    
                 </tr>
-            </thead>
-            <tbody>
-                @forelse($examinations as $exam)
-                    <tr>
-                        <td>{{ $exam->date ? \Carbon\Carbon::parse($exam->date)->format('d.m.Y') : '-' }}</td>
-                        <td><strong>{{ $exam->new_rank }}</strong></td>
-                        <td>{{ $exam->examiner_name }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">Keine Prüfungseinträge.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+            @empty
+                {{-- Wird unten behandelt, falls beide leer sind --}}
+            @endforelse
+
+            {{-- Anzeige der alten manuellen examinations-Einträge --}}
+            @forelse($examinations as $exam)
+                <tr>
+                    <td><span class="badge bg-info text-sm">Einstufung</span></td>
+                    <td>Einstufung ({{ $exam->examiner_name }})</td>
+                    <td><span class="badge bg-primary">Abgeschlossen</span></td>
+                    <td>-</td>
+                </tr>
+            @empty
+                {{-- Wird ignoriert, wenn examAttempts Ergebnisse hat --}}
+            @endforelse
+
+            {{-- Fallback: Nur anzeigen, wenn BEIDE Listen leer sind --}}
+            @if($examAttempts->isEmpty() && $examinations->isEmpty())
+                <tr>
+                    <td colspan="5" class="text-center text-muted">Keine Prüfungseinträge oder Modulabschlüsse vorhanden.</td>
+                </tr>
+            @endif
+        </tbody>
+    </table>
+</div>
+
+
 </div>

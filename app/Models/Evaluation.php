@@ -20,6 +20,7 @@ class Evaluation extends Model
         'period',           // Bewertungszeitraum (z.B. '00-06 Uhr')
         'json_data',        // Speichert alle spezifischen Bewertungskriterien als JSON
         'description',      // Freitextbeschreibung / Kommentar
+        'status',           // Status der Bewertung (z.B. 'pending', 'processed')
     ];
 
     protected $casts = [

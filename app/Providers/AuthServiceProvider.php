@@ -16,9 +16,21 @@ use App\Policies\PrescriptionPolicy;
 use Spatie\Permission\Models\Permission;
 use App\Policies\PermissionPolicy;
 
+use Spatie\Permission\Models\TrainingModule;
+use App\Policies\TrainingModulePolicy;
+
+use App\Models\Evaluation;
+use App\Policies\EvaluationPolicy;
+
+use App\Models\ExamAttempt;
+use App\Policies\ExamAttemptPolicy;
+
+use App\Models\Exam;
+use App\Policies\ExamPolicy;
+
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
-
+ 
 class AuthServiceProvider extends ServiceProvider
 {
     /**
@@ -31,6 +43,10 @@ class AuthServiceProvider extends ServiceProvider
         Citizen::class => CitizenPolicy::class,
         Prescription::class => PrescriptionPolicy::class,
         Permission::class => PermissionPolicy::class,
+        TrainingModule::class => TrainingModulePolicy::class,
+        Evaluation::class => EvaluationPolicy::class,
+        ExamAttempt::class => ExamAttemptPolicy::class,
+        Exam::class => ExamPolicy::class,
     ];
 
     /**
