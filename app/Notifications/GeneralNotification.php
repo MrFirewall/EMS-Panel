@@ -3,7 +3,7 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBroadcast; // Muss für Broadcasting implementiert werden
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Notification;
 // use Illuminate\Notifications\Messages\BroadcastMessage; // ENTFERNT, da nicht direkt verwendet
 use Illuminate\Broadcasting\PrivateChannel; // Für private Benutzerkanäle
