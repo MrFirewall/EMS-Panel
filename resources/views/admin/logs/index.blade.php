@@ -110,7 +110,7 @@
 
 
 {{-- DATATABLES INITIALISIERUNG --}}
-@section('js')
+@push('scripts')
     <script>
         $(document).ready(function() {
             // DataTables auf die Tabelle anwenden
@@ -138,4 +138,4 @@
             });
         });
     </script>
-@stop
+@endpush
