@@ -111,9 +111,8 @@
 <script>
     $(function () {
       $("#usersTable").DataTable({
-        // Deutsche Sprachoptionen laden
         "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/German.json"
+            "url": "https://cdn.datatables.net/plug-ins/2.0.8/i18n/de-DE.json"
         },
         "order": [[1, 'desc']] , // Standardmäßig nach Personalnummer absteigend sortieren
         "responsive": {
