@@ -55,7 +55,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($rules as $rule)
+                            {{-- @forelse loop without @empty --}}
+                            @foreach ($rules as $rule)
                                 <tr>
                                     <td>{{ $rule->controller_action }}</td>
                                     <td>{{ ucfirst($rule->target_type) }}</td>
@@ -96,13 +97,8 @@
                                         @endcan
                                     </td>
                                 </tr>
-                            @empty
-                                {{-- Dieser Teil wird bei leerer DB nicht angezeigt, wenn DataTables aktiv ist --}}
-                                {{-- Man könnte hier eine leere Zeile lassen oder DataTables die Meldung "Keine Daten" anzeigen lassen --}}
-                                <tr>
-                                     <td colspan="6" class="text-center dataTables_empty">Keine Benachrichtigungsregeln gefunden.</td>
-                                </tr>
-                            @endforelse
+                            @endforeach
+                            {{-- @empty block removed --}}
                         </tbody>
                     </table>
                 </div>
@@ -141,7 +137,7 @@
                   "loadingRecords": "Wird geladen...",
                   "processing": "Bitte warten...",
                   "search": "Suchen:",
-                  "zeroRecords": "Keine Einträge gefunden",
+                  "zeroRecords": "Keine Einträge gefunden", // Diese Meldung wird jetzt von DataTables angezeigt
                   "paginate": {
                       "first": "Erste",
                       "last": "Letzte",
