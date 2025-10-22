@@ -27,7 +27,7 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
      */
     public function __construct(int $userId, string $text, string $icon, string $url)
     {
-        $this->userId = $userId;
+        $this->userId = (int) $userId;
         $this->text   = $text;
         $this->icon   = $icon;
         $this->url    = $url;

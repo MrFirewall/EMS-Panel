@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
         App\Providers\AuthServiceProvider::class,
         Lab404\Impersonate\ImpersonateServiceProvider::class,
+        Laravel\Reverb\ReverbServiceProvider::class,
     ])
     ->withExceptions(function (Exceptions $exceptions): void {
         //
