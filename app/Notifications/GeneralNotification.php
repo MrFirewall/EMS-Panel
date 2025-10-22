@@ -5,11 +5,11 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // WICHTIG: ÄNDERUNG auf NOW
 use Illuminate\Notifications\Messages\BroadcastMessage; 
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; // Für Transaktionssicherheit
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit; 
 
-class GeneralNotification extends Notification implements ShouldBroadcast, ShouldDispatchAfterCommit
+class GeneralNotification extends Notification implements ShouldBroadcastNow, ShouldDispatchAfterCommit
 {
     use Queueable; 
 
@@ -26,6 +26,7 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
 
     public function via($notifiable): array
     {
+        // BroadcastNow ignoriert die Queue und sendet sofort
         return ['database', 'broadcast'];
     }
 
@@ -48,24 +49,18 @@ class GeneralNotification extends Notification implements ShouldBroadcast, Shoul
     
     /**
      * Definiert die zu sendenden Daten für das Broadcasting.
-     * Wir fügen HIER einen Debug-Schritt hinzu.
      *
      * @param mixed $notifiable
-     * @return BroadcastMessage
+     * @return array
      */
     public function toBroadcast($notifiable): array
     {
-        $payload = [
+        return [
             'id' => $this->id, // Wichtig für den Fetch
             'text' => $this->text, 
             'icon' => $this->icon, 
             'url'  => $this->url,
         ];
-        
-        // DEBUG: Prüft, ob die Daten korrekt an den Broadcaster übergeben werden.
-        // dd('Broadcasting Payload:', $payload, 'Broadcast Name:', $this->broadcastAs()); 
-
-        return $payload;
     }
 
     public function toArray($notifiable): array
