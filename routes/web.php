@@ -147,3 +147,25 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
         Route::post('/{attempt}/send-link', [\App\Http\Controllers\Admin\ExamController::class, 'sendLink'])->name('send.link');
     });
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Interne API-Routen (für Frontend-AJAX)
+|--------------------------------------------------------------------------
+|
+| Diese Routen werden von der web.php geladen, damit sie
+| die 'web' Middleware-Gruppe (Sessions, Cookies, CSRF) erben.
+*/
+Route::middleware('auth.cfx') // Nutzt Ihre existierende Auth-Middleware
+     ->prefix('api')            // Stellt sicher, dass die URL /api/... lautet
+     ->group(function () {
+    
+    // Benachrichtigungen abrufen
+    Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])
+        ->name('api.notifications.fetch'); // Name wie von Blade erwartet
+
+    // Prüfungsversuch flaggen
+    Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])
+        ->name('api.exams.flag');
+});
