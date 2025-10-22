@@ -245,7 +245,53 @@
 <script src="https://cdn.datatables.net/responsive/3.0.2/js/responsive.bootstrap4.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
 
+{{-- ECHO & PUSHER DEPENDENCIES (FÜR ECHTZEIT) --}}
+{{-- Hinweis: Hier wird Pusher als Protokoll genutzt, auch wenn Sie Laravel Reverb verwenden. --}}
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.0/echo.iife.min.js"></script>
+
 <script>
+    // ------------------------------------------------------------------------
+    // ECHO INITIALISIERUNG
+    // ------------------------------------------------------------------------
+    window.Pusher = Pusher;
+
+    // TODO: Ersetzen Sie diese Platzhalter durch Ihre tatsächlichen Laravel/Broadcaster-Konfigurationswerte
+    window.Echo = new Echo({
+        broadcaster: 'pusher',
+        key: '{{ env("REVERB_APP_KEY") }}', 
+        wsHost: '{{ env("REVERB_HOST") ?? request()->getHost() }}',
+        wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
+        wssPort: {{ env("REVERB_PORT") ?? 8080 }},
+        // forceTLS nur auf true setzen, wenn der Host explizit SSL (WSS) verwendet
+        forceTLS: ('{{ env("REVERB_SCHEME") }}' === 'https' || window.location.protocol === 'https:'),
+        disableStats: true,
+        // Authorizer für private Channel (notwendig für benutzer-spezifische Benachrichtigungen)
+        authorizer: (channel, options) => {
+            return {
+                authorize: (socketId, callback) => {
+                    $.post('/broadcasting/auth', {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        socket_id: socketId,
+                        channel_name: channel.name
+                    })
+                    .done(response => {
+                        callback(false, response);
+                    })
+                    .fail(error => {
+                        console.error('Echo Authorization Failed:', error);
+                        // Falls die Autorisierung fehlschlägt, versuchen wir es nicht erneut,
+                        // verhindern aber, dass das Haupt-Dropdown schließt.
+                        // callback(true, error);
+                    });
+                }
+            };
+        },
+    });
+
+    // ------------------------------------------------------------------------
+    // THEME-LOGIK (Unverändert)
+    // ------------------------------------------------------------------------
     (() => {
         'use strict'
         const getStoredTheme = () => localStorage.getItem('theme')
@@ -348,63 +394,85 @@
     });
 </script>
 
-{{-- NEU: JAVASCRIPT FÜR BENACHRICHTIGUNGEN --}}
+{{-- JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig) --}}
 <script>
-    $(document).ready(function() {
+    
+    // Holt Benachrichtigungen vom Server und stellt den Zustand der Collapse-Gruppen wieder her.
+    function fetchNotifications() {
         const notificationCount = $('#notification-count');
         const notificationList = $('#notification-list');
-        // WICHTIG: Verwende die definierte Route
         const fetchUrl = '{{ route("api.notifications.fetch") }}'; 
+        
+        // 1. Zustand speichern: IDs aller geöffneten Collapse-Gruppen sammeln
+        let openGroups = [];
+        $('#notification-list .collapse.show').each(function() {
+            openGroups.push($(this).attr('id'));
+        });
 
-        function fetchNotifications() {
-            $.ajax({
-                url: fetchUrl,
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    // KORREKTUR: Verwende 'items_html' anstelle von 'html' (wie im Controller definiert)
-                    const htmlContent = response.items_html;
-                    
-                    // Zähler aktualisieren
-                    if (response.count > 0) {
-                        notificationCount.text(response.count).show();
-                    } else {
-                        notificationCount.hide();
-                    }
-
-                    // Dropdown-Liste mit dem HTML aus dem Partial füllen
-                    if (htmlContent) {
-                        notificationList.html(htmlContent);
-                    } else {
-                       // Fallback, wenn kein HTML zurückkommt (sollte nicht passieren)
-                       notificationList.html('<li class="dropdown-item">Fehler beim Laden oder leere Antwort.</li>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Fehler beim Abrufen der Benachrichtigungen:', status, error);
-                    // Zeige einen Fehler im Dropdown an
-                    notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
+        $.ajax({
+            url: fetchUrl,
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                const htmlContent = response.items_html;
+                
+                // Zähler aktualisieren
+                if (response.count > 0) {
+                    notificationCount.text(response.count).show();
+                } else {
+                    notificationCount.hide();
                 }
-            });
-        }
 
-        // Führe die Funktion sofort beim Laden der Seite aus...
+                // Dropdown-Liste mit dem NEUEN HTML aus dem Partial füllen
+                if (htmlContent) {
+                    notificationList.html(htmlContent);
+
+                    // 2. Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
+                    openGroups.forEach(function(id) {
+                        $('#' + id).collapse('show');
+                    });
+
+                } else {
+                   notificationList.html('<a href="#" class="dropdown-item"><span class="text-muted">Keine neuen Meldungen.</span></a>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Fehler beim Abrufen der Benachrichtigungen:', status, error);
+                notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        // Führe die Funktion sofort beim Laden der Seite aus, um den initialen Zustand zu setzen
         fetchNotifications();
 
-        // ...und dann alle 60 Sekunden erneut.
-        // Nur starten, wenn der Benutzer berechtigt ist, Benachrichtigungen zu sehen (vom Backend gesteuert)
-        setInterval(fetchNotifications, 1000); 
+        // --------------------------------------------------------------------
+        // ECHTE ECHTZEIT-LOGIK (Laravel Echo)
+        // --------------------------------------------------------------------
+        @auth
+        window.Echo.private(`users.{{ Auth::id() }}`) 
+            // Lauscht auf den Standard-Event-Namen, den Laravel Notifications broadcasten
+            .listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (e) => {
+                console.log('Echtzeit-Benachrichtigung erhalten!');
+                // Lädt das Dropdown nur, wenn ein Event eintrifft
+                fetchNotifications(); 
+            });
+        @endauth
+        // --------------------------------------------------------------------
+
     });
 
-    // WICHTIGER FIX: Verhindert, dass das Benachrichtigungs-Dropdown beim Klicken auf die Collapsible-Elemente schließt.
-    // Dies muss auf das gesamte Dropdown-Menü angewendet werden.
+    // FIX: Verhindert, dass das Haupt-Dropdown-Menü schließt, wenn auf Toggle- oder Content-Elemente der Untergruppen geklickt wird.
     $(document).on('click', '#notification-dropdown .dropdown-menu', function (e) {
-        // Überprüft, ob das geklickte Element ein Toggle-Link für ein Collapse-Element ist
+        // Überprüft, ob das geklickte Element (oder ein Elternteil) ein Link für eine Collapse-Gruppe ist
         const isToggle = $(e.target).closest('a[data-toggle="collapse"]').length > 0;
-        
-        // Stoppt die Schließ-Logik für alle Klicks im Dropdown-Menü, außer es ist ein Formular/Link der
-        // das Fenster absichtlich schließen oder zu einer neuen Seite navigieren soll.
-        if (isToggle) {
+        // Überprüft, ob das geklickte Element innerhalb einer Collapse-Gruppe liegt
+        const isContent = $(e.target).closest('.collapse').length > 0;
+
+        // Nur wenn es ein Toggle-Klick ist oder ein Klick auf den Inhalt einer geöffneten Gruppe,
+        // stoppen wir die Weitergabe des Events, um das Haupt-Dropdown offen zu halten.
+        if (isToggle || isContent) {
              e.stopPropagation();
         }
     });

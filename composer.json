@@ -10,6 +10,7 @@
         "doctrine/dbal": "^4.3",
         "lab404/laravel-impersonate": "^1.7",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.6",
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.6",

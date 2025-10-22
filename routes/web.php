@@ -13,17 +13,17 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\TrainingAssignmentController;
-use App\Http\Controllers\TrainingModuleController; // Korrekter Import
+use App\Http\Controllers\TrainingModuleController;
 use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
-use App\Http\Controllers\ExamController; // NEU
-use App\Http\Controllers\NotificationController; // NEU (Benötigt für die API)
+use App\Http\Controllers\ExamController;
+use App\Http\Controllers\NotificationController;
 use Lab404\Impersonate\Controllers\ImpersonateController;
-// NEU: Imports für die Test-Route
-use App\Models\User;
-use App\Notifications\GeneralNotification;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User; // Für die Test-Route benötigt
+use App\Notifications\GeneralNotification; // Für die Test-Route benötigt
+use Illuminate\Support\Facades\Auth; // Für die Test-Route benötigt
+
 /*
 |--------------------------------------------------------------------------
 | Öffentliche Routen & Authentifizierung
@@ -180,7 +180,7 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
 | die 'web' Middleware-Gruppe (Sessions, Cookies, CSRF) erben.
 */
 Route::middleware('auth.cfx') // Nutzt Ihre existierende Auth-Middleware
-     ->prefix('api')            // Stellt sicher, dass die URL /api/... lautet
+     ->prefix('api') // Stellt sicher, dass die URL /api/... lautet
      ->group(function () {
     
     // Benachrichtigungen abrufen
@@ -191,39 +191,43 @@ Route::middleware('auth.cfx') // Nutzt Ihre existierende Auth-Middleware
     Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])
         ->name('api.exams.flag');
 });
+
 /*
 |--------------------------------------------------------------------------
 | TEST-ROUTE (Temporär)
 |--------------------------------------------------------------------------
+| Wichtig: Diese Route testet die Datenbank-Speicherung und den Laravel Echo Broadcast.
+| Sie sollte NACH dem Start von 'php artisan reverb:start' aufgerufen werden.
 */
 Route::get('/test-notification', function() {
+    // Stellen Sie sicher, dass Sie die GeneralNotification Klasse korrekt importiert haben.
+    // (Bereits im Code-Block oben korrigiert)
+
     if (!Auth::check()) {
         return 'Bitte zuerst einloggen.';
     }
 
     $user = Auth::user();
     
-    // Erstelle eine Test-Benachrichtigung
+    // Die toDatabase-Methode speichert den Eintrag.
+    // Die broadcastOn-Methode sendet den Event über Reverb.
     $user->notify(new GeneralNotification(
-        'Dies ist ein Test', // Text
-        'fas fa-flask text-success',    // Icon
-        route('dashboard')  // URL
+        'Test 1: Fehler gefunden',
+        'fas fa-exclamation-triangle text-danger',
+        route('dashboard')
     ));
 
-    // Erstelle eine Test-Benachrichtigung
     $user->notify(new GeneralNotification(
-        'Dies ist ein Test', // Text
-        'fas fa-user-plus',    // Icon
-        route('dashboard')  // URL
+        'Test 2: Neue Akte erstellt',
+        'fas fa-file-alt text-info',
+        route('dashboard')
     ));
 
-    // Erstelle eine Test-Benachrichtigung
     $user->notify(new GeneralNotification(
-        'Dies ist ein Test', // Text
-        'fas fa-file-alt',    // Icon
-        route('dashboard')  // URL
+        'Test 3: Mitarbeiter angemeldet',
+        'fas fa-user-plus text-success',
+        route('dashboard')
     ));
     
-    return "Test-Benachrichtigung an '{$user->name}' gesendet! Aktualisieren Sie das Dashboard.";
-})->middleware('auth.cfx'); // Wichtig: Muss auch geschützt sein
-
+    return "3 Test-Benachrichtigungen an '{$user->name}' gesendet (DB & Broadcast)!";
+})->middleware('auth.cfx');

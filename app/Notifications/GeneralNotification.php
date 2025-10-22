@@ -3,11 +3,13 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast; // Wichtig für Echtzeit
+use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Broadcasting\PrivateChannel; // Für private Kanäle
 
-class GeneralNotification extends Notification
+class GeneralNotification extends Notification implements ShouldBroadcast // <- Hinzugefügt
 {
     use Queueable;
 
@@ -36,8 +38,8 @@ class GeneralNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        // Wir speichern dies nur in der Datenbank
-        return ['database'];
+        // Wir speichern in der Datenbank UND senden über den Broadcaster
+        return ['database', 'broadcast']; // <- Geändert
     }
 
     /**
@@ -48,7 +50,6 @@ class GeneralNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         // Diese Daten werden in der 'data'-Spalte der 'notifications'-Tabelle gespeichert.
-        // Unser NotificationController wird diese Daten lesen.
         return [
             'text' => $this->text,
             'icon' => $this->icon,
@@ -57,14 +58,32 @@ class GeneralNotification extends Notification
     }
 
     /**
-     * Get the array representation of the notification (wird hier nicht genutzt).
+     * Definiert den Kanal, über den die Benachrichtigung gesendet wird.
      *
-     * @return array<string, mixed>
+     * @param object $notifiable
+     * @return array
+     */
+    public function broadcastOn(object $notifiable): array
+    {
+        // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
+        // Die Autorisierung dieses Kanals erfolgt in routes/channels.php.
+        return [
+            new PrivateChannel('users.' . $notifiable->id),
+        ];
+    }
+
+    /**
+     * Definiert die zu sendenden Daten für das Broadcasting.
+     *
+     * Laravel verwendet standardmäßig die toArray()-Methode, aber wir können 
+     * explizit toBroadcast() definieren, um nur die notwendigen Daten zu senden,
+     * was wir hier tun, indem wir die gleichen Daten wie toDatabase() verwenden.
+     *
+     * @param object $notifiable
+     * @return array
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            //
-        ];
+        return $this->toDatabase($notifiable);
     }
 }
