@@ -372,8 +372,8 @@
         wsPort: {{ env("REVERB_PORT") ?? 8080 }},
         wssPort: {{ env("REVERB_PORT") ?? 8080 }},
 
-        forceTLS: useTls,
-        encrypted: useTls,
+        forceTLS: false,
+        encrypted: false,
         disableStats: true,
 
         authorizer: (channel, options) => {
