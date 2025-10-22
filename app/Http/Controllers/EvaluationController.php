@@ -6,17 +6,19 @@ use App\Models\Evaluation;
 use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\TrainingModule;
+use App\Notifications\GeneralNotification; // Import hinzugefügt
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification; // Import hinzugefügt
 
 class EvaluationController extends Controller
 {
     // Statische Arrays für Konsistenz
     public static array $grades = ['Sehr Gut', 'Gut', 'Befriedigend', 'Ausreichend', 'Mangelhaft', 'Ungenügend', 'Nicht feststellbar'];
     public static array $periods = ['00 - 06 Uhr', '06 - 12 Uhr', '12 - 18 Uhr', '18 - 00 Uhr'];
-    
+
     public static array $typeLabels = [
-        'azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 
+        'azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten',
         'anmeldung', 'modul_anmeldung', 'pruefung_anmeldung'
     ];
 
@@ -41,8 +43,8 @@ class EvaluationController extends Controller
 
         // 1. Lade NUR offene Anträge, die eine Aktion erfordern
         $offeneAntraegeQuery = Evaluation::where('status', 'pending')
-                                    ->whereIn('evaluation_type', $applicationTypes);
-        
+                                        ->whereIn('evaluation_type', $applicationTypes);
+
         // 2. Lade NUR reguläre Bewertungen, unabhängig von ihrem Status
         $evaluationsQuery = Evaluation::whereIn('evaluation_type', $evaluationTypes);
 
@@ -52,24 +54,24 @@ class EvaluationController extends Controller
             $userId = Auth::id();
             // Benutzer sehen nur ihre eigenen offenen Anträge
             $offeneAntraegeQuery->where('user_id', $userId);
-            
+
             // Benutzer sehen Bewertungen, die sie erhalten ODER erstellt haben
             $evaluationsQuery->where(function ($query) use ($userId) {
                 $query->where('user_id', $userId)
                       ->orWhere('evaluator_id', $userId);
             });
         }
-        
+
         $offeneAntraege = $offeneAntraegeQuery->with('user')->latest()->get();
         // WICHTIG: Die Variable heißt jetzt '$evaluations'
         $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->latest()->paginate(10);
-        
+
         $counts = $this->getEvaluationCounts();
 
         // Übergibt die neuen, klar benannten Variablen an die View
         return view('forms.evaluations.index', compact('offeneAntraege', 'evaluations', 'counts', 'canViewAll'));
     }
-    
+
     /**
      * Zählt die verschiedenen Formulartypen für die Übersichtsseite.
      */
@@ -96,7 +98,7 @@ class EvaluationController extends Controller
         }
         return $counts;
     }
-    
+
     // =========================================================================
     // FORMULAR-ANSICHTEN
     // =========================================================================
@@ -130,7 +132,7 @@ class EvaluationController extends Controller
         })->orderBy('name')->get();
         return view('forms.evaluations.mitarbeiter', ['users' => $users, 'evaluationType' => 'mitarbeiter']);
     }
-    
+
     public function modulAnmeldung()
     {
         $this->authorize('create', Evaluation::class);
@@ -142,7 +144,7 @@ class EvaluationController extends Controller
             'modules' => $availableModules
         ]);
     }
-    
+
     public function pruefungsAnmeldung()
     {
         $this->authorize('create', Evaluation::class);
@@ -155,22 +157,21 @@ class EvaluationController extends Controller
             'modules' => $modulesInTraining
         ]);
     }
-    
+
     // =========================================================================
     // DATEN SPEICHERN & DETAILANSICHT
     // =========================================================================
 
     public function store(Request $request)
     {
-        // Die store-Methode ist bereits korrekt und bleibt unverändert.
         $this->authorize('create', Evaluation::class);
-        
+
         $evaluationType = $request->input('evaluation_type');
-        
+
         $validationRules = [
             'evaluation_type' => 'required|in:' . implode(',', self::$typeLabels),
             'description' => 'nullable|string',
-            'evaluation_date' => 'required|date', 
+            'evaluation_date' => 'required|date',
             'period' => 'required|string',
             'data' => 'nullable|array',
         ];
@@ -184,53 +185,77 @@ class EvaluationController extends Controller
             $validationRules['user_id'] = 'required|exists:users,id';
             $validationRules['data.*'] = 'required|string';
         }
-        
+
         $validated = $request->validate($validationRules);
-        
+
         $data = [
             'evaluator_id' => Auth::id(),
             'evaluation_type' => $validated['evaluation_type'],
             'evaluation_date' => $validated['evaluation_date'],
             'period' => $validated['period'],
             'json_data' => $validated['data'] ?? [],
-            'description' => $validated['description'],
+            'description' => $validated['description'] ?? null, // Nullable Beschreibung sicherstellen
         ];
 
         $logDescription = '';
+        $module = null; // Variable für das Modul definieren
 
         if (in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
-            $module = TrainingModule::find($validated['target_module_id']);
-            $data['user_id'] = Auth::id();
-            $data['target_name'] = Auth::user()->name;
+            $module = TrainingModule::find($validated['target_module_id']); // Modul hier laden
+            $data['user_id'] = Auth::id(); // Antragsteller ist der eingeloggte User
+            $data['target_name'] = Auth::user()->name; // Name des Antragstellers
             $data['json_data']['module_name'] = $module->name;
             $data['json_data']['module_id'] = $module->id;
-            
+
             $logAction = ($evaluationType === 'modul_anmeldung') ? 'Antrag auf Modulanmeldung' : 'Antrag auf Prüfungsanmeldung';
             $logDescription = "{$logAction} für '{$module->name}' von {$data['target_name']} eingereicht.";
 
         } elseif ($evaluationType === 'praktikant') {
-            $data['user_id'] = null; 
+            $data['user_id'] = null; // Kein spezifischer User
             $data['target_name'] = $validated['target_name'];
             $logDescription = "Neue Bewertung für Praktikant/in '{$data['target_name']}' ({$evaluationType}) erstellt.";
 
         } else {
-            $data['user_id'] = $validated['user_id'];
+            $data['user_id'] = $validated['user_id']; // Der bewertete User
             $targetUser = User::find($data['user_id']);
             $data['target_name'] = $targetUser->name;
             $logDescription = "Neue Bewertung für '{$data['target_name']}' ({$evaluationType}) erstellt.";
         }
 
         $evaluation = Evaluation::create($data);
-        
+
         ActivityLog::create([
-             'user_id' => Auth::id(),
+             'user_id' => Auth::id(), // Der Ersteller des Logs (kann Admin oder User sein)
              'log_type' => 'EVALUATION',
              'action' => 'CREATED',
              'target_id' => $evaluation->id,
              'description' => $logDescription,
         ]);
 
-        return redirect()->route('forms.evaluations.index')->with('success', 'Formular erfolgreich eingereicht!');
+        // --- BENACHRICHTIGUNG BEI ANTRAG ---
+        // Nur benachrichtigen, wenn es ein Modul- oder Prüfungsantrag ist
+        if ($module && in_array($evaluationType, ['modul_anmeldung', 'pruefung_anmeldung'])) {
+            $antragsteller = Auth::user();
+            $antragArt = ($evaluationType === 'modul_anmeldung') ? 'Modulanmeldung' : 'Prüfungsanmeldung';
+
+            // KORREKTUR: Filtere alle Benutzer nach der Berechtigung
+            $berechtigteBenutzer = User::all()->filter(function ($user) {
+                // Ersetze 'receive application notifications' mit dem Namen deiner tatsächlichen Berechtigung
+                return $user->can('evaluations.view.all');
+            });
+
+            if ($berechtigteBenutzer->isNotEmpty()) {
+                Notification::send($berechtigteBenutzer, new GeneralNotification(
+                    "Neuer Antrag ({$antragArt}) für '{$module->name}' von {$antragsteller->name}.", // Nachrichtentext
+                    'fas fa-file-signature text-warning', // Icon (Beispiel)
+                    route('forms.evaluations.show', $evaluation->id) // URL zum Antrag/Evaluation
+                ));
+            }
+        }
+        // ------------------------------------
+
+        // Erfolgsmeldung entfernt
+        return redirect()->route('forms.evaluations.index');
     }
 
     public function show(Evaluation $evaluation)
@@ -240,8 +265,8 @@ class EvaluationController extends Controller
 
         $evaluation->load(['user', 'evaluator']);
 
-        $evaluationData = is_array($evaluation->json_data) 
-            ? $evaluation->json_data 
+        $evaluationData = is_array($evaluation->json_data)
+            ? $evaluation->json_data
             : json_decode($evaluation->json_data, true);
 
         $targetName = $evaluation->target_name ?? $evaluation->user?->name ?? 'Unbekannt';
