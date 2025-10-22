@@ -12,32 +12,21 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
 {
     use Queueable;
 
-    protected int $userId;
     protected string $text;
     protected string $icon;
     protected string $url;
+    protected int $userId;
 
-    /**
-     * GeneralNotification constructor.
-     *
-     * @param int $userId ID des Benutzers für den privaten Channel
-     * @param string $text Text der Notification
-     * @param string $icon Icon für die Notification
-     * @param string $url Ziel-URL der Notification
-     */
     public function __construct(int $userId, string $text, string $icon, string $url)
     {
-        $this->userId = (int) $userId;
-        $this->text   = $text;
-        $this->icon   = $icon;
-        $this->url    = $url;
+        $this->userId = $userId; // User-ID für private Channels
+        $this->text = $text;
+        $this->icon = $icon;
+        $this->url = $url;
     }
 
     /**
-     * Kanäle, die für die Notification verwendet werden.
-     *
-     * @param mixed $notifiable
-     * @return array
+     * Welche Kanäle verwendet werden.
      */
     public function via($notifiable): array
     {
@@ -45,9 +34,7 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
     }
 
     /**
-     * Broadcast-Kanal für den Benutzer.
-     *
-     * @return array
+     * Channels für Broadcasts (Laravel 12-kompatibel)
      */
     public function broadcastOn(): array
     {
@@ -57,9 +44,7 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
     }
 
     /**
-     * Broadcast-Event-Name.
-     *
-     * @return string
+     * Broadcast-Eventname
      */
     public function broadcastAs(): string
     {
@@ -67,10 +52,7 @@ class GeneralNotification extends Notification implements ShouldBroadcastNow, Sh
     }
 
     /**
-     * Payload für Datenbank & Broadcast.
-     *
-     * @param mixed $notifiable
-     * @return array
+     * Payload für Broadcast & Datenbank
      */
     public function toArray($notifiable): array
     {

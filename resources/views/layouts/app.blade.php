@@ -351,33 +351,32 @@
 
 
     // ------------------------------------------------------------------------
-    // ECHO INITIALISIERUNG (Korrigiert für Reverb hinter HTTPS)
+    // ECHO INITIALISIERUNG
     // ------------------------------------------------------------------------
     window.Pusher = Pusher;
 
-    // Wir respektieren die Einstellung aus der .env und zwingen kein TLS,
-    // nur weil die Seite über HTTPS läuft.
-    const useTls = '{{ env("REVERB_SCHEME") }}' === 'https';
+    // Host wird von Laravel übernommen
+    const isHttps = window.location.protocol === 'https:';
 
     console.log('[DEBUG] 1. Initialisierung Echo-Konfig.');
-    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${useTls}`);
+    console.log(`[DEBUG] Host: {{ request()->getHost() }}, Port: {{ env("REVERB_PORT") ?? 8080 }}, TLS: ${isHttps}`);
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env("REVERB_APP_KEY") }}',
-
-        wsHost: '{{ request()->getHost() }}',
+        key: '{{ env("REVERB_APP_KEY") }}', 
+        
+        wsHost: '{{ request()->getHost() }}', 
         wssHost: '{{ request()->getHost() }}',
 
-        wsPort: {{ env("REVERB_PORT") ?? 8080 }},
+        wsPort: {{ env("REVERB_PORT") ?? 8080 }}, 
         wssPort: {{ env("REVERB_PORT") ?? 8080 }},
+        
+        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
-        forceTLS: false,
-        encrypted: false,
         disableStats: true,
-
+        // Authorizer bleibt unverändert
         authorizer: (channel, options) => {
-            console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
+             console.log(`[DEBUG] 2. Autorisierungsanfrage für Channel: ${channel.name}`);
             return {
                 authorize: (socketId, callback) => {
                     $.post('/broadcasting/auth', {
@@ -397,7 +396,6 @@
             };
         },
     });
-
     
     // Globaler Listener für Statusänderungen (hilfreich für Verbindungsprobleme)
     window.Echo.connector.pusher.connection.bind('state_change', function(states) {
@@ -468,19 +466,17 @@
         // ECHTE ECHTZEIT-LOGIK (Laravel Echo)
         // --------------------------------------------------------------------
         @auth
-        console.log('[DEBUG] Listener für GeneralNotification aktiviert.');
-
-        // Private Kanal für den eingeloggten Benutzer
-        const channel = window.Echo.private(`users.{{ Auth::id() }}`);
-
-        // Lauscht auf das Broadcast-Event (broadcastAs: 'new.ems.notification')
-        channel.listen('.new.ems.notification', (e) => {
-            console.log('--- ECHTZEIT EVENT EMPFANGEN ---', e);
-            // Dropdown aktualisieren
-            fetchNotifications();
-        });
+        // Lauscht auf den privaten Kanal des eingeloggten Benutzers
+        console.log('[DEBUG] 7. Listener für .App.Notifications.GeneralNotification aktiviert.');
+        window.Echo.private(`users.{{ Auth::id() }}`) 
+            // FINALER FIX: Lauscht auf den vollen Klassennamen, um den Namespace-Konflikt zu vermeiden
+            .listen('.App\\Notifications\\GeneralNotification', (e) => { // Beachtet den im Backend definierten broadcastAs-Namen
+                console.log('--- ECHTZEIT EVENT EMPFANGEN ---');
+                console.log('[DEBUG] 8. Benachrichtigung über .listen() erhalten!', e);
+                // Lädt das Dropdown nur, wenn ein Event eintrifft
+                fetchNotifications(); 
+            });
         @endauth
-
         // --------------------------------------------------------------------
 
     });
