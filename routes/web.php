@@ -113,6 +113,9 @@ Route::middleware('auth.cfx')->group(function () {
         // Aktion: Alle als gelesen markieren
         Route::post('/mark-all-read', [NotificationController::class, 'markAllRead'])->name('markAllRead');
         
+        // Aktion: Einzelne als gelesen markieren
+        Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+
         // Aktion: Einzelne löschen
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
     });
