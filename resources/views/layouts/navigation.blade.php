@@ -229,7 +229,7 @@
         @endcan
 
         {{-- NEUER MENÜPUNKT: BENACHRICHTIGUNGSREGELN --}}
-        @can('manage notification rules')
+        @can('notification.rules.manage')
         <li class="nav-item">
             <a href="{{ route('admin.notification-rules.index') }}" class="nav-link {{ $isNotificationRulesActive ? 'active' : '' }}">
                 <i class="nav-icon fas fa-cogs"></i> {{-- Oder fas fa-bell-slash / fas fa-sliders-h --}}
