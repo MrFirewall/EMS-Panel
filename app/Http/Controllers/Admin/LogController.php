@@ -19,11 +19,13 @@ class LogController extends Controller
 
     /**
      * Zeigt das Audit-Log an.
+     * WICHTIG: Holt alle Logs. Bei sehr großen Datenmengen (10000+) Server-Side Processing verwenden.
      */
     public function index()
     {
         // Lädt die Logs und den zugehörigen Benutzer (user) für die Anzeige
-        $logs = ActivityLog::with('user')->latest()->paginate(20);
+        // Wir holen alle Logs, da DataTables die Paginierung clientseitig übernimmt.
+        $logs = ActivityLog::with('user')->latest()->get();
 
         return view('admin.logs.index', compact('logs'));
     }
