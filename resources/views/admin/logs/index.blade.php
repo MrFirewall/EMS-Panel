@@ -48,7 +48,7 @@
                     @endphp
 
                     <table id="activityLogTable" class="table table-bordered table-striped table-hover">
-                        <thead class="thead-light">
+                        <thead class="thead">
                             <tr>
                                 <th style="width: 150px;">Zeitpunkt</th>
                                 <th>Akteur (Benutzer-ID)</th>
@@ -121,7 +121,19 @@
                 "ordering": true,
                 "info": true,
                 "autoWidth": false,
-                "responsive": true,
+                "responsive": {
+                    details: {
+                        display: DataTable.Responsive.display.modal({
+                            header: function (row) {
+                                var data = row.data();
+                                return 'Details für ' + data[0] + ' ' + data[1];
+                            }
+                        }),
+                        renderer: DataTable.Responsive.renderer.tableAll({
+                            tableClass: 'table'
+                        })
+                    }
+                },
                 "order": [
                     [0, 'desc']
                 ], // Standardmäßig nach Zeitpunkt absteigend sortieren
