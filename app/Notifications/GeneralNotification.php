@@ -52,7 +52,7 @@ class GeneralNotification extends Notification implements ShouldDispatchAfterCom
      * @param mixed $notifiable
      * @return array
      */
-    public function broadcastOn($notifiable): array
+    public function broadcastOn($notifiable) // Rückgabetyp ': array' entfernt!
     {
         // Wir broadcasten auf den privaten Kanal des spezifischen Benutzers.
         return [
