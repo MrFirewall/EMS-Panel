@@ -169,3 +169,24 @@ Route::middleware('auth.cfx') // Nutzt Ihre existierende Auth-Middleware
     Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])
         ->name('api.exams.flag');
 });
+/*
+|--------------------------------------------------------------------------
+| TEST-ROUTE (Temporär)
+|--------------------------------------------------------------------------
+*/
+Route::get('/test-notification', function() {
+    if (!Auth::check()) {
+        return 'Bitte zuerst einloggen.';
+    }
+
+    $user = Auth::user();
+    
+    // Erstelle eine Test-Benachrichtigung
+    $user->notify(new GeneralNotification(
+        'Dies ist ein Test', // Text
+        'fas fa-flask text-success',    // Icon
+        route('dashboard')  // URL
+    ));
+
+    return "Test-Benachrichtigung an '{$user->name}' gesendet! Aktualisieren Sie das Dashboard.";
+})->middleware('auth.cfx'); // Wichtig: Muss auch geschützt sein
