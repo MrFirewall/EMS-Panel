@@ -1,49 +1,9 @@
-{{-- Dieses Partial wird von create.blade.php und edit.blade.php verwendet --}}
-{{-- Die Variable $notificationRule ist in 'edit' gesetzt, in 'create' ist sie null --}}
-
-{{-- Select2 CSS wird jetzt im Hauptlayout geladen --}}
-@push('styles')
-    {{-- Theme für Bootstrap 4 --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
-    <style>
-        /* NEU: Blendet ausgewählte Optionen im Dropdown-Menü aus (funktioniert für Multi-Select) */
-        .select2-results__option[aria-selected="true"] {
-            display: none;
-        }
-
-        /* Style Anpassungen für Select2 im Dark Mode */
-        .dark-mode .select2-container--bootstrap4 .select2-selection {
-            background-color: #343a40;
-            border-color: #6c757d;
-            color: #fff;
-        }
-        .dark-mode .select2-container--bootstrap4 .select2-dropdown {
-            background-color: #343a40;
-            border-color: #6c757d;
-        }
-        .dark-mode .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field {
-            background-color: #454d55;
-            color: #fff;
-        }
-        .dark-mode .select2-container--bootstrap4 .select2-results__option {
-            color: #dee2e6; /* Hellere Textfarbe für Optionen */
-        }
-        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
-            background-color: #007bff;
-            color: #fff;
-        }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
-            color: #fff; /* Stellt sicher, dass der ausgewählte Text weiß ist */
-        }
-    </style>
-@endpush
-
 <div class="card-body">
     {{-- Controller Action Dropdown --}}
     <div class="form-group">
         <label for="controller_action">Auslösende Aktion(en) <span class="text-danger">*</span></label>
         {{-- NEU: 'multiple' und 'name="...[]"' --}}
-        <select name="controller_action[]" id="controller_action" class="form-control select2 @error('controller_action') is-invalid @enderror" required multiple>
+        <select name="controller_action[]" id="controller_action" class="form-control select2-multihide @error('controller_action') is-invalid @enderror" required multiple>
             <option value="" disabled>Bitte Aktion(en) auswählen...</option>
             @php
                 // GEÄNDERT: Hole das Array der alten/gespeicherten Werte
@@ -67,7 +27,7 @@
     {{-- Target Type Dropdown --}}
     <div class="form-group">
         <label for="target_type">Benachrichtigungsziel (Typ) <span class="text-danger">*</span></label>
-        <select name="target_type" id="target_type" class="form-control select2 @error('target_type') is-invalid @enderror" required>
+        <select name="target_type" id="target_type" class="form-control select2-single @error('target_type') is-invalid @enderror" required>
             <option value="" disabled {{ old('target_type', $notificationRule->target_type ?? '') == '' ? 'selected' : '' }}>Bitte Typ auswählen...</option>
             @foreach($targetTypes as $type => $label)
                 <option value="{{ $type }}" {{ old('target_type', $notificationRule->target_type ?? '') == $type ? 'selected' : '' }}>
@@ -84,7 +44,7 @@
     <div class="form-group">
         <label for="target_identifier">Ziel-Identifier <span class="text-danger">*</span></label>
         {{-- NEU: 'multiple' und 'name="...[]"' --}}
-        <select name="target_identifier[]" id="target_identifier" class="form-control select2 @error('target_identifier') is-invalid @enderror" required multiple>
+        <select name="target_identifier[]" id="target_identifier" class="form-control select2-multihide @error('target_identifier') is-invalid @enderror" required multiple>
 
             {{-- GEÄNDERT: PHP-Logik zur Vorauswahl für Multi-Select --}}
             @php
@@ -160,13 +120,31 @@
 {{-- Das Select2 JS wird jetzt im Hauptlayout geladen --}}
 @push('scripts')
 <script>
+    // Selektiert die Multi-Select-Felder und gibt null zurück, wenn sie bereits ausgewählt sind.
+    function hideSelectedTemplate(data) {
+        if (data.selected) {
+            return null;
+        }
+        return data.text;
+    }
+
     $(document).ready(function() {
-        // Initialisiere alle Select2-Felder mit Bootstrap 4 Theme
+        
+        // 1. Initialisiere Single-Select-Felder (die das Problem nicht haben)
         if (typeof $.fn.select2 === 'function') {
-            $('.select2').select2({
+            $('.select2-single').select2({
                 theme: 'bootstrap4',
-                placeholder: $(this).data('placeholder') || 'Bitte auswählen...',
-                allowClear: Boolean($(this).data('allow-clear')),
+                placeholder: 'Bitte Typ auswählen...',
+                allowClear: false,
+            });
+
+            // 2. Initialisiere Multi-Select-Felder mit der Logik zum Ausblenden
+            $('.select2-multihide').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Bitte Aktion(en) auswählen...',
+                allowClear: true,
+                // WICHTIG: templateResult verhindert das Rendern ausgewählter Elemente im Dropdown
+                templateResult: hideSelectedTemplate
             });
         } else {
             console.error("Select2 wurde nicht gefunden. Stelle sicher, dass es im Hauptlayout geladen wird.");
@@ -185,9 +163,11 @@
             const $identifierSelect = $('#target_identifier');
             
             // Behalte die aktuell ausgewählten Werte nur, wenn der Typ sich NICHT geändert hat
-            // (Diese Zeile muss VOR .empty() stehen)
             let valuesToRestore = (selectedType === initialType) ? initialIdentifiers : [];
 
+            // Speichere die aktuellen Select2-Einstellungen, um sie später wiederzuverwenden
+            const select2Config = $identifierSelect.data('select2') ? $identifierSelect.data('select2').options.options : {};
+            
             $identifierSelect.empty(); 
 
             let placeholderText = 'Bitte auswählen...';
@@ -197,7 +177,6 @@
                 case 'role':
                     placeholderText = 'Rolle(n) auswählen...';
                     $.each(identifiers['Rollen'] || {}, function(key, value) {
-                        // Der 3. Parameter ist "selected", der 4. "disabled"
                         $identifierSelect.append(new Option(value, key, false, false));
                     });
                     break;
@@ -236,17 +215,17 @@
                 $identifierSelect.prop('disabled', false);
             }
 
-            // Initialisiere Select2 für das Identifier-Feld neu
+            // Initialisiere Select2 für das Identifier-Feld neu (mit der hideSelectedTemplate)
             if (typeof $.fn.select2 === 'function') {
                 $identifierSelect.select2({
                     theme: 'bootstrap4',
                     placeholder: placeholderText,
                     allowClear: enableClear,
+                    templateResult: hideSelectedTemplate // WICHTIG: Die Logik zum Ausblenden
                 });
             }
             
-            // Stelle die alten/initialen Werte (als Array) wieder her,
-            // aber nur, wenn der Typ dem initialen Typ entspricht.
+            // Stelle die alten/initialen Werte (als Array) wieder her.
             if (valuesToRestore.length > 0) {
                 $identifierSelect.val(valuesToRestore).trigger('change.select2');
             } else {
@@ -256,8 +235,6 @@
 
         // Event Listener für die Typ-Änderung
         $('#target_type').on('change', function() {
-            // Wenn der Typ geändert wird, werden die Identifier-Werte durch 
-            // die updateIdentifierOptions-Funktion automatisch zurückgesetzt.
             updateIdentifierOptions($(this).val());
         });
 
