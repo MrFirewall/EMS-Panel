@@ -2,7 +2,23 @@
 
 @section('title', 'Benachrichtigungsregeln Verwalten')
 
-{{-- Füge DataTables CSS im Head-Bereich deines Layouts hinzu oder hier: --}}
+{{-- Füge einen Stil-Block hinzu, um den Umbruch für Badges zu erzwingen --}}
+@push('styles')
+    <style>
+        /* Erlaubt den Zeilenumbruch innerhalb der Badges */
+        .badge-wrap {
+            white-space: normal !important;
+            word-break: break-word;
+            display: inline-block; /* Wichtig, um die Breite der Zelle zu nutzen */
+            text-align: left;
+        }
+
+        /* Stellt sicher, dass die Spaltenbreite flexibel ist und nicht unterdrückt wird */
+        #rulesTable td {
+            white-space: normal !important; 
+        }
+    </style>
+@endpush
 
 @section('content')
     {{-- AdminLTE Content Header --}}
@@ -39,7 +55,8 @@
                 {{-- Card-Body ohne Padding, da DataTables sein eigenes Layout mitbringt --}}
                 <div class="card-body">
                     {{-- ID hinzugefügt und DataTables-Klassen --}}
-                    <table id="rulesTable" class="table table-bordered table-striped table-hover dt-responsive nowrap" style="width:100%">
+                    {{-- GEÄNDERT: 'nowrap' entfernt, da es den Umbruch verhindert --}}
+                    <table id="rulesTable" class="table table-bordered table-striped table-hover dt-responsive" style="width:100%">
                         <thead>
                             <tr>
                                 <th>Aktion (Controller@Methode)</th>
@@ -56,11 +73,12 @@
                                     {{-- Spalte 0: Aktion(en) --}}
                                     <td>
                                         @if(is_array($rule->controller_action))
+                                            {{-- GEÄNDERT: Füge die neue Klasse 'badge-wrap' hinzu --}}
                                             @foreach($rule->controller_action as $action)
-                                                <span class="badge badge-info mb-1" style="white-space: normal;">{{ $action }}</span>
+                                                <span class="badge badge-info mb-1 badge-wrap">{{ $action }}</span>
                                             @endforeach
                                         @else
-                                            <span class="badge badge-info">{{ $rule->controller_action }}</span>
+                                            <span class="badge badge-info badge-wrap">{{ $rule->controller_action }}</span>
                                         @endif
                                     </td>
 
@@ -71,18 +89,18 @@
                                     <td>
                                         @if(!is_array($rule->target_identifier))
                                             {{-- Fallback, falls Daten noch nicht konvertiert wurden --}}
-                                            <span class="badge badge-secondary">{{ $rule->target_identifier }}</span>
+                                            <span class="badge badge-secondary badge-wrap">{{ $rule->target_identifier }}</span>
                                         @else
                                             {{-- Logik für 'user'-Typ --}}
                                             @if($rule->target_type === 'user')
                                                 @foreach($rule->target_identifier as $identifier)
                                                     @if($identifier === 'triggering_user')
-                                                        <span class="badge badge-primary mb-1">Auslösender Benutzer</span>
+                                                        <span class="badge badge-primary mb-1 badge-wrap">Auslösender Benutzer</span>
                                                     @else
                                                         @php
                                                             $user = \App\Models\User::find($identifier);
                                                         @endphp
-                                                        <span class="badge badge-primary mb-1">
+                                                        <span class="badge badge-primary mb-1 badge-wrap">
                                                             {{ $user?->name ?? 'Unbekannt' }} (ID: {{ $identifier }})
                                                         </span>
                                                     @endif
@@ -91,13 +109,13 @@
                                             {{-- Logik für 'role' oder 'permission' --}}
                                             @elseif($rule->target_type === 'role' || $rule->target_type === 'permission')
                                                 @foreach($rule->target_identifier as $identifier)
-                                                    <span class="badge badge-success mb-1">{{ $identifier }}</span>
+                                                    <span class="badge badge-success mb-1 badge-wrap">{{ $identifier }}</span>
                                                 @endforeach
                                             
                                             {{-- Fallback für andere Typen --}}
                                             @else
                                                 @foreach($rule->target_identifier as $identifier)
-                                                    <span class="badge badge-light mb-1">{{ $identifier }}</span>
+                                                    <span class="badge badge-light mb-1 badge-wrap">{{ $identifier }}</span>
                                                 @endforeach
                                             @endif
                                         @endif
@@ -105,7 +123,10 @@
 
                                     {{-- Spalte 3: Beschreibung (FEHLTE) --}}
                                     <td>
-                                        {{ $rule->event_description }}
+                                        {{-- Stellt sicher, dass die Zelle den Umbruch erlaubt --}}
+                                        <div style="white-space: normal; max-width: 300px;">
+                                            {{ $rule->event_description }}
+                                        </div>
                                     </td>
 
                                     {{-- Spalte 4: Status (FEHLTE) --}}
@@ -118,6 +139,7 @@
                                     </td>
 
                                     {{-- Spalte 5: Aktionen (FEHLTE) --}}
+                                    {{-- GEÄNDERT: white-space: nowrap auf die Zelle belassen, da Buttons nicht umbrechen sollen --}}
                                     <td class="text-right" style="white-space: nowrap;">
                                         @can('update', $rule)
                                             <a href="{{ route('admin.notification-rules.edit', $rule) }}" class="btn btn-xs btn-primary" title="Bearbeiten">
@@ -151,14 +173,16 @@
     <script>
         $(function () {
           $("#rulesTable").DataTable({
-            "responsive": true, // Aktiviert die Responsive-Erweiterung
-            "lengthChange": false, // Deaktiviert die Auswahl der Eintragsanzahl
-            "autoWidth": false, // Deaktiviert die automatische Breitenanpassung
-            // "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"], // Beispiel für Buttons (benötigt zusätzliche JS-Dateien)
-            "paging": true, // Aktiviert Paginierung
-            "searching": true, // Aktiviert Suche
-            "ordering": true, // Aktiviert Sortierung
-            "info": true, // Aktiviert "Zeige X von Y Einträgen" Info
+            "responsive": true, // Aktiviert die Responsive-Erweiterung (wichtig)
+            "lengthChange": false, 
+            "autoWidth": false, // Deaktiviert die automatische Breitenanpassung (sehr wichtig für den Umbruch)
+            "columnDefs": [
+                { "width": "50%", "targets": 0 } // Versucht, der ersten Spalte mehr Platz zu geben
+            ],
+            "paging": true, 
+            "searching": true, 
+            "ordering": true, 
+            "info": true, 
             "language": { // Optionale Übersetzung ins Deutsche
                   "decimal": ",",
                   "thousands": ".",
@@ -170,7 +194,7 @@
                   "loadingRecords": "Wird geladen...",
                   "processing": "Bitte warten...",
                   "search": "Suchen:",
-                  "zeroRecords": "Keine Einträge gefunden", // Diese Meldung wird jetzt von DataTables angezeigt
+                  "zeroRecords": "Keine Einträge gefunden",
                   "paginate": {
                       "first": "Erste",
                       "last": "Letzte",
@@ -182,8 +206,7 @@
                       "sortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
                   }
              }
-          });//.buttons().container().appendTo('#rulesTable_wrapper .col-md-6:eq(0)'); // Für Buttons
+          });
         });
       </script>
 @endpush
-
