@@ -182,30 +182,10 @@
             "paging": true, 
             "searching": true, 
             "ordering": true, 
-            "info": true, 
-            "language": { // Optionale Übersetzung ins Deutsche
-                  "decimal": ",",
-                  "thousands": ".",
-                  "info": "Zeige _START_ bis _END_ von _TOTAL_ Einträgen",
-                  "infoEmpty": "Zeige 0 bis 0 von 0 Einträgen",
-                  "infoFiltered": "(gefiltert von _MAX_ Einträgen)",
-                  "infoPostFix": "",
-                  "lengthMenu": "Zeige _MENU_ Einträge",
-                  "loadingRecords": "Wird geladen...",
-                  "processing": "Bitte warten...",
-                  "search": "Suchen:",
-                  "zeroRecords": "Keine Einträge gefunden",
-                  "paginate": {
-                      "first": "Erste",
-                      "last": "Letzte",
-                      "next": "Nächste",
-                      "previous": "Zurück"
-                  },
-                  "aria": {
-                      "sortAscending": ": aktivieren, um Spalte aufsteigend zu sortieren",
-                      "sortDescending": ": aktivieren, um Spalte absteigend zu sortieren"
-                  }
-             }
+            "info": true,
+            "language": {
+                "url": "{{ asset('js/i18n/de-DE.json') }}"
+            },
           });
         });
       </script>

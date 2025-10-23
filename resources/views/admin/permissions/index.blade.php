@@ -65,7 +65,7 @@
     $(function () {
       $("#permissionsTable").DataTable({
         "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/German.json"
+            "url": "{{ asset('js/i18n/de-DE.json') }}"
         },
         "order": [[1, 'desc']] , // Standardmäßig nach Name absteigend sortieren
         "responsive": true,
