@@ -6,6 +6,11 @@
     {{-- Theme für Bootstrap 4 --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
     <style>
+        /* NEU: Blendet ausgewählte Optionen im Dropdown-Menü aus (funktioniert für Multi-Select) */
+        .select2-results__option[aria-selected="true"] {
+            display: none;
+        }
+
         /* Style Anpassungen für Select2 im Dark Mode */
         .dark-mode .select2-container--bootstrap4 .select2-selection {
             background-color: #343a40;
@@ -20,16 +25,16 @@
             background-color: #454d55;
             color: #fff;
         }
-         .dark-mode .select2-container--bootstrap4 .select2-results__option {
-             color: #dee2e6; /* Hellere Textfarbe für Optionen */
-         }
+        .dark-mode .select2-container--bootstrap4 .select2-results__option {
+            color: #dee2e6; /* Hellere Textfarbe für Optionen */
+        }
         .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
             background-color: #007bff;
             color: #fff;
         }
-         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
-             color: #fff; /* Stellt sicher, dass der ausgewählte Text weiß ist */
-         }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+            color: #fff; /* Stellt sicher, dass der ausgewählte Text weiß ist */
+        }
     </style>
 @endpush
 
@@ -192,6 +197,7 @@
                 case 'role':
                     placeholderText = 'Rolle(n) auswählen...';
                     $.each(identifiers['Rollen'] || {}, function(key, value) {
+                        // Der 3. Parameter ist "selected", der 4. "disabled"
                         $identifierSelect.append(new Option(value, key, false, false));
                     });
                     break;
@@ -227,7 +233,7 @@
             }
 
             if (selectedType) {
-                 $identifierSelect.prop('disabled', false);
+                $identifierSelect.prop('disabled', false);
             }
 
             // Initialisiere Select2 für das Identifier-Feld neu
@@ -242,9 +248,9 @@
             // Stelle die alten/initialen Werte (als Array) wieder her,
             // aber nur, wenn der Typ dem initialen Typ entspricht.
             if (valuesToRestore.length > 0) {
-                 $identifierSelect.val(valuesToRestore).trigger('change.select2');
+                $identifierSelect.val(valuesToRestore).trigger('change.select2');
             } else {
-                 $identifierSelect.val(null).trigger('change.select2');
+                $identifierSelect.val(null).trigger('change.select2');
             }
         }
 
