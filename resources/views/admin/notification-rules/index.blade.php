@@ -54,43 +54,54 @@
                             {{-- @forelse loop without @empty --}}
                             @foreach ($rules as $rule)
                                 <tr>
-                                    <td>{{ $rule->controller_action }}</td>
+                                    {{-- Gibt alle Aktionen als Badges aus --}}
+                                    <td>
+                                        @if(is_array($rule->controller_action))
+                                            @foreach($rule->controller_action as $action)
+                                                <span class="badge badge-info mb-1" style="white-space: normal;">{{ $action }}</span>
+                                            @endforeach
+                                        @else
+                                            <span class="badge badge-info">{{ $rule->controller_action }}</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Zeigt den Typ an (bleibt gleich) --}}
                                     <td>{{ ucfirst($rule->target_type) }}</td>
+
+                                    {{-- Gibt alle Identifier als Badges aus --}}
                                     <td>
-                                        {{-- Zeige Namen anstatt IDs für bessere Lesbarkeit --}}
-                                        @if($rule->target_type === 'user')
-                                            {{ \App\Models\User::find($rule->target_identifier)?->name ?? $rule->target_identifier }} (ID: {{ $rule->target_identifier }})
-                                        @elseif($rule->target_type === 'role')
-                                            {{ $rule->target_identifier }}
-                                        @elseif($rule->target_type === 'permission')
-                                             {{ $rule->target_identifier }}
+                                        @if(!is_array($rule->target_identifier))
+                                            {{-- Fallback, falls Daten noch nicht konvertiert wurden --}}
+                                            <span class="badge badge-secondary">{{ $rule->target_identifier }}</span>
                                         @else
-                                            {{ $rule->target_identifier }}
+                                            {{-- Logik für 'user'-Typ --}}
+                                            @if($rule->target_type === 'user')
+                                                @foreach($rule->target_identifier as $identifier)
+                                                    @if($identifier === 'triggering_user')
+                                                        <span class="badge badge-primary mb-1">Auslösender Benutzer</span>
+                                                    @else
+                                                        @php
+                                                            $user = \App\Models\User::find($identifier);
+                                                        @endphp
+                                                        <span class="badge badge-primary mb-1">
+                                                            {{ $user?->name ?? 'Unbekannt' }} (ID: {{ $identifier }})
+                                                        </span>
+                                                    @endif
+                                                @endforeach
+                                                
+                                            {{-- Logik für 'role' oder 'permission' --}}
+                                            @elseif($rule->target_type === 'role' || $rule->target_type === 'permission')
+                                                @foreach($rule->target_identifier as $identifier)
+                                                    <span class="badge badge-success mb-1">{{ $identifier }}</span>
+                                                @endforeach
+                                            
+                                            {{-- Fallback für andere Typen --}}
+                                            @else
+                                                @foreach($rule->target_identifier as $identifier)
+                                                    <span class="badge badge-light mb-1">{{ $identifier }}</span>
+                                                @endforeach
+                                            @endif
                                         @endif
-                                    </td>
-                                    <td>{{ $rule->description ?? '-' }}</td>
-                                    <td>
-                                        @if ($rule->is_active)
-                                            <span class="badge badge-success">Aktiv</span>
-                                        @else
-                                            <span class="badge badge-secondary">Inaktiv</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @can('update', $rule)
-                                            <a href="{{ route('admin.notification-rules.edit', $rule) }}" class="btn btn-info btn-xs" title="Bearbeiten">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        @endcan
-                                        @can('delete', $rule)
-                                            <form action="{{ route('admin.notification-rules.destroy', $rule) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Sind Sie sicher, dass Sie diese Regel löschen möchten?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-xs" title="Löschen">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </form>
-                                        @endcan
                                     </td>
                                 </tr>
                             @endforeach
