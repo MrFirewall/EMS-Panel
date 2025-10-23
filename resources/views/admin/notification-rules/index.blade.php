@@ -51,10 +51,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{-- @forelse loop without @empty --}}
                             @foreach ($rules as $rule)
                                 <tr>
-                                    {{-- Gibt alle Aktionen als Badges aus --}}
+                                    {{-- Spalte 0: Aktion(en) --}}
                                     <td>
                                         @if(is_array($rule->controller_action))
                                             @foreach($rule->controller_action as $action)
@@ -65,10 +64,10 @@
                                         @endif
                                     </td>
 
-                                    {{-- Zeigt den Typ an (bleibt gleich) --}}
+                                    {{-- Spalte 1: Typ --}}
                                     <td>{{ ucfirst($rule->target_type) }}</td>
 
-                                    {{-- Gibt alle Identifier als Badges aus --}}
+                                    {{-- Spalte 2: Identifier --}}
                                     <td>
                                         @if(!is_array($rule->target_identifier))
                                             {{-- Fallback, falls Daten noch nicht konvertiert wurden --}}
@@ -103,9 +102,40 @@
                                             @endif
                                         @endif
                                     </td>
+
+                                    {{-- Spalte 3: Beschreibung (FEHLTE) --}}
+                                    <td>
+                                        {{ $rule->event_description }}
+                                    </td>
+
+                                    {{-- Spalte 4: Status (FEHLTE) --}}
+                                    <td>
+                                        @if($rule->is_active)
+                                            <span class="badge badge-success">Aktiv</span>
+                                        @else
+                                            <span class="badge badge-danger">Inaktiv</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Spalte 5: Aktionen (FEHLTE) --}}
+                                    <td class="text-right" style="white-space: nowrap;">
+                                        @can('update', $rule)
+                                            <a href="{{ route('admin.notification-rules.edit', $rule) }}" class="btn btn-xs btn-primary" title="Bearbeiten">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        @endcan
+                                        @can('delete', $rule)
+                                            <form action="{{ route('admin.notification-rules.destroy', $rule) }}" method="POST" class="d-inline" onsubmit="return confirm('Regel wirklich löschen?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-xs btn-danger" title="Löschen">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </td>
                                 </tr>
                             @endforeach
-                            {{-- @empty block removed --}}
                         </tbody>
                     </table>
                 </div>
