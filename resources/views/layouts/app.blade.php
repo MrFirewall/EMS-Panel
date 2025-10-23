@@ -113,6 +113,18 @@
             margin-left: 3px;
             font-weight: 700;
         }
+        /* FIX: Select2-Box wächst nicht bei vielen Tags (Multi-Select) */
+        .select2-container--bootstrap4 .select2-selection--multiple {
+            min-height: 38px; /* Standardhöhe */
+            height: auto !important; /* Erlaubt die automatische Höhenanpassung */
+            padding-bottom: 5px; /* Fügt etwas Puffer hinzu */
+        }
+
+        /* Wichtig: Sicherstellen, dass die Eingabezeile genug Platz hat */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__rendered {
+            line-height: normal; /* Stellt sicher, dass die Zeilenhöhe korrekt ist */
+            display: block; /* Wichtig für die korrekte Breiten- und Höhenberechnung */
+        }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
             text-decoration: none;

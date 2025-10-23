@@ -6,27 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('notification_rules', function (Blueprint $table) {
-            // Ändere Spalten zu JSON
-            $table->json('controller_action')->nullable()->change();
-            $table->json('target_identifier')->nullable()->change();
+            // Wähle entweder JSON (bevorzugt) oder TEXT
+            $table->json('controller_action')->change(); 
+            // ODER: $table->text('controller_action')->change();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('notification_rules', function (Blueprint $table) {
-            // Mache die Änderung rückgängig (konvertiert JSON zu String)
-            $table->string('controller_action')->nullable()->change();
-            $table->string('target_identifier')->nullable()->change();
+            // Rückgängig machen (setzt auf VARCHAR(255) zurück, wenn es das Original war)
+            $table->string('controller_action', 255)->change(); 
         });
     }
 };
