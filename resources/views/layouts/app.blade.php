@@ -94,6 +94,9 @@
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
             background-color: #007bff;
             color: #fff !important;
+            /* NEU: Weniger Margin, damit die Tags besser ineinander fließen */
+            margin-top: 2px !important; 
+            margin-bottom: 2px !important;
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
             background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit im Dark Mode */
@@ -113,18 +116,26 @@
             margin-left: 3px;
             font-weight: 700;
         }
-        /* FIX: Select2-Box wächst nicht bei vielen Tags (Multi-Select) */
+        
+        /* 🔥 FIX: Select2-Box muss wachsen können (Auto-Height) 🔥 */
         .select2-container--bootstrap4 .select2-selection--multiple {
-            min-height: 38px; /* Standardhöhe */
-            height: auto !important; /* Erlaubt die automatische Höhenanpassung */
-            padding-bottom: 5px; /* Fügt etwas Puffer hinzu */
+            min-height: 38px;
+            /* ZWINGEND: Ermöglicht das Wachstum über mehrere Zeilen */
+            height: auto !important; 
+            /* Erhöht das interne Padding oben und unten für mehr Platz für die Tags */
+            padding-top: 5px !important; 
+            padding-bottom: 5px !important; 
         }
 
         /* Wichtig: Sicherstellen, dass die Eingabezeile genug Platz hat */
         .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__rendered {
-            line-height: normal; /* Stellt sicher, dass die Zeilenhöhe korrekt ist */
-            display: block; /* Wichtig für die korrekte Breiten- und Höhenberechnung */
+            line-height: normal; 
+            /* Muss 'block' sein, damit es die Tags korrekt umbricht und die Höhe berechnet */
+            display: block; 
+            padding: 0;
+            margin: 0;
         }
+        
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
             color: #fff;
             text-decoration: none;
