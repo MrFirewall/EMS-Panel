@@ -124,17 +124,22 @@
 <script>
     // FÜGE DIE VORLAGEN-FUNKTION AUS DEINEM BEISPIEL HINZU
     function hideSelectedTemplate(data) {
-        // Prüft, ob das Element 'selected' ist. Select2 setzt dieses Flag
-        // auf true, wenn es bereits ausgewählt ist.
         if (data.selected) {
-            return null; // Zeigt das Element nicht im Dropdown an
+            return null;
         }
-        return data.text; // Zeigt das Element normal an
+        return data.text;
+    }
+
+    // NEUE FUNKTION: Erzwingt die Neuberechnung der Höhe
+    function fixSelect2Height($select) {
+        // Öffne und schließe Select2 sofort, um die interne Höhenberechnung zu triggern.
+        // Führt oft zu einem besseren Rendering der Tags.
+        $select.select2('open').select2('close');
     }
 
     $(document).ready(function() {
         
-        // 1. Initialisiere Single-Select-Felder (einfacher Select2-Aufruf)
+        // 1. Initialisiere Single-Select-Felder
         if (typeof $.fn.select2 === 'function') {
             $('.select2-single').select2({
                 theme: 'bootstrap4',
@@ -142,14 +147,16 @@
                 allowClear: false,
             });
 
-            // 2. Initialisiere Multi-Select-Felder mit der Logik zum Ausblenden
-            $('.select2-multihide').select2({
+            // 2. Initialisiere Multi-Select-Feld 'controller_action'
+            const $controllerActionSelect = $('#controller_action');
+            $controllerActionSelect.select2({
                 theme: 'bootstrap4',
-                placeholder: 'Bitte auswählen...',
+                placeholder: 'Bitte Aktion(en) auswählen...',
                 allowClear: true,
-                // WICHTIG: templateResult verhindert das Rendern ausgewählter Elemente im Dropdown
                 templateResult: hideSelectedTemplate
             });
+            // FIX: Zwinge Select2, die Höhe sofort nach der Initialisierung neu zu berechnen
+            fixSelect2Height($controllerActionSelect);
         } else {
             console.error("Select2 wurde nicht gefunden. Stelle sicher, dass es im Hauptlayout geladen wird.");
         }
@@ -158,18 +165,16 @@
         
         // --- LOGIK FÜR DYNAMISCHES FELD target_identifier ---
         
-        // Speichere den Typ und die Werte, die beim Laden der Seite aktiv waren
         const initialType = $('#target_type').val();
         const initialIdentifiers = @json($currentIdentifiers); 
 
         function updateIdentifierOptions(selectedType) {
             const $identifierSelect = $('#target_identifier');
             
-            // Behalte die aktuell ausgewählten Werte nur, wenn der Typ sich NICHT geändert hat
             let valuesToRestore = (selectedType === initialType) ? initialIdentifiers : [];
 
             $identifierSelect.empty(); 
-
+            // ... (Rest der Logik zum Befüllen der Optionen bleibt gleich) ...
             let placeholderText = 'Bitte auswählen...';
             let enableClear = true;
 
@@ -221,7 +226,6 @@
                     theme: 'bootstrap4',
                     placeholder: placeholderText,
                     allowClear: enableClear,
-                    // WICHTIG: Verwende die Logik zum Ausblenden
                     templateResult: hideSelectedTemplate
                 });
             }
@@ -231,6 +235,11 @@
                 $identifierSelect.val(valuesToRestore).trigger('change.select2');
             } else {
                 $identifierSelect.val(null).trigger('change.select2');
+            }
+
+            // FIX: Zwinge Select2, die Höhe sofort nach dem Befüllen neu zu berechnen
+            if (valuesToRestore.length > 0) {
+                fixSelect2Height($identifierSelect);
             }
         }
 
