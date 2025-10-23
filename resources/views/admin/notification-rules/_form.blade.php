@@ -1,8 +1,9 @@
+
 <div class="card-body">
     {{-- Controller Action Dropdown --}}
     <div class="form-group">
         <label for="controller_action">Auslösende Aktion(en) <span class="text-danger">*</span></label>
-        {{-- NEU: 'multiple' und 'name="...[]"' --}}
+        {{-- HINWEIS: Klasse von 'select2' zu 'select2-multihide' geändert --}}
         <select name="controller_action[]" id="controller_action" class="form-control select2-multihide @error('controller_action') is-invalid @enderror" required multiple>
             <option value="" disabled>Bitte Aktion(en) auswählen...</option>
             @php
@@ -27,6 +28,7 @@
     {{-- Target Type Dropdown --}}
     <div class="form-group">
         <label for="target_type">Benachrichtigungsziel (Typ) <span class="text-danger">*</span></label>
+        {{-- HINWEIS: Klasse von 'select2' zu 'select2-single' geändert --}}
         <select name="target_type" id="target_type" class="form-control select2-single @error('target_type') is-invalid @enderror" required>
             <option value="" disabled {{ old('target_type', $notificationRule->target_type ?? '') == '' ? 'selected' : '' }}>Bitte Typ auswählen...</option>
             @foreach($targetTypes as $type => $label)
@@ -43,7 +45,7 @@
     {{-- Target Identifier Dropdown (wird dynamisch befüllt) --}}
     <div class="form-group">
         <label for="target_identifier">Ziel-Identifier <span class="text-danger">*</span></label>
-        {{-- NEU: 'multiple' und 'name="...[]"' --}}
+        {{-- HINWEIS: Klasse von 'select2' zu 'select2-multihide' geändert --}}
         <select name="target_identifier[]" id="target_identifier" class="form-control select2-multihide @error('target_identifier') is-invalid @enderror" required multiple>
 
             {{-- GEÄNDERT: PHP-Logik zur Vorauswahl für Multi-Select --}}
@@ -120,17 +122,19 @@
 {{-- Das Select2 JS wird jetzt im Hauptlayout geladen --}}
 @push('scripts')
 <script>
-    // Selektiert die Multi-Select-Felder und gibt null zurück, wenn sie bereits ausgewählt sind.
+    // FÜGE DIE VORLAGEN-FUNKTION AUS DEINEM BEISPIEL HINZU
     function hideSelectedTemplate(data) {
+        // Prüft, ob das Element 'selected' ist. Select2 setzt dieses Flag
+        // auf true, wenn es bereits ausgewählt ist.
         if (data.selected) {
-            return null;
+            return null; // Zeigt das Element nicht im Dropdown an
         }
-        return data.text;
+        return data.text; // Zeigt das Element normal an
     }
 
     $(document).ready(function() {
         
-        // 1. Initialisiere Single-Select-Felder (die das Problem nicht haben)
+        // 1. Initialisiere Single-Select-Felder (einfacher Select2-Aufruf)
         if (typeof $.fn.select2 === 'function') {
             $('.select2-single').select2({
                 theme: 'bootstrap4',
@@ -141,7 +145,7 @@
             // 2. Initialisiere Multi-Select-Felder mit der Logik zum Ausblenden
             $('.select2-multihide').select2({
                 theme: 'bootstrap4',
-                placeholder: 'Bitte Aktion(en) auswählen...',
+                placeholder: 'Bitte auswählen...',
                 allowClear: true,
                 // WICHTIG: templateResult verhindert das Rendern ausgewählter Elemente im Dropdown
                 templateResult: hideSelectedTemplate
@@ -152,12 +156,11 @@
 
         const identifiers = @json($availableIdentifiers);
         
-        // --- GEÄNDERTE LOGIK ---
+        // --- LOGIK FÜR DYNAMISCHES FELD target_identifier ---
         
         // Speichere den Typ und die Werte, die beim Laden der Seite aktiv waren
-        // (entweder aus der DB oder aus 'old()' bei einem Validierungsfehler)
         const initialType = $('#target_type').val();
-        const initialIdentifiers = @json($currentIdentifiers); // Nutzt die PHP-Variable von oben
+        const initialIdentifiers = @json($currentIdentifiers); 
 
         function updateIdentifierOptions(selectedType) {
             const $identifierSelect = $('#target_identifier');
@@ -165,9 +168,6 @@
             // Behalte die aktuell ausgewählten Werte nur, wenn der Typ sich NICHT geändert hat
             let valuesToRestore = (selectedType === initialType) ? initialIdentifiers : [];
 
-            // Speichere die aktuellen Select2-Einstellungen, um sie später wiederzuverwenden
-            const select2Config = $identifierSelect.data('select2') ? $identifierSelect.data('select2').options.options : {};
-            
             $identifierSelect.empty(); 
 
             let placeholderText = 'Bitte auswählen...';
@@ -215,13 +215,14 @@
                 $identifierSelect.prop('disabled', false);
             }
 
-            // Initialisiere Select2 für das Identifier-Feld neu (mit der hideSelectedTemplate)
+            // Initialisiere Select2 für das Identifier-Feld neu
             if (typeof $.fn.select2 === 'function') {
                 $identifierSelect.select2({
                     theme: 'bootstrap4',
                     placeholder: placeholderText,
                     allowClear: enableClear,
-                    templateResult: hideSelectedTemplate // WICHTIG: Die Logik zum Ausblenden
+                    // WICHTIG: Verwende die Logik zum Ausblenden
+                    templateResult: hideSelectedTemplate
                 });
             }
             
@@ -241,7 +242,7 @@
         // Führe die Funktion beim Laden der Seite aus, um das Feld zu befüllen
         updateIdentifierOptions(initialType);
         
-        // --- ENDE GEÄNDERTE LOGIK ---
+        // --- ENDE LOGIK FÜR DYNAMISCHES FELD ---
     });
 </script>
 @endpush
