@@ -94,17 +94,25 @@ class NotificationRuleController extends Controller
     /**
      * Validiert die Eingaben für eine Regel.
      */
-    private function validateRule(Request $request, ?NotificationRule $rule = null): array
+private function validateRule(Request $request, ?NotificationRule $rule = null): array
     {
         $availableActions = array_keys($this->getAvailableControllerActions());
         $availableTypes = array_keys($this->getTargetTypes());
 
-        // KORREKTUR: 'description' zu 'event_description' geändert
+        // GEÄNDERT: Validierung für 'controller_action' und 'target_identifier'
         return $request->validate([
-            'controller_action' => ['required', 'string', Rule::in($availableActions)],
+            // 'controller_action' ist jetzt ein Array
+            'controller_action' => ['required', 'array', 'min:1'],
+            'controller_action.*' => ['required', 'string', Rule::in($availableActions)], // Validiert jeden Eintrag im Array
+            
+            // 'target_type' bleibt ein einzelner String
             'target_type' => ['required', 'string', Rule::in($availableTypes)],
-            'target_identifier' => ['required', 'string', 'max:255'],
-            'event_description' => ['nullable', 'string', 'max:255'], // Angepasst an DB-Feld
+            
+            // 'target_identifier' ist jetzt ein Array
+            'target_identifier' => ['required', 'array', 'min:1'],
+            'target_identifier.*' => ['required', 'string', 'max:255'], // Validiert jeden Eintrag im Array
+
+            'event_description' => ['nullable', 'string', 'max:255'], 
             'is_active' => ['nullable'],
         ]);
     }

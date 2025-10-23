@@ -36,17 +36,26 @@
 <div class="card-body">
     {{-- Controller Action Dropdown --}}
     <div class="form-group">
-        <label for="controller_action">Auslösende Aktion <span class="text-danger">*</span></label>
-        <select name="controller_action" id="controller_action" class="form-control select2 @error('controller_action') is-invalid @enderror" required>
-            <option value="" disabled {{ old('controller_action', $notificationRule->controller_action ?? '') == '' ? 'selected' : '' }}>Bitte Aktion auswählen...</option>
+        <label for="controller_action">Auslösende Aktion(en) <span class="text-danger">*</span></label>
+        {{-- NEU: 'multiple' und 'name="...[]"' --}}
+        <select name="controller_action[]" id="controller_action" class="form-control select2 @error('controller_action') is-invalid @enderror" required multiple>
+            <option value="" disabled>Bitte Aktion(en) auswählen...</option>
+            @php
+                // GEÄNDERT: Hole das Array der alten/gespeicherten Werte
+                $currentActions = old('controller_action', $notificationRule->controller_action ?? []);
+            @endphp
             @foreach($controllerActions as $action => $label)
-                <option value="{{ $action }}" {{ old('controller_action', $notificationRule->controller_action ?? '') == $action ? 'selected' : '' }}>
+                {{-- GEÄNDERT: Prüfe mit in_array --}}
+                <option value="{{ $action }}" {{ in_array($action, $currentActions) ? 'selected' : '' }}>
                     {{ $label }} ({{ $action }})
                 </option>
             @endforeach
         </select>
         @error('controller_action')
             <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+        @error('controller_action.*') {{-- NEU: Fehler für Array-Einträge --}}
+            <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
     </div>
 
@@ -69,35 +78,46 @@
     {{-- Target Identifier Dropdown (wird dynamisch befüllt) --}}
     <div class="form-group">
         <label for="target_identifier">Ziel-Identifier <span class="text-danger">*</span></label>
-        {{-- Das Select-Feld wird jetzt nur noch vom JavaScript befüllt --}}
-        <select name="target_identifier" id="target_identifier" class="form-control select2 @error('target_identifier') is-invalid @enderror" required>
-            {{-- PHP-Logik zur Vorauswahl des richtigen Labels (korrekt) --}}
-             @php
-                $currentIdentifier = old('target_identifier', $notificationRule->target_identifier ?? null);
-                $currentType = old('target_type', $notificationRule->target_type ?? null);
-                $identifierLabel = $currentIdentifier;
+        {{-- NEU: 'multiple' und 'name="...[]"' --}}
+        <select name="target_identifier[]" id="target_identifier" class="form-control select2 @error('target_identifier') is-invalid @enderror" required multiple>
 
-                if ($currentIdentifier && $currentType) {
-                    if ($currentType === 'user' && isset($availableIdentifiers['Benutzer'][$currentIdentifier])) {
-                        $identifierLabel = $availableIdentifiers['Benutzer'][$currentIdentifier] . ' (ID: ' . $currentIdentifier . ')';
-                    } elseif ($currentType === 'role' && isset($availableIdentifiers['Rollen'][$currentIdentifier])) {
-                        $identifierLabel = $availableIdentifiers['Rollen'][$currentIdentifier];
-                    } elseif ($currentType === 'permission' && isset($availableIdentifiers['Berechtigungen'][$currentIdentifier])) {
-                        $identifierLabel = $availableIdentifiers['Berechtigungen'][$currentIdentifier];
-                    } elseif ($currentType === 'user' && $currentIdentifier === 'triggering_user' && isset($availableIdentifiers['Spezifisch']['triggering_user'])) {
-                        $identifierLabel = $availableIdentifiers['Spezifisch']['triggering_user'];
-                    }
+            {{-- GEÄNDERT: PHP-Logik zur Vorauswahl für Multi-Select --}}
+            @php
+                $currentIdentifiers = old('target_identifier', $notificationRule->target_identifier ?? []);
+                if (!is_array($currentIdentifiers)) { // Fallback, falls es noch ein String ist
+                    $currentIdentifiers = $currentIdentifiers ? [$currentIdentifiers] : [];
                 }
-             @endphp
-             {{-- Zeige die initial ausgewählte Option oder einen Platzhalter --}}
-             @if($currentIdentifier)
-                 <option value="{{ $currentIdentifier }}" selected>{{ $identifierLabel }}</option>
-             @else
-                 <option value="" disabled selected>Zuerst Typ auswählen...</option>
+                $currentType = old('target_type', $notificationRule->target_type ?? null);
+            @endphp
+
+            @foreach($currentIdentifiers as $currentIdentifier)
+                @php
+                    // Diese Logik rendert das gespeicherte Label
+                    $identifierLabel = $currentIdentifier;
+                    if ($currentIdentifier && $currentType) {
+                        if ($currentType === 'user' && isset($availableIdentifiers['Benutzer'][$currentIdentifier])) {
+                            $identifierLabel = $availableIdentifiers['Benutzer'][$currentIdentifier] . ' (ID: ' . $currentIdentifier . ')';
+                        } elseif ($currentType === 'role' && isset($availableIdentifiers['Rollen'][$currentIdentifier])) {
+                            $identifierLabel = $availableIdentifiers['Rollen'][$currentIdentifier];
+                        } elseif ($currentType === 'permission' && isset($availableIdentifiers['Berechtigungen'][$currentIdentifier])) {
+                            $identifierLabel = $availableIdentifiers['Berechtigungen'][$currentIdentifier];
+                        } elseif (isset($availableIdentifiers['Spezifisch'][$currentIdentifier])) {
+                            $identifierLabel = $availableIdentifiers['Spezifisch'][$currentIdentifier];
+                        }
+                    }
+                @endphp
+                <option value="{{ $currentIdentifier }}" selected>{{ $identifierLabel }}</option>
+            @endforeach
+
+            @if(empty($currentIdentifiers))
+                <option value="" disabled>Zuerst Typ auswählen...</option>
             @endif
         </select>
         @error('target_identifier')
             <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+        @error('target_identifier.*') {{-- NEU: Fehler für Array-Einträge --}}
+            <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
     </div>
 
@@ -134,7 +154,6 @@
 {{-- JavaScript für Select2 und dynamische Identifier --}}
 {{-- Das Select2 JS wird jetzt im Hauptlayout geladen --}}
 @push('scripts')
-{{-- <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script> --}} {{-- Wird im Hauptlayout geladen --}}
 <script>
     $(document).ready(function() {
         // Initialisiere alle Select2-Felder mit Bootstrap 4 Theme
@@ -149,60 +168,69 @@
         }
 
         const identifiers = @json($availableIdentifiers);
-        let currentIdentifierValue = $('#target_identifier').val();
+        
+        // --- GEÄNDERTE LOGIK ---
+        
+        // Speichere den Typ und die Werte, die beim Laden der Seite aktiv waren
+        // (entweder aus der DB oder aus 'old()' bei einem Validierungsfehler)
+        const initialType = $('#target_type').val();
+        const initialIdentifiers = @json($currentIdentifiers); // Nutzt die PHP-Variable von oben
 
         function updateIdentifierOptions(selectedType) {
             const $identifierSelect = $('#target_identifier');
-            const previouslySelectedValue = $identifierSelect.val();
-            $identifierSelect.empty();
+            
+            // Behalte die aktuell ausgewählten Werte nur, wenn der Typ sich NICHT geändert hat
+            // (Diese Zeile muss VOR .empty() stehen)
+            let valuesToRestore = (selectedType === initialType) ? initialIdentifiers : [];
 
-            let optionsData = [];
+            $identifierSelect.empty(); 
+
             let placeholderText = 'Bitte auswählen...';
             let enableClear = true;
 
             switch (selectedType) {
                 case 'role':
-                    optionsData = identifiers['Rollen'] || {};
-                    placeholderText = 'Rolle auswählen...';
+                    placeholderText = 'Rolle(n) auswählen...';
+                    $.each(identifiers['Rollen'] || {}, function(key, value) {
+                        $identifierSelect.append(new Option(value, key, false, false));
+                    });
                     break;
                 case 'permission':
-                    optionsData = identifiers['Berechtigungen'] || {};
-                     placeholderText = 'Berechtigung auswählen...';
+                    placeholderText = 'Berechtigung(en) auswählen...';
+                    $.each(identifiers['Berechtigungen'] || {}, function(key, value) {
+                        $identifierSelect.append(new Option(value, key, false, false));
+                    });
                     break;
                 case 'user':
-                    optionsData = { ...(identifiers['Benutzer'] || {}), ...(identifiers['Spezifisch'] || {}) };
                     placeholderText = 'Benutzer oder spezifisches Ziel auswählen...';
+                    // Optgroup für Benutzer
+                    if (!$.isEmptyObject(identifiers['Benutzer'])) {
+                        const $userGroup = $('<optgroup label="Benutzer"></optgroup>');
+                        $.each(identifiers['Benutzer'], function(id, name) {
+                            $userGroup.append(new Option(name + ' (ID: ' + id + ')', id, false, false));
+                        });
+                        $identifierSelect.append($userGroup);
+                    }
+                    // Optgroup für Spezifisch
+                    if (!$.isEmptyObject(identifiers['Spezifisch'])) {
+                        const $specificGroup = $('<optgroup label="Spezifisch"></optgroup>');
+                        $.each(identifiers['Spezifisch'], function(key, label) {
+                            $specificGroup.append(new Option(label, key, false, false));
+                        });
+                        $identifierSelect.append($specificGroup);
+                    }
                     break;
                 default:
                     placeholderText = 'Zuerst Typ auswählen...';
                     enableClear = false;
+                    $identifierSelect.prop('disabled', true);
             }
 
-             $identifierSelect.append(new Option(placeholderText, "", true, true)).prop('disabled', $.isEmptyObject(optionsData) && selectedType === '');
+            if (selectedType) {
+                 $identifierSelect.prop('disabled', false);
+            }
 
-             if (selectedType === 'user') {
-                 if (!$.isEmptyObject(identifiers['Benutzer'])) {
-                     const $userGroup = $('<optgroup label="Benutzer"></optgroup>');
-                     $.each(identifiers['Benutzer'], function(id, name) {
-                         $userGroup.append(new Option(name + ' (ID: ' + id + ')', id, false, false));
-                     });
-                     $identifierSelect.append($userGroup);
-                 }
-                 if (!$.isEmptyObject(identifiers['Spezifisch'])) {
-                     const $specificGroup = $('<optgroup label="Spezifisch"></optgroup>');
-                     $.each(identifiers['Spezifisch'], function(key, label) {
-                         $specificGroup.append(new Option(label, key, false, false));
-                     });
-                     $identifierSelect.append($specificGroup);
-                 }
-             } else {
-                 $.each(optionsData, function(key, value) {
-                     const optionValue = (selectedType === 'user') ? key : value;
-                     const optionText = value;
-                     $identifierSelect.append(new Option(optionText, optionValue, false, false));
-                 });
-             }
-
+            // Initialisiere Select2 für das Identifier-Feld neu
             if (typeof $.fn.select2 === 'function') {
                 $identifierSelect.select2({
                     theme: 'bootstrap4',
@@ -210,37 +238,27 @@
                     allowClear: enableClear,
                 });
             }
-
-             let valueToSelect = previouslySelectedValue;
-             if ($('#target_type').val() === selectedType && (!valueToSelect || valueToSelect === '')) {
-                 valueToSelect = currentIdentifierValue;
-             }
-             if (valueToSelect && $identifierSelect.find("option[value='" + valueToSelect + "']").length) {
-                 $identifierSelect.val(valueToSelect).trigger('change.select2');
-             } else {
+            
+            // Stelle die alten/initialen Werte (als Array) wieder her,
+            // aber nur, wenn der Typ dem initialen Typ entspricht.
+            if (valuesToRestore.length > 0) {
+                 $identifierSelect.val(valuesToRestore).trigger('change.select2');
+            } else {
                  $identifierSelect.val(null).trigger('change.select2');
-                 currentIdentifierValue = null;
-             }
+            }
         }
 
+        // Event Listener für die Typ-Änderung
         $('#target_type').on('change', function() {
-            currentIdentifierValue = $('#target_identifier').val();
+            // Wenn der Typ geändert wird, werden die Identifier-Werte durch 
+            // die updateIdentifierOptions-Funktion automatisch zurückgesetzt.
             updateIdentifierOptions($(this).val());
         });
 
-        const initialType = $('#target_type').val();
-        if (initialType) {
-            updateIdentifierOptions(initialType);
-        } else {
-            if (typeof $.fn.select2 === 'function') {
-                $('#target_identifier').prop('disabled', true).select2({
-                    theme: 'bootstrap4',
-                    placeholder: 'Zuerst Typ auswählen...',
-                    allowClear: false,
-                });
-            }
-        }
+        // Führe die Funktion beim Laden der Seite aus, um das Feld zu befüllen
+        updateIdentifierOptions(initialType);
+        
+        // --- ENDE GEÄNDERTE LOGIK ---
     });
 </script>
 @endpush
-

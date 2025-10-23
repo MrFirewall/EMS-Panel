@@ -1,5 +1,4 @@
 <?php
-// app/Models/NotificationRule.php
 
 namespace App\Models;
 
@@ -11,14 +10,21 @@ class NotificationRule extends Model
     use HasFactory;
 
     protected $fillable = [
-        'event_description',
         'controller_action',
         'target_type',
         'target_identifier',
+        'event_description',
         'is_active',
     ];
 
+    /**
+     * Die Attribute, die umgewandelt werden sollen.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'is_active' => 'boolean',
+        'controller_action' => 'array', // NEU
+        'target_identifier' => 'array', // NEU
     ];
 }
