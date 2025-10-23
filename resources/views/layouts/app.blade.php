@@ -82,12 +82,12 @@
             background-color: #007bff;
             color: #fff;
         }
-         .dark-mode .select2-container--bootstrap4 .select2-results__option {
-             color: #dee2e6;
-         }
-         .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
-             color: #fff;
-         }
+        .dark-mode .select2-container--bootstrap4 .select2-results__option {
+            color: #dee2e6;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+            color: #fff;
+        }
 
 
         /* Select2: Multi-Select Tag Styling (Standard & Dark Mode) */
@@ -97,6 +97,7 @@
             /* NEU: Weniger Margin, damit die Tags besser ineinander fließen */
             margin-top: 2px !important; 
             margin-bottom: 2px !important;
+            float: left; /* Beibehalten, damit Tags nebeneinander liegen */
         }
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
             background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit im Dark Mode */
@@ -117,7 +118,7 @@
             font-weight: 700;
         }
         
-        /* 🔥 FIX: Select2-Box muss wachsen können (Auto-Height) 🔥 */
+        /* 🔥 FIXES FÜR DYNAMISCHE HÖHE (Multi-Select) 🔥 */
         .select2-container--bootstrap4 .select2-selection--multiple {
             min-height: 38px;
             /* ZWINGEND: Ermöglicht das Wachstum über mehrere Zeilen */
@@ -134,6 +135,22 @@
             display: block; 
             padding: 0;
             margin: 0;
+        }
+        
+        /* 🔥 NEUE KRITISCHE REGELN: Zwingt Suchfeld zum Umbruch 🔥 */
+        /* Zielt auf das umschließende Element der Sucheingabe */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-search--inline {
+            /* Entfernt das Float, das oft die Höhenberechnung blockiert */
+            float: none !important; 
+            display: inline-block;
+            /* Ermöglicht Umbruch nach den Tags */
+            width: 100%; 
+        }
+        
+        /* Zielt auf das eigentliche Texteingabefeld */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-search__field {
+             /* Wichtig, um die Sucheingabe sichtbar zu machen und Umbrüche zu erzwingen */
+            min-width: 100px !important; 
         }
         
         .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
