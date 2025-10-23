@@ -19,6 +19,7 @@ return new class extends Migration
             // da Sie bereits den SQL-Fehler beim Ändern des JSON-Typs hatten
             // (und TEXT robuster für die Speicherung langer Arrays ist).
             $table->text('controller_action')->change();
+            $table->text('target_identifier')->change();
         });
 
         Schema::table('notification_rules', function (Blueprint $table) {
