@@ -3,9 +3,8 @@
 namespace App\Services;
 
 use App\Models\Exam;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Exceptions\ExamValidationException;
+// Kein Request mehr nötig, da Validierung im FormRequest ist
 
 class ExamService
 {
@@ -16,14 +15,13 @@ class ExamService
     {
         return DB::transaction(function () use ($validatedData) {
             $exam = Exam::create([
-                'training_module_id' => $validatedData['training_module_id'],
+                // 'training_module_id' entfernt
                 'title' => $validatedData['title'],
                 'description' => $validatedData['description'],
                 'pass_mark' => $validatedData['pass_mark'],
             ]);
 
             $this->syncQuestions($exam, $validatedData['questions']);
-
             return $exam;
         });
     }
@@ -35,14 +33,13 @@ class ExamService
     {
         return DB::transaction(function () use ($exam, $validatedData) {
             $exam->update([
-                'training_module_id' => $validatedData['training_module_id'],
+                 // 'training_module_id' entfernt
                 'title' => $validatedData['title'],
                 'description' => $validatedData['description'],
                 'pass_mark' => $validatedData['pass_mark'],
             ]);
 
             $this->syncQuestions($exam, $validatedData['questions']);
-
             return $exam;
         });
     }
@@ -87,7 +84,7 @@ class ExamService
                 // Lösche veraltete Optionen für diese Frage
                 $question->options()->whereNotIn('id', $submittedOptionIds)->delete();
             } else {
-                // Lösche alle Optionen, falls Typ auf 'text_field' geändert wurde
+                // Lösche alle Optionen, falls Typ auf 'text_field' geändert wurde oder keine Optionen gesendet wurden
                 $question->options()->delete();
             }
         }
