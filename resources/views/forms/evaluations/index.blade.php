@@ -76,7 +76,7 @@
                                                     <form action="{{ route('admin.exams.attempts.store') }}" method="POST">
                                                         @csrf
                                                         <input type="hidden" name="user_id" value="{{ $antrag->user_id }}">
-                                                        <input type="hidden" name="module_id" value="{{ $antrag->json_data['module_id'] }}">
+                                                        <input type="hidden" name="exam_id" value="{{ $antrag->json_data['exam_id'] ?? '' }}">
                                                         <input type="hidden" name="evaluation_id" value="{{ $antrag->id }}">
                                                         <button type="submit" class="btn btn-sm btn-info" title="Einen einmaligen Link für die Prüfung erstellen">
                                                             <i class="fas fa-link"></i> Prüfungslink generieren
