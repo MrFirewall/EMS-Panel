@@ -182,6 +182,9 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
         
         // Manuelle Bewertung (alte Route)
         Route::post('/{attempt:uuid}/evaluate', [AdminExamAttemptController::class, 'setEvaluated'])->name('setEvaluated');
+
+        // NEU: Löschen-Route
+        Route::delete('/{attempt:uuid}', [AdminExamAttemptController::class, 'destroy'])->name('destroy');
     });
 
     // ALTE ROUTEN (Jetzt im AdminExamAttemptController)
