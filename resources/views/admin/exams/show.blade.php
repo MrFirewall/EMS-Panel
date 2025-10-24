@@ -22,12 +22,12 @@
 <div class="content">
     <div class="container-fluid">
         <div class="row">
+            {{-- Linke Spalte: Stammdaten --}}
             <div class="col-lg-4">
                 <div class="card card-primary card-outline">
                     <div class="card-header"><h3 class="card-title">Stammdaten</h3></div>
                     <div class="card-body">
-                        <strong><i class="fas fa-book mr-1"></i> Modul</strong>
-                        <p class="text-muted">{{ $exam->trainingModule->name }}</p><hr>
+                        {{-- Modul-Anzeige entfernt --}}
                         <strong><i class="fas fa-check-circle mr-1"></i> Bestehensgrenze</strong>
                         <p class="text-muted">{{ $exam->pass_mark }}%</p><hr>
                         <strong><i class="far fa-file-alt mr-1"></i> Beschreibung</strong>
@@ -35,14 +35,17 @@
                     </div>
                 </div>
             </div>
+            {{-- Rechte Spalte: Fragenkatalog --}}
             <div class="col-lg-8">
                 <div class="card card-primary card-outline">
-                    <div class="card-header"><h3 class="card-title">Fragenkatalog</h3></div>
+                    <div class="card-header"><h3 class="card-title">Fragenkatalog ({{ $exam->questions->count() }} Fragen)</h3></div>
                     <div class="card-body">
-                        @foreach($exam->questions as $question)
+                        @forelse($exam->questions as $question)
                         <div class="mb-4">
                             <h5><strong>Frage {{ $loop->iteration }}:</strong> {{ $question->question_text }}</h5>
-                            <ul class="list-group">
+                            <span class="badge badge-secondary">{{ Str::ucfirst(str_replace('_', '-', $question->type)) }}</span>
+                            @if($question->type !== 'text_field')
+                            <ul class="list-group mt-2">
                                 @foreach($question->options as $option)
                                 <li class="list-group-item {{ $option->is_correct ? 'list-group-item-success' : '' }}">
                                     @if($option->is_correct)
@@ -54,8 +57,17 @@
                                 </li>
                                 @endforeach
                             </ul>
+                            @else
+                                <p class="text-muted mt-2"><em>(Textantwort erforderlich)</em></p>
+                            @endif
                         </div>
-                        @endforeach
+                        @if(!$loop->last) <hr> @endif
+                        @empty
+                         <p class="text-center text-muted">Für diese Prüfung wurden noch keine Fragen hinzugefügt.</p>
+                        @endforelse
+                    </div>
+                    <div class="card-footer">
+                         <a href="{{ route('admin.exams.edit', $exam) }}" class="btn btn-warning"><i class="fas fa-edit"></i> Prüfung bearbeiten</a>
                     </div>
                 </div>
             </div>
