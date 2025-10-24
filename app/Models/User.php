@@ -224,7 +224,6 @@ class User extends Authenticatable
     public function receivedEvaluations() { return $this->hasMany(Evaluation::class, 'user_id'); }
     public function serviceRecords() { return $this->hasMany(ServiceRecord::class); }
     public function reports() { return $this->hasMany(Report::class); }
-    public function examinations() { return $this->hasMany(Examination::class); }
     public function vacations() { return $this->hasMany(Vacation::class); }
     public function attendedReports() { return $this->belongsToMany(Report::class, 'report_user'); }
  
