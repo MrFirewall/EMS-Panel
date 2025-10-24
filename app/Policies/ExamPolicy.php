@@ -24,7 +24,7 @@ class ExamPolicy
         return $user->can('exams.manage');
     }
 
-    public function view(User $user): bool
+    public function view(User $user, Exam $exam): bool
     {
         return $user->can('exams.manage');
     }
