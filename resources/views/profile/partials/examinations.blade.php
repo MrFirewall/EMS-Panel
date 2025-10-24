@@ -16,7 +16,7 @@
 @forelse($examAttempts as $attempt)
 @php
 // Standardwerte für laufende oder eingereichte Prüfungen
-//$statusColor = 'bg-secondary';
+$statusColor = 'bg-secondary';
 //$statusText = 'Zur Bewertung';
 
                     if ($attempt->status === 'submitted') {
