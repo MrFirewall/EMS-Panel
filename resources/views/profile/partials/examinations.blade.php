@@ -17,7 +17,7 @@
 @php
 // Standardwerte für laufende oder eingereichte Prüfungen
 $statusColor = 'bg-secondary';
-//$statusText = 'Zur Bewertung';
+$statusText = 'Zur Bewertung';
 
                     if ($attempt->status === 'submitted') {
                         $statusColor = 'bg-warning';
