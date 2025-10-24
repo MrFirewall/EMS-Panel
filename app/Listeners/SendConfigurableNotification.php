@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use App\Models\ServiceRecord;
-
+use Illuminate\Support\Facades\Route;
 
 class SendConfigurableNotification
 {
@@ -131,9 +131,9 @@ class SendConfigurableNotification
 
             $notificationText = "Neuer Antrag ({$antragArt}) für '{$moduleName}' von {$antragsteller->name}.";
             $notificationIcon = 'fas fa-file-signature text-warning';
-             $notificationUrl = route()->has('admin.forms.evaluations.show') // Prüfen ob Admin-Route existiert
-                 ? route('admin.forms.evaluations.show', $evaluation->id)
-                 : route('forms.evaluations.show', $evaluation->id);
+            $notificationUrl = Route::has('admin.forms.evaluations.show') // KORREKTUR: Route-Facade
+                ? route('admin.forms.evaluations.show', $evaluation->id)
+                : route('forms.evaluations.index'); // KORREKTUR: Fallback auf die Index-Seite
             // Weiter zu Notification::send am Ende
         }
 
