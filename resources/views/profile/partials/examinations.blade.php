@@ -50,18 +50,6 @@ $statusText = 'Zur Bewertung';
                 {{-- Wird unten behandelt, falls beide leer sind --}}
             @endforelse
 
-            {{-- Anzeige der alten manuellen examinations-Einträge --}}
-            @forelse($examinations as $exam)
-                <tr>
-                    <td><span class="badge bg-info text-sm">Einstufung</span></td>
-                    <td>Einstufung ({{ $exam->examiner_name }})</td>
-                    <td><span class="badge bg-primary">Abgeschlossen</span></td>
-                    <td>-</td>
-                </tr>
-            @empty
-                {{-- Wird ignoriert, wenn examAttempts Ergebnisse hat --}}
-            @endforelse
-
             {{-- Fallback: Nur anzeigen, wenn BEIDE Listen leer sind --}}
             @if($examAttempts->isEmpty() && $examinations->isEmpty())
                 <tr>
