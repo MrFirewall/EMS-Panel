@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\ServiceRecord;
 use App\Models\Evaluation;
 use App\Models\ExamAttempt;
+use App\Models\TrainingModule; // Import hinzugefügt
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
@@ -22,14 +23,14 @@ class UserController extends Controller
      * @var array
      */
     private $rankHierarchy = [
-        'ems-director'            => 8,
-        'assistant-ems-director'  => 7,
-        'instructor'              => 6,
-        'emergency-doctor'        => 5,
-        'paramedic'               => 4,
-        'emt'                     => 3,
-        'emt-trainee'             => 2,
-        'praktikant'              => 1,
+        'ems-director'           => 8,
+        'assistant-ems-director' => 7,
+        'instructor'             => 6,
+        'emergency-doctor'       => 5,
+        'paramedic'              => 4,
+        'emt'                    => 3,
+        'emt-trainee'            => 2,
+        'praktikant'             => 1,
     ];
 
     /**
@@ -77,6 +78,8 @@ class UserController extends Controller
         $this->middleware('can:users.create')->only(['create', 'store']);
         $this->middleware('can:users.edit')->only(['edit', 'update']);
         $this->middleware('can:users.manage.record')->only('addRecord');
+        // NEU: Zusätzliche Berechtigung für Modul-Management
+        $this->middleware('can:users.manage.modules')->only(['update']); // Nur beim Speichern prüfen
     }
 
     /**
@@ -172,6 +175,12 @@ class UserController extends Controller
             'status' => 'required|string',
             'roles' => 'sometimes|array',
             'roles.*' => [Rule::in($managableRoleNames)],
+            // Weitere optionale Felder
+             'email' => 'nullable|email|max:255',
+             'birthday' => 'nullable|date',
+             'discord_name' => 'nullable|string|max:255',
+             'forum_name' => 'nullable|string|max:255',
+             'hire_date' => 'nullable|date', // Wird jetzt ggf. überschrieben
         ]);
 
         $selectedRoles = $request->roles ?? [];
@@ -192,7 +201,10 @@ class UserController extends Controller
         } while (User::where('employee_id', $newEmployeeId)->exists());
         $validatedData['employee_id'] = $newEmployeeId;
 
-        $validatedData['hire_date'] = now();
+        // Einstellungsdatum nur setzen, wenn es nicht explizit übergeben wurde
+        if (empty($validatedData['hire_date'])) {
+            $validatedData['hire_date'] = now();
+        }
         $validatedData['last_edited_by'] = Auth::user()->name;
         $validatedData['last_edited_at'] = now();
 
@@ -207,16 +219,14 @@ class UserController extends Controller
             'description' => "Neuer Mitarbeiter '{$user->name}' ({$user->id}) angelegt.",
         ]);
 
-        // --- BENACHRICHTIGUNG VIA EVENT ---
         PotentiallyNotifiableActionOccurred::dispatch(
             'Admin\UserController@store',
-            $user,        // Der neue Benutzer
-            $user,        // Das zugehörige Modell
-            Auth::user()  // Der Admin, der die Aktion durchführt
+            $user,
+            $user,
+            Auth::user()
         );
-        // ---------------------------------
 
-        return redirect()->route('admin.users.index'); // Ohne success
+        return redirect()->route('admin.users.index');
     }
 
     /**
@@ -227,7 +237,7 @@ class UserController extends Controller
     {
         // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
         $user->load([
-            'examinations',
+            // 'examinations', // Wurde entfernt
             'trainingModules',
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
@@ -235,9 +245,9 @@ class UserController extends Controller
 
         // 1. Prüfungsversuche laden
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                   ->with('exam.trainingModule')
-                                   ->latest('completed_at')
-                                   ->get();
+                                    ->with('exam.trainingModule')
+                                    ->latest('completed_at') // Sortiert nach Abschlussdatum
+                                    ->get();
 
         // 2. Weitere Variablen laden, die der View erwartet
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
@@ -247,43 +257,48 @@ class UserController extends Controller
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
 
+        // Filter Super-Admin Rolle
+        $this->filterSuperAdminFromRoles($user);
 
+        // $examinations ist nicht mehr nötig
         return view('profile.show', compact(
             'user',
             'serviceRecords',
-            'examAttempts',
+            'examAttempts', // Übergeben
             'evaluationCounts',
             'hourData',
             'weeklyHours'
+            // 'examinations' => collect() // Leere Collection übergeben oder komplett entfernen
         ));
     }
 
     private function calculateEvaluationCounts(User $user): array
     {
-        $typeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle'];
-        $counts = ['verfasst' => [], 'erhalten' => []];
+         $typeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle']; // Nur relevante Typen
+         $counts = ['verfasst' => [], 'erhalten' => []];
 
-        // Zählungen des Profilbesitzers ($user) - ERHALTEN
-        $receivedCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
-                                    ->where('user_id', $user->id)
-                                    ->whereIn('evaluation_type', $typeLabels)
-                                    ->groupBy('evaluation_type')
-                                    ->pluck('count', 'evaluation_type');
+         // Zählungen des Profilbesitzers ($user) - ERHALTEN
+         $receivedCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
+                                     ->where('user_id', $user->id)
+                                     ->whereIn('evaluation_type', $typeLabels)
+                                     ->groupBy('evaluation_type')
+                                     ->pluck('count', 'evaluation_type');
 
-        // Zählungen des angemeldeten Benutzers (Auth::user()) - VERFASST
-        $authoredCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
-                                    ->where('evaluator_id', Auth::id())
-                                    ->whereIn('evaluation_type', $typeLabels)
-                                    ->groupBy('evaluation_type')
-                                    ->pluck('count', 'evaluation_type');
+         // Zählungen des angemeldeten Benutzers (Auth::user()) - VERFASST
+         // Wichtig: Zeigt *immer* die vom *aktuell eingeloggten Admin* verfassten an, nicht die vom Profilinhaber!
+         $authoredCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
+                                     ->where('evaluator_id', Auth::id())
+                                     ->whereIn('evaluation_type', $typeLabels)
+                                     ->groupBy('evaluation_type')
+                                     ->pluck('count', 'evaluation_type');
 
-        // Initialisiere mit 0 und fülle die Ergebnisse auf
-        foreach ($typeLabels as $type) {
-            $counts['erhalten'][$type] = $receivedCounts->get($type, 0);
-            $counts['verfasst'][$type] = $authoredCounts->get($type, 0);
-        }
+         // Initialisiere mit 0 und fülle die Ergebnisse auf
+         foreach ($typeLabels as $type) {
+             $counts['erhalten'][$type] = $receivedCounts->get($type, 0);
+             $counts['verfasst'][$type] = $authoredCounts->get($type, 0);
+         }
 
-        return $counts;
+         return $counts;
     }
 
     public function edit(User $user)
@@ -295,54 +310,85 @@ class UserController extends Controller
         $roles = $this->getManagableRoles();
         $permissions = Permission::all();
         $allPossibleNumbers = range(1, 150);
+        // Schließe nur Nummern von AKTIVEN Usern aus (außer dem aktuellen User selbst)
         $takenNumbers = User::where('status', 'Aktiv')->where('id', '!=', $user->id)->pluck('personal_number')->toArray();
         $availablePersonalNumbers = array_diff($allPossibleNumbers, $takenNumbers);
-        return view('admin.users.edit', compact('user', 'roles', 'permissions', 'availablePersonalNumbers', 'statuses'));
+
+        // Alle verfügbaren Trainingsmodule laden
+        $allModules = TrainingModule::orderBy('category')->orderBy('name')->get();
+        // Die IDs der Module laden, die der User bereits hat
+        $userModules = $user->trainingModules()->pluck('training_module_id')->toArray();
+
+        return view('admin.users.edit', compact(
+            'user',
+            'roles',
+            'permissions',
+            'availablePersonalNumbers',
+            'statuses',
+            'allModules',     // <-- NEU übergeben
+            'userModules'     // <-- NEU übergeben
+        ));
     }
 
     public function update(Request $request, User $user)
     {
         $validatedData = $request->validate([
-            'name' => 'required|string',
+            'name' => 'required|string|max:255',
             'roles' => 'sometimes|array',
             'permissions' => 'sometimes|array',
             'status' => 'required|string',
-            'personal_number' => ['required', 'integer', Rule::unique('users')->ignore($user->id)],
-            'employee_id' => 'nullable|string', 'email' => 'nullable|email',
-            'birthday' => 'nullable|date', 'discord_name' => 'nullable|string',
-            'forum_name' => 'nullable|string', 'special_functions' => 'nullable|string',
+            'personal_number' => ['required', 'integer', 'min:1', 'max:150', Rule::unique('users')->ignore($user->id)],
+            'employee_id' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'birthday' => 'nullable|date',
+            'discord_name' => 'nullable|string|max:255',
+            'forum_name' => 'nullable|string|max:255',
+            'special_functions' => 'nullable|string',
+             'hire_date' => 'nullable|date', // Einstellungsdatum validieren
+
+            // NEU: Validierung für Module
+            'modules' => 'sometimes|array',
+            'modules.*' => 'exists:training_modules,id',
         ]);
 
         $managableRoleNames = $this->getManagableRoles()->pluck('name')->toArray();
         $originalRoleNames = $user->getRoleNames()->toArray();
         $submittedRoleNames = $request->input('roles', []);
 
+        // Prüfen, ob der Admin versucht, Rollen zuzuweisen, die er nicht managen darf
         $newlyAddedRoles = array_diff($submittedRoleNames, $originalRoleNames);
-
         foreach ($newlyAddedRoles as $addedRole) {
             if (!in_array($addedRole, $managableRoleNames)) {
                 return redirect()->back()
-                        ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
-                        ->withInput();
+                                ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
+                                ->withInput();
             }
         }
+        // Sicherstellen, dass die Super-Admin-Rolle nicht entfernt werden kann
         if ($user->hasRole($this->superAdminRole)) {
             if (!in_array($this->superAdminRole, $submittedRoleNames)) {
                 $submittedRoleNames[] = $this->superAdminRole;
             }
         }
+
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
+
         $oldRank = $user->rank;
         $oldStatus = $user->status;
         $newStatus = $validatedData['status'];
 
-        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert'];
-        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase'];
-
+        // Einstellungsdatum neu setzen, wenn von inaktiv zu aktiv gewechselt wird
+        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert']; // 'inaktiv' hinzugefügt falls verwendet
+        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase']; // Ggf. anpassen
         if (in_array($oldStatus, $inactiveStatuses) && in_array($newStatus, $activeStatuses)) {
-            $validatedData['hire_date'] = now();
+            // Nur setzen, wenn hire_date nicht explizit im Formular gesetzt wurde
+            if (empty($validatedData['hire_date'])) {
+                 $validatedData['hire_date'] = now();
+            }
         }
-        $newRank = 'praktikant';
+
+        // Höchsten Rang neu berechnen
+        $newRank = 'praktikant'; // Standard
         $highestLevel = 0;
         foreach ($submittedRoleNames as $roleName) {
             if (isset($this->rankHierarchy[$roleName]) && $this->rankHierarchy[$roleName] > $highestLevel) {
@@ -352,19 +398,57 @@ class UserController extends Controller
         }
         $validatedData['rank'] = $newRank;
 
-        // Clone User object BEFORE update to pass old state to event if needed
+        // Clone User object BEFORE update
         $userBeforeUpdate = clone $user;
+        // Lade die Module VOR dem Update, um Änderungen zu erkennen
+        $userBeforeUpdate->load('trainingModules');
+        $oldModuleIds = $userBeforeUpdate->trainingModules->pluck('id')->toArray();
 
+        // Rollen und Berechtigungen synchronisieren
         $user->syncRoles($submittedRoleNames);
         $user->syncPermissions($request->permissions ?? []);
 
+        // Stammdaten aktualisieren
         $validatedData['last_edited_at'] = now();
         $validatedData['last_edited_by'] = Auth::user()->name;
         $user->update($validatedData);
 
-        // Reload roles relationship to reflect changes for the event
-        $user->load('roles');
+        // --- Module synchronisieren ---
+        $submittedModuleIds = $request->input('modules', []);
+        $modulesToSync = [];
+        $adminName = Auth::user()->name;
+        $timestamp = now();
 
+        foreach ($submittedModuleIds as $moduleId) {
+            // Prüfen, ob der User das Modul bereits hat, um Daten nicht zu überschreiben
+            $existingPivot = $userBeforeUpdate->trainingModules->find($moduleId)?->pivot;
+
+            if ($existingPivot) {
+                // Wenn Modul schon vorhanden war, behalte bestehende Daten bei,
+                // außer es wird explizit als 'bestanden' markiert (was hier der Fall ist).
+                 $modulesToSync[$moduleId] = [
+                    'status' => 'bestanden', // Status auf 'bestanden' setzen/überschreiben
+                    'completed_at' => $existingPivot->completed_at ?? $timestamp->toDateString(), // Bestehendes Datum behalten, sonst neues
+                    'notes' => $existingPivot->notes // Bestehende Notizen behalten
+                        . "\nManuell geprüft/bestätigt von {$adminName} am " . $timestamp->format('d.m.Y H:i') // Vermerk hinzufügen
+                 ];
+            } else {
+                // Standard-Pivot-Daten für NEU manuell zugewiesene Module
+                $modulesToSync[$moduleId] = [
+                    'status' => 'bestanden',
+                    'completed_at' => $timestamp->toDateString(),
+                    'notes' => "Manuell zugewiesen von {$adminName} am " . $timestamp->format('d.m.Y H:i')
+                ];
+            }
+        }
+        $user->trainingModules()->sync($modulesToSync);
+        // --- Ende Modul-Synchronisation ---
+
+        // Reload relationships to reflect changes for the event/log
+        $user->load(['roles', 'trainingModules']);
+        $newModuleIds = $user->trainingModules->pluck('id')->toArray();
+
+        // Activity Log erstellen
         $description = "Benutzerprofil von '{$user->name}' ({$user->id}) aktualisiert.";
         if ($oldRank !== $newRank) {
             $description .= " Rang geändert: {$oldRank} -> {$newRank}.";
@@ -373,25 +457,47 @@ class UserController extends Controller
             $description .= " Status geändert: {$oldStatus} -> {$validatedData['status']}.";
         }
 
-        ActivityLog::create([
-            'user_id' => Auth::id(), 'log_type' => 'USER_RECORD', 'action' => 'UPDATED',
-            'target_id' => $user->id, 'description' => $description,
-        ]);
-
-        if ($oldRank !== $newRank) {
-            $recordType = $highestLevel > ($this->rankHierarchy[$oldRank] ?? 0) ? 'Beförderung' : 'Degradierung';
-            ServiceRecord::create(['user_id' => $user->id, 'author_id' => Auth::id(), 'type' => $recordType, 'content' => "Rang geändert von '{$oldRank}' zu '{$newRank}'."]);
+        // Log für Moduländerungen
+        $addedModules = array_diff($newModuleIds, $oldModuleIds);
+        $removedModules = array_diff($oldModuleIds, $newModuleIds);
+        if (!empty($addedModules)) {
+            $addedModuleNames = TrainingModule::whereIn('id', $addedModules)->pluck('name')->implode(', ');
+            $description .= " Module manuell hinzugefügt/bestätigt: {$addedModuleNames}.";
+        }
+        if (!empty($removedModules)) {
+            $removedModuleNames = TrainingModule::whereIn('id', $removedModules)->pluck('name')->implode(', ');
+            $description .= " Module entfernt: {$removedModuleNames}.";
         }
 
-        // --- BENACHRICHTIGUNG VIA EVENT ---
+        ActivityLog::create([
+             'user_id' => Auth::id(),
+             'log_type' => 'USER_RECORD', // Typ ggf. anpassen auf 'USER'
+             'action' => 'UPDATED',
+             'target_id' => $user->id,
+             'description' => $description,
+         ]);
+
+        // Service Record bei Beförderung/Degradierung
+        if ($oldRank !== $newRank) {
+            $currentRankLevel = $this->rankHierarchy[$newRank] ?? 0;
+            $oldRankLevel = $this->rankHierarchy[$oldRank] ?? 0;
+            $recordType = $currentRankLevel > $oldRankLevel ? 'Beförderung' : ($currentRankLevel < $oldRankLevel ? 'Degradierung' : 'Rangänderung');
+            ServiceRecord::create([
+                'user_id' => $user->id,
+                'author_id' => Auth::id(),
+                'type' => $recordType,
+                'content' => "Rang geändert von '{$oldRank}' zu '{$newRank}'."
+            ]);
+        }
+
+        // Event auslösen
         PotentiallyNotifiableActionOccurred::dispatch(
             'Admin\UserController@update',
-            $user,                    // Der aktualisierte Benutzer
-            $user,                    // Das zugehörige Modell
-            Auth::user(),             // Der Admin, der die Aktion durchführt
-            ['old_rank' => $oldRank, 'old_status' => $oldStatus] // Optional: Alter Zustand
+            $user,
+            $user,
+            Auth::user(),
+            ['old_rank' => $oldRank, 'old_status' => $oldStatus, 'added_modules' => $addedModules, 'removed_modules' => $removedModules]
         );
-        // ---------------------------------
 
         return redirect()->route('admin.users.index'); // Ohne success
     }
@@ -405,6 +511,7 @@ class UserController extends Controller
             'type' => $request->type, 'content' => $request->content
         ]);
 
+        // Update last edited info
         $user->update(['last_edited_at' => now(), 'last_edited_by' => Auth::user()->name]);
 
         ActivityLog::create([
@@ -413,16 +520,13 @@ class UserController extends Controller
             'description' => "Eintrag (Typ: {$request->type}) zur Personalakte von '{$user->name}' hinzugefügt.",
         ]);
 
-        // --- BENACHRICHTIGUNG VIA EVENT ---
         PotentiallyNotifiableActionOccurred::dispatch(
             'Admin\UserController@addRecord',
-            $user,        // Der Benutzer, dessen Akte bearbeitet wird
-            $record,      // Der neue Akteneintrag als zugehöriges Modell
-            Auth::user()  // Der Admin, der die Aktion durchführt
+            $user,
+            $record,
+            Auth::user()
         );
-        // ---------------------------------
 
         return redirect()->route('admin.users.show', $user); // Ohne success
     }
 }
-
