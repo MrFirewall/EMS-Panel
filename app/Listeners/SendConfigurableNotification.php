@@ -1,26 +1,26 @@
 <?php
 
-namespace App\Listeners;
+namespace App/Listeners;
 
-use App\Events\PotentiallyNotifiableActionOccurred;
-use App\Models\NotificationRule;
-use App\Models\User;
-use App\Models\Evaluation;
-use App\Models\TrainingModule;
-use App\Models\Announcement;
-use App\Models\Exam; // Import sicherstellen
-use App\Models\ExamAttempt; // Import sicherstellen
-use App\Models\Citizen;
-use App\Models\Prescription;
-use App\Models\Report;
-use App\Models\Vacation;
-use App\Models\ServiceRecord;
-use App\Notifications\GeneralNotification;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Log; // Optional für Debugging
-use Illuminate\Support\Facades\Route; // Wichtig für Route::has()
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use App/Events/PotentiallyNotifiableActionOccurred;
+use App/Models/NotificationRule;
+use App/Models/User;
+use App/Models/Evaluation;
+use App/Models/TrainingModule;
+use App/Models/Announcement;
+use App/Models/Exam; // Import sicherstellen
+use App/Models/ExamAttempt; // Import sicherstellen
+use App/Models/Citizen;
+use App/Models/Prescription;
+use App/Models/Report;
+use App/Models/Vacation;
+use App/Models/ServiceRecord;
+use App/Notifications/GeneralNotification;
+use Illuminate\Support/Facades/Notification;
+use Illuminate/Support/Facades/Log; // Optional für Debugging
+use Illuminate/Support/Facades/Route; // Wichtig für Route::has()
+use Spatie\Permission\Models/Permission;
+use Spatie\Permission\Models/Role;
 
 
 class SendConfigurableNotification
@@ -75,24 +75,52 @@ class SendConfigurableNotification
             }
         }
 
-        // Empfänger-Filterung (Akteur ausschließen, außer explizit genannt oder = TriggeringUser)
+        // =====================================================================
+        // === EMPFÄNGER-FILTERUNG (KORRIGIERT) ===
+        // =====================================================================
         $actorUserId = $event->actorUser ? $event->actorUser->id : null;
         $triggeringUserId = ($event->triggeringUser instanceof User) ? $event->triggeringUser->id : null;
 
-        $notifyActorUserRuleExists = $rules->contains(function ($rule) use ($actorUserId) {
-            return $rule->target_type === 'user' && is_array($rule->target_identifier) && in_array((string)$actorUserId, $rule->target_identifier, true); // Strikter Vergleich mit String-Casting
+        // 1. Gibt es eine Regel, die explizit auf die User-ID des Akteurs zielt?
+        $actorTargetedByIdRuleExists = $rules->contains(function ($rule) use ($actorUserId) {
+            return $rule->target_type === 'user' && is_array($rule->target_identifier) && in_array((string)$actorUserId, $rule->target_identifier, true);
         });
+
+        // 2. Gibt es eine Regel, die auf eine Rolle oder Berechtigung zielt, die der Akteur besitzt?
+        $actorTargetedByGroupRuleExists = false;
+        if ($event->actorUser) { // Nur prüfen, wenn es einen Akteur gibt
+            $actorTargetedByGroupRuleExists = $rules->contains(function ($rule) use ($event) {
+                if ($rule->target_type === 'role' && is_array($rule->target_identifier)) {
+                    // Prüft, ob der Akteur mindestens eine der Ziel-Rollen hat
+                    return $event->actorUser->hasAnyRole($rule->target_identifier);
+                }
+                if ($rule->target_type === 'permission' && is_array($rule->target_identifier)) {
+                     // Prüft, ob der Akteur mindestens eine der Ziel-Berechtigungen hat
+                     return collect($rule->target_identifier)->contains(fn($p) => $event->actorUser->can($p));
+                }
+                return false;
+            });
+        }
 
         $uniqueRecipients = $recipients->unique('id');
 
         // Schließe Akteur aus, WENN:
         // 1. Es eine Akteur-ID gibt UND
-        // 2. KEINE Regel explizit den Akteur als Ziel hat UND
-        // 3. Der Akteur NICHT derselbe ist wie der Auslöser (z.B. bei Anträgen)
-        if ($actorUserId && !$notifyActorUserRuleExists && $actorUserId !== $triggeringUserId) {
+        // 2. KEINE Regel explizit auf die Akteur-ID zielt UND
+        // 3. KEINE Regel auf eine Gruppe (Rolle/Permission) zielt, der der Akteur angehört UND
+        // 4. Der Akteur NICHT derselbe ist wie der Auslöser
+        if (
+            $actorUserId &&
+            !$actorTargetedByIdRuleExists &&
+            !$actorTargetedByGroupRuleExists &&
+            $actorUserId !== $triggeringUserId
+        ) {
+            // Log::info("[Notify] Filter Akteur {$actorUserId} heraus für {$event->controllerAction}."); // Debugging
             $uniqueRecipients = $uniqueRecipients->reject(fn ($user) => $user->id === $actorUserId);
+        } else {
+             // Log::info("[Notify] Akteur {$actorUserId} wird NICHT herausgefiltert für {$event->controllerAction}. TargetedByID: {$actorTargetedByIdRuleExists}, TargetedByGroup: {$actorTargetedByGroupRuleExists}, ActorIsTrigger: " . ($actorUserId === $triggeringUserId)); // Debugging
         }
-
+        // === ENDE EMPFÄNGER-FILTERUNG ===
 
         if ($uniqueRecipients->isEmpty()) {
             // Log::info("[Notify] Keine Empfänger (nach Filterung) für {$event->controllerAction}.");
@@ -153,7 +181,7 @@ class SendConfigurableNotification
         elseif ($event->controllerAction === 'AnnouncementController@store' && $event->relatedModel instanceof Announcement) {
              /** @var Announcement $announcement */ $announcement = $event->relatedModel; $ersteller = $event->actorUser;
              $notificationText = "Neue Ankündigung '{$announcement->title}' wurde von {$ersteller->name} veröffentlicht.";
-             $notificationIcon = 'fas fa-bullhorn text-primary'; $notificationUrl = route('dashboard'); // Oder Link zur Ankündigung?
+             $notificationIcon = 'fas fa-bullhorn text-primary'; $notificationUrl = route('dashboard');
         }
         elseif ($event->controllerAction === 'AnnouncementController@update' && $event->relatedModel instanceof Announcement) {
              /** @var Announcement $announcement */ $announcement = $event->relatedModel; $editor = $event->actorUser;
@@ -161,7 +189,6 @@ class SendConfigurableNotification
              $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('dashboard');
         }
         elseif ($event->controllerAction === 'AnnouncementController@destroy') {
-             // relatedModel ist hier das Objekt mit alten Daten oder additionalData nutzen
              $title = $event->additionalData['title'] ?? ($event->relatedModel->title ?? 'Unbekannt'); $deleter = $event->actorUser;
              $notificationText = "Ankündigung '{$title}' wurde von {$deleter->name} gelöscht.";
              $notificationIcon = 'fas fa-trash-alt text-danger'; $notificationUrl = route('admin.announcements.index');
@@ -171,12 +198,12 @@ class SendConfigurableNotification
         elseif ($event->controllerAction === 'Admin\ExamController@store' && $event->relatedModel instanceof Exam) {
              /** @var Exam $exam */ $exam = $event->relatedModel; $creator = $event->actorUser;
              $notificationText = "Neue Prüfungsvorlage '{$exam->title}' wurde von {$creator->name} erstellt.";
-             $notificationIcon = 'fas fa-file-medical-alt text-success'; $notificationUrl = route('admin.exams.show', $exam); // RMB nutzen
+             $notificationIcon = 'fas fa-file-medical-alt text-success'; $notificationUrl = route('admin.exams.show', $exam);
         }
         elseif ($event->controllerAction === 'Admin\ExamController@update' && $event->relatedModel instanceof Exam) {
               /** @var Exam $exam */ $exam = $event->relatedModel; $editor = $event->actorUser;
               $notificationText = "Prüfungsvorlage '{$exam->title}' wurde von {$editor->name} bearbeitet.";
-              $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('admin.exams.show', $exam); // RMB nutzen
+              $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('admin.exams.show', $exam);
         }
         elseif ($event->controllerAction === 'Admin\ExamController@destroy') {
              $title = $event->additionalData['title'] ?? ($event->relatedModel->title ?? 'Unbekannt'); $deleter = $event->actorUser;
@@ -185,139 +212,124 @@ class SendConfigurableNotification
         }
 
         // I-M) Admin Prüfungs-VERSUCH Verwaltung (Admin\ExamAttemptController)
-        elseif ($event->controllerAction === 'Admin\ExamAttemptController@store' && $event->relatedModel instanceof ExamAttempt) { // war ExamController@generateLink / Admin\ExamController@generateLink
+        elseif ($event->controllerAction === 'Admin\ExamAttemptController@store' && $event->relatedModel instanceof ExamAttempt) {
              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
-             /** @var User $user */ $user = $event->triggeringUser; // Der User, FÜR den der Link ist (aus Event übergeben)
-             /** @var User $admin */ $admin = $event->actorUser; // Der Admin, der den Link generiert
+             /** @var User $user */ $user = $event->triggeringUser;
+             /** @var User $admin */ $admin = $event->actorUser;
 
-             // Benachrichtige den User, für den der Link ist (falls Regel existiert)
              $notifyUserRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($user->id, $r->target_identifier));
              if ($notifyUserRuleExists) {
                  $nTextUser = "Ein Prüfungslink für '{$attempt->exam->title}' wurde von {$admin->name} für dich generiert.";
-                 Notification::send($user, new GeneralNotification($nTextUser, 'fas fa-link text-info', route('exams.take', $attempt))); // RMB nutzen
+                 Notification::send($user, new GeneralNotification($nTextUser, 'fas fa-link text-info', route('exams.take', $attempt)));
              }
-             // Benachrichtige andere (Admins etc.)
              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $user->id);
              if ($otherRecipients->isNotEmpty()) {
                  $nTextAdmin = "Prüfungslink für '{$attempt->exam->title}' wurde von {$admin->name} für {$user->name} generiert.";
                  Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-link text-secondary', route('admin.exams.attempts.index')));
              }
-             return; // Beende hier
+             return;
         }
-        elseif ($event->controllerAction === 'Admin\ExamAttemptController@update' && $event->relatedModel instanceof ExamAttempt) { // war ExamController@finalizeEvaluation
+        elseif ($event->controllerAction === 'Admin\ExamAttemptController@update' && $event->relatedModel instanceof ExamAttempt) {
               /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
-              /** @var User $student */ $student = $attempt->user; // Student aus dem Versuch holen
+              /** @var User $student */ $student = $attempt->user;
               /** @var User $admin */ $admin = $event->actorUser;
-              $resultText = $event->additionalData['status_result'] ?? 'unbekannt'; // 'bestanden' / 'nicht_bestanden'
+              $resultText = $event->additionalData['status_result'] ?? 'unbekannt';
               $isPassed = ($resultText === 'bestanden');
               $resultIcon = $isPassed ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
 
-              // Benachrichtige den Schüler (falls Regel existiert)
               $notifyStudentRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($student->id, $r->target_identifier));
               if ($notifyStudentRuleExists) {
                    $nTextStudent = "Deine Prüfung '{$attempt->exam->title}' wurde von {$admin->name} final bewertet: {$resultText} ({$attempt->score}%).";
-                   Notification::send($student, new GeneralNotification($nTextStudent, $resultIcon, route('profile.show'))); // Link zum Profil
+                   Notification::send($student, new GeneralNotification($nTextStudent, $resultIcon, route('profile.show')));
               }
-              // Benachrichtige andere Admins
               $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $student->id);
               if ($otherRecipients->isNotEmpty()) {
                    $nTextAdmin = "Prüfung '{$attempt->exam->title}' von {$student->name} wurde von {$admin->name} final als '{$resultText}' bewertet ({$attempt->score}%).";
-                   Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-clipboard-check text-info', route('admin.exams.attempts.show', $attempt))); // Link zur Admin-Detailansicht
+                   Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-clipboard-check text-info', route('admin.exams.attempts.show', $attempt)));
               }
-              return; // Beende hier
+              return;
         }
-        elseif ($event->controllerAction === 'Admin\ExamAttemptController@resetAttempt' && $event->relatedModel instanceof ExamAttempt) { // war Admin\ExamController@resetAttempt
+        elseif ($event->controllerAction === 'Admin\ExamAttemptController@resetAttempt' && $event->relatedModel instanceof ExamAttempt) {
              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
              /** @var User $resetter */ $resetter = $event->actorUser;
-             /** @var User $student */ $student = $attempt->user; // Student aus dem Versuch holen
+             /** @var User $student */ $student = $attempt->user;
 
-             // Benachrichtige den Schüler (falls Regel existiert)
              $notifyStudentRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($student->id, $r->target_identifier));
              if($notifyStudentRuleExists) {
                 $nTextStudent = "Dein Prüfungsversuch für '{$attempt->exam->title}' wurde von {$resetter->name} zurückgesetzt. Du kannst die Prüfung erneut ablegen.";
                 $nIconStudent = 'fas fa-exclamation-triangle text-warning';
-                $nUrlStudent = route('exams.take', $attempt); // Link zum erneuten Ablegen
+                $nUrlStudent = route('exams.take', $attempt);
                 Notification::send($student, new GeneralNotification($nTextStudent, $nIconStudent, $nUrlStudent));
              }
 
-             // Benachrichtige andere Admins/Prüfer
              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $student->id);
              if($otherRecipients->isNotEmpty()){
                  $nTextAdmin = "Prüfungsversuch für '{$attempt->exam->title}' von {$student->name} wurde von {$resetter->name} zurückgesetzt.";
                  $nIconAdmin = 'fas fa-undo text-warning';
-                 $nUrlAdmin = route('admin.exams.attempts.show', $attempt); // Link zur Admin-Detailansicht
+                 $nUrlAdmin = route('admin.exams.attempts.show', $attempt);
                  Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, $nIconAdmin, $nUrlAdmin));
              }
-            return; // Beende hier
+            return;
         }
-        elseif ($event->controllerAction === 'Admin\ExamAttemptController@setEvaluated' && $event->relatedModel instanceof ExamAttempt) { // war Admin\ExamController@setEvaluated (Schnellbewertung)
+        elseif ($event->controllerAction === 'Admin\ExamAttemptController@setEvaluated' && $event->relatedModel instanceof ExamAttempt) {
              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
              /** @var User $evaluator */ $evaluator = $event->actorUser;
-             /** @var User $student */ $student = $attempt->user; // Student aus dem Versuch holen
+             /** @var User $student */ $student = $attempt->user;
              $isPassed = $attempt->score >= $attempt->exam->pass_mark;
              $resultText = $isPassed ? 'bestanden' : 'nicht bestanden';
              $resultIcon = $isPassed ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
 
-             // Benachrichtige den Schüler (falls Regel existiert)
              $notifyStudentRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($student->id, $r->target_identifier));
              if($notifyStudentRuleExists){
                  $nTextStudent = "Deine Prüfung '{$attempt->exam->title}' wurde von {$evaluator->name} schnell-bewertet: Score {$attempt->score}%.";
                  Notification::send($student, new GeneralNotification($nTextStudent, 'fas fa-info-circle text-info', route('profile.show')));
              }
 
-             // Benachrichtige andere Admins/Prüfer
              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $student->id);
              if($otherRecipients->isNotEmpty()){
                  $nTextAdmin = "Prüfung '{$attempt->exam->title}' von {$student->name} wurde von {$evaluator->name} schnell-bewertet (Score: {$attempt->score}%).";
                  Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-clipboard-check text-info', route('admin.exams.attempts.show', $attempt)));
              }
-             return; // Beende hier
+             return;
         }
-        elseif ($event->controllerAction === 'Admin\ExamAttemptController@sendLink' && $event->relatedModel instanceof ExamAttempt) { // war Admin\ExamController@sendLink
+        elseif ($event->controllerAction === 'Admin\ExamAttemptController@sendLink' && $event->relatedModel instanceof ExamAttempt) {
              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
-             /** @var User $user */ $user = $attempt->user; // Der User, FÜR den der Link ist
-             /** @var User $admin */ $admin = $event->actorUser; // Der Admin, der den Link generiert
+             /** @var User $user */ $user = $attempt->user;
+             /** @var User $admin */ $admin = $event->actorUser;
 
-             // Benachrichtige den User, für den der Link ist (falls Regel existiert)
              $notifyUserRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($user->id, $r->target_identifier));
              if($notifyUserRuleExists) {
                  $nTextUser = "Ein neuer Prüfungslink für '{$attempt->exam->title}' wurde von {$admin->name} für dich generiert.";
-                 Notification::send($user, new GeneralNotification($nTextUser, 'fas fa-link text-info', route('exams.take', $attempt))); // RMB nutzen
+                 Notification::send($user, new GeneralNotification($nTextUser, 'fas fa-link text-info', route('exams.take', $attempt)));
              }
 
-              // Benachrichtige andere (Admins etc.)
              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $user->id);
              if($otherRecipients->isNotEmpty()){
                  $nTextAdmin = "Neuer Prüfungslink für '{$attempt->exam->title}' wurde von {$admin->name} für {$user->name} generiert.";
                  Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-link text-secondary', route('admin.exams.attempts.show', $attempt)));
              }
-             return; // Beende hier
+             return;
         }
-         // NEU: Löschen eines Versuchs (Admin\ExamAttemptController@destroy)
          elseif ($event->controllerAction === 'Admin\ExamAttemptController@destroy') {
-             // relatedModel ist hier das Objekt mit alten Daten
              $attemptId = $event->additionalData['id'] ?? ($event->relatedModel->id ?? 'Unbekannt');
              $examTitle = $event->additionalData['exam_title'] ?? ($event->relatedModel->exam->title ?? 'Unbekannte Prüfung');
              $studentName = $event->additionalData['user_name'] ?? ($event->relatedModel->user->name ?? 'Unbekannter User');
              /** @var User $deleter */ $deleter = $event->actorUser;
              $notificationText = "Prüfungsversuch #{$attemptId} ('{$examTitle}') von {$studentName} wurde von {$deleter->name} endgültig gelöscht.";
              $notificationIcon = 'fas fa-trash-alt text-danger'; $notificationUrl = route('admin.exams.attempts.index');
-             // Weiter zu Notification::send am Ende (nur Admins benachrichtigen)
+              // Weiter zu Notification::send
          }
 
         // N-O) User Prüfungs-VERSUCH Aktionen (ExamAttemptController)
-        elseif ($event->controllerAction === 'ExamAttemptController@update' && $event->relatedModel instanceof ExamAttempt) { // war ExamController@submit
+        elseif ($event->controllerAction === 'ExamAttemptController@update' && $event->relatedModel instanceof ExamAttempt) {
               /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
-              /** @var User $user */ $user = $event->triggeringUser; // Ist hier der Actor UND der Triggering User
+              /** @var User $user */ $user = $event->triggeringUser;
 
-              // Benachrichtige Admins/Prüfer (alle Empfänger laut Regeln)
               if ($uniqueRecipients->isNotEmpty()) {
                    $nText = "{$user->name} hat Prüfung '{$attempt->exam->title}' eingereicht (Auto-Score: {$attempt->score}%).";
-                   Notification::send($uniqueRecipients, new GeneralNotification($nText, 'fas fa-file-alt text-warning', route('admin.exams.attempts.show', $attempt))); // Link zur Admin-Ansicht
+                   Notification::send($uniqueRecipients, new GeneralNotification($nText, 'fas fa-file-alt text-warning', route('admin.exams.attempts.show', $attempt)));
               }
-              // Optional: Benachrichtige den User selbst (falls Regel existiert)
-              // $notifyUserRuleExists = $rules->contains(fn($r) => ...); if($notifyUserRuleExists) { ... }
-              return; // Beende hier
+              return;
         }
 
         // P-Q) Berechtigungen & Rollen (Admin)
@@ -339,12 +351,12 @@ class SendConfigurableNotification
         elseif ($event->controllerAction === 'Admin\RoleController@store' && $event->relatedModel instanceof Role) {
              /** @var Role $role */ $role = $event->relatedModel; $creator = $event->actorUser;
              $notificationText = "Neue Rolle '{$role->name}' wurde von {$creator->name} erstellt.";
-             $notificationIcon = 'fas fa-user-shield text-success'; $notificationUrl = route('admin.roles.index'); // Link zur Übersicht
+             $notificationIcon = 'fas fa-user-shield text-success'; $notificationUrl = route('admin.roles.index');
         }
         elseif ($event->controllerAction === 'Admin\RoleController@update' && $event->relatedModel instanceof Role) {
              /** @var Role $role */ $role = $event->relatedModel; $editor = $event->actorUser;
              $notificationText = "Rolle '{$role->name}' wurde von {$editor->name} bearbeitet.";
-             $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('admin.roles.index'); // Link zur Übersicht
+             $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('admin.roles.index');
         }
         elseif ($event->controllerAction === 'Admin\RoleController@destroy') {
              $name = $event->additionalData['name'] ?? ($event->relatedModel->name ?? 'Unbekannt'); $deleter = $event->actorUser;
@@ -356,12 +368,11 @@ class SendConfigurableNotification
         elseif ($event->controllerAction === 'Admin\UserController@store' && $event->relatedModel instanceof User) {
              /** @var User $newUser */ $newUser = $event->relatedModel; $creator = $event->actorUser;
              $notificationText = "Neuer Benutzer '{$newUser->name}' wurde von {$creator->name} angelegt.";
-             $notificationIcon = 'fas fa-user-plus text-success'; $notificationUrl = route('admin.users.show', $newUser); // RMB nutzen
+             $notificationIcon = 'fas fa-user-plus text-success'; $notificationUrl = route('admin.users.show', $newUser);
         }
         elseif ($event->controllerAction === 'Admin\UserController@update' && $event->relatedModel instanceof User) {
              /** @var User $editedUser */ $editedUser = $event->relatedModel; $editor = $event->actorUser;
              $notificationText = "Profil von '{$editedUser->name}' wurde von {$editor->name} bearbeitet.";
-             // Prüfen, ob Module geändert wurden (aus additionalData)
              $addedModules = $event->additionalData['added_modules'] ?? [];
              $removedModules = $event->additionalData['removed_modules'] ?? [];
              if(!empty($addedModules) || !empty($removedModules)){
@@ -370,26 +381,28 @@ class SendConfigurableNotification
              } else {
                  $notificationIcon = 'fas fa-user-edit text-info';
              }
-             $notificationUrl = route('admin.users.show', $editedUser); // RMB nutzen
+             $notificationUrl = route('admin.users.show', $editedUser);
+             // Weiter zu Notification::send
         }
         elseif ($event->controllerAction === 'Admin\UserController@addRecord' && $event->relatedModel instanceof ServiceRecord) {
              /** @var ServiceRecord $record */ $record = $event->relatedModel;
-             /** @var User $targetUser */ $targetUser = $event->triggeringUser; // Der User, der den Eintrag erhält
+             /** @var User $targetUser */ $targetUser = $event->triggeringUser;
              /** @var User $author */ $author = $event->actorUser;
              $notificationText = "Neuer Akteneintrag ('{$record->type}') wurde von {$author->name} für {$targetUser->name} hinzugefügt.";
-             $notificationIcon = 'fas fa-folder-plus text-primary'; $notificationUrl = route('admin.users.show', $targetUser); // RMB nutzen
+             $notificationIcon = 'fas fa-folder-plus text-primary'; $notificationUrl = route('admin.users.show', $targetUser);
+             // Weiter zu Notification::send
         }
 
         // U-W) Patientenakten (CitizenController)
         elseif ($event->controllerAction === 'CitizenController@store' && $event->relatedModel instanceof Citizen) {
              /** @var Citizen $citizen */ $citizen = $event->relatedModel; $creator = $event->actorUser;
              $notificationText = "Neue Patientenakte für '{$citizen->name}' wurde von {$creator->name} erstellt.";
-             $notificationIcon = 'fas fa-address-book text-success'; $notificationUrl = route('citizens.show', $citizen); // RMB nutzen
+             $notificationIcon = 'fas fa-address-book text-success'; $notificationUrl = route('citizens.show', $citizen);
         }
         elseif ($event->controllerAction === 'CitizenController@update' && $event->relatedModel instanceof Citizen) {
               /** @var Citizen $citizen */ $citizen = $event->relatedModel; $editor = $event->actorUser;
               $notificationText = "Patientenakte von '{$citizen->name}' wurde von {$editor->name} bearbeitet.";
-              $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('citizens.show', $citizen); // RMB nutzen
+              $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('citizens.show', $citizen);
         }
         elseif ($event->controllerAction === 'CitizenController@destroy') {
              $name = $event->additionalData['name'] ?? ($event->relatedModel->name ?? 'Unbekannt'); $deleter = $event->actorUser;
@@ -401,18 +414,18 @@ class SendConfigurableNotification
         elseif ($event->controllerAction === 'DutyStatusController@toggle.on_duty' && $event->triggeringUser instanceof User) {
              /** @var User $user */ $user = $event->triggeringUser;
              $notificationText = "{$user->name} hat den Dienst angetreten.";
-             $notificationIcon = 'fas fa-user-clock text-success'; $notificationUrl = route('admin.users.show', $user); // RMB nutzen
+             $notificationIcon = 'fas fa-user-clock text-success'; $notificationUrl = route('admin.users.show', $user);
         }
         elseif ($event->controllerAction === 'DutyStatusController@toggle.off_duty' && $event->triggeringUser instanceof User) {
              /** @var User $user */ $user = $event->triggeringUser;
              $notificationText = "{$user->name} hat den Dienst beendet.";
-             $notificationIcon = 'fas fa-user-clock text-danger'; $notificationUrl = route('admin.users.show', $user); // RMB nutzen
+             $notificationIcon = 'fas fa-user-clock text-danger'; $notificationUrl = route('admin.users.show', $user);
         }
 
         // CC-DD) Rezeptverwaltung (PrescriptionController)
         elseif ($event->controllerAction === 'PrescriptionController@store' && $event->relatedModel instanceof Prescription) {
               /** @var Prescription $prescription */ $prescription = $event->relatedModel;
-              /** @var Citizen|null $citizen */ $citizen = $event->triggeringUser; // Triggering ist hier der Citizen oder null
+              /** @var Citizen|null $citizen */ $citizen = $event->triggeringUser;
               /** @var User $doctor */ $doctor = $event->actorUser;
               $citizenName = ($citizen instanceof Citizen) ? $citizen->name : 'Unbekannt';
               $notificationText = "Neues Rezept ('{$prescription->medication}') wurde von {$doctor->name} für {$citizenName} ausgestellt.";
@@ -434,12 +447,12 @@ class SendConfigurableNotification
             /** @var Report $report */ $report = $event->relatedModel; $creator = $event->actorUser;
             $patientName = $report->patient_name ?? 'Unbekannt';
             $notificationText = "Neuer Einsatzbericht ('{$report->title}') wurde von {$creator->name} erstellt (Patient: {$patientName}).";
-            $notificationIcon = 'fas fa-file-medical text-success'; $notificationUrl = route('reports.show', $report); // RMB
+            $notificationIcon = 'fas fa-file-medical text-success'; $notificationUrl = route('reports.show', $report);
         }
         elseif ($event->controllerAction === 'ReportController@update' && $event->relatedModel instanceof Report) {
             /** @var Report $report */ $report = $event->relatedModel; $editor = $event->actorUser;
             $notificationText = "Einsatzbericht '{$report->title}' wurde von {$editor->name} bearbeitet.";
-            $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('reports.show', $report); // RMB
+            $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('reports.show', $report);
         }
         elseif ($event->controllerAction === 'ReportController@destroy') {
             $title = $event->additionalData['title'] ?? ($event->relatedModel->title ?? 'Unbekannt');
@@ -453,21 +466,19 @@ class SendConfigurableNotification
         elseif ($event->controllerAction === 'TrainingModuleController@store' && $event->relatedModel instanceof TrainingModule) {
              /** @var TrainingModule $module */ $module = $event->relatedModel; $creator = $event->actorUser;
              $notificationText = "Neues Ausbildungsmodul '{$module->name}' wurde von {$creator->name} erstellt.";
-             $notificationIcon = 'fas fa-graduation-cap text-success'; $notificationUrl = route('modules.show', $module); // RMB
+             $notificationIcon = 'fas fa-graduation-cap text-success'; $notificationUrl = route('modules.show', $module);
         }
         elseif ($event->controllerAction === 'TrainingModuleController@update' && $event->relatedModel instanceof TrainingModule) {
              /** @var TrainingModule $module */ $module = $event->relatedModel; $editor = $event->actorUser;
              $notificationText = "Ausbildungsmodul '{$module->name}' wurde von {$editor->name} bearbeitet.";
-             $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('modules.show', $module); // RMB
+             $notificationIcon = 'fas fa-edit text-info'; $notificationUrl = route('modules.show', $module);
         }
         elseif ($event->controllerAction === 'TrainingModuleController@destroy') {
              $name = $event->additionalData['name'] ?? ($event->relatedModel->name ?? 'Unbekannt'); $deleter = $event->actorUser;
              $notificationText = "Ausbildungsmodul '{$name}' wurde von {$deleter->name} gelöscht.";
              $notificationIcon = 'fas fa-trash-alt text-danger'; $notificationUrl = route('modules.index');
         }
-        // elseif ($event->controllerAction === 'TrainingModuleController@signUp' ... ) {
-        //     // Diese Aktion erstellt jetzt eine Evaluation, daher greift Block A)
-        // }
+        // elseif ($event->controllerAction === 'TrainingModuleController@signUp' ... ) // Covered by EvaluationController@store
 
         // MM-NN) Urlaubsanträge (VacationController)
         elseif ($event->controllerAction === 'VacationController@store' && $event->relatedModel instanceof Vacation) {
@@ -477,26 +488,24 @@ class SendConfigurableNotification
         }
         elseif ($event->controllerAction === 'VacationController@updateStatus' && $event->relatedModel instanceof Vacation) {
              /** @var Vacation $vacation */ $vacation = $event->relatedModel;
-             /** @var User $user */ $user = $event->triggeringUser; // Der User, dessen Antrag bearbeitet wurde
-             /** @var User $admin */ $admin = $event->actorUser; // Der Admin
-             $status = $event->additionalData['status'] ?? 'unbekannt'; // 'approved' / 'rejected'
+             /** @var User $user */ $user = $event->triggeringUser;
+             /** @var User $admin */ $admin = $event->actorUser;
+             $status = $event->additionalData['status'] ?? 'unbekannt';
              $statusText = $status === 'approved' ? 'genehmigt' : 'abgelehnt';
              $statusIcon = $status === 'approved' ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
 
-             // Benachrichtige den Antragsteller (falls Regel existiert)
              $notifyUserRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($user->id, $r->target_identifier));
              if ($notifyUserRuleExists) {
                   $nTextU = "Dein Urlaubsantrag ({$vacation->start_date->format('d.m.Y')} - {$vacation->end_date->format('d.m.Y')}) wurde von {$admin->name} {$statusText}.";
-                  Notification::send($user, new GeneralNotification($nTextU, $statusIcon, route('profile.show'))); // Link zum eigenen Profil
+                  Notification::send($user, new GeneralNotification($nTextU, $statusIcon, route('profile.show')));
              }
 
-             // Benachrichtige andere Admins etc.
              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $user->id);
              if ($otherRecipients->isNotEmpty()) {
                   $nTextA = "Urlaubsantrag von {$user->name} wurde von {$admin->name} {$statusText}.";
                   Notification::send($otherRecipients, new GeneralNotification($nTextA, 'fas fa-calendar-check text-info', route('admin.vacations.index')));
              }
-             return; // Beende hier
+             return;
         }
 
 
