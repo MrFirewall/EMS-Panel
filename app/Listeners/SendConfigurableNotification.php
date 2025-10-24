@@ -1,26 +1,26 @@
 <?php
 
-namespace App/Listeners;
+namespace App\Listeners; // Corrected line
 
-use App/Events/PotentiallyNotifiableActionOccurred;
-use App/Models/NotificationRule;
-use App/Models/User;
-use App/Models/Evaluation;
-use App/Models/TrainingModule;
-use App/Models/Announcement;
-use App/Models/Exam; // Import sicherstellen
-use App/Models/ExamAttempt; // Import sicherstellen
-use App/Models/Citizen;
-use App/Models/Prescription;
-use App/Models/Report;
-use App/Models/Vacation;
-use App/Models/ServiceRecord;
-use App/Notifications/GeneralNotification;
-use Illuminate\Support/Facades/Notification;
-use Illuminate/Support/Facades/Log; // Optional für Debugging
-use Illuminate/Support/Facades/Route; // Wichtig für Route::has()
-use Spatie\Permission\Models/Permission;
-use Spatie\Permission\Models/Role;
+use App\Events\PotentiallyNotifiableActionOccurred;
+use App\Models\NotificationRule;
+use App\Models\User;
+use App\Models\Evaluation;
+use App\Models\TrainingModule;
+use App\Models\Announcement;
+use App\Models\Exam; // Import sicherstellen
+use App\Models\ExamAttempt; // Import sicherstellen
+use App\Models\Citizen;
+use App\Models\Prescription;
+use App\Models\Report;
+use App\Models\Vacation;
+use App\Models\ServiceRecord;
+use App\Notifications\GeneralNotification;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log; // Optional für Debugging
+use Illuminate\Support\Facades\Route; // Wichtig für Route::has()
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 
 class SendConfigurableNotification
