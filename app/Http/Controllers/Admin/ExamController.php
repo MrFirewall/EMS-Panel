@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
-use App\Models\TrainingModule;
+// use App\Models\TrainingModule; // Nicht mehr benötigt
 use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth;
 use App\Events\PotentiallyNotifiableActionOccurred;
-use App\Services\ExamService; // NEU
-use App\Http\Requests\Admin\StoreExamRequest; // NEU
-use App\Http\Requests\Admin\UpdateExamRequest; // NEU
+use App\Services\ExamService;
+use App\Http\Requests\Admin\StoreExamRequest;
+use App\Http\Requests\Admin\UpdateExamRequest;
 
 class ExamController extends Controller
 {
@@ -25,14 +25,14 @@ class ExamController extends Controller
 
     public function index()
     {
-        $exams = Exam::with('trainingModule')->withCount('questions')->latest()->paginate(15);
+        $exams = Exam::withCount('questions')->latest()->paginate(15); // Ohne trainingModule
         return view('admin.exams.index', compact('exams'));
     }
 
     public function create()
     {
-        $modules = TrainingModule::doesntHave('exam')->orderBy('name')->get();
-        return view('admin.exams.create', compact('modules'));
+        // Keine Module mehr nötig
+        return view('admin.exams.create'); // Ohne compact('modules')
     }
 
     public function store(StoreExamRequest $request)
@@ -50,44 +50,43 @@ class ExamController extends Controller
 
     public function show(Exam $exam)
     {
-        $exam->load('trainingModule', 'questions.options');
+        $exam->load('questions.options'); // Ohne trainingModule
         return view('admin.exams.show', compact('exam'));
     }
 
     public function edit(Exam $exam)
     {
         $exam->load('questions.options');
+        // Keine Module mehr nötig
 
-        $modules = TrainingModule::whereDoesntHave('exam')
-                                 ->orWhere('id', $exam->training_module_id)
-                                 ->orderBy('name')
-                                 ->get();
-        
-        // Die Logik zur Aufbereitung der JSON-Daten für Vue/JS bleibt
+        // Logik zur Aufbereitung der JSON-Daten für Vue/JS
         $initialData = old('questions');
-        if (!$initialData) {
+        if (!$initialData && $exam->relationLoaded('questions')) { // Prüfen ob Relation geladen ist
             $initialData = $exam->questions->map(function ($q) {
                 $data = [
                     'id' => $q->id,
                     'question_text' => $q->question_text,
                     'type' => $q->type,
-                    'options' => $q->options->map(function($o) {
+                    'options' => $q->relationLoaded('options') ? $q->options->map(function($o) { // Prüfen ob Relation geladen
                         return [
                             'id' => $o->id, 'option_text' => $o->option_text, 'is_correct' => (bool)$o->is_correct
                         ];
-                    })->all()
+                    })->all() : [] // Fallback auf leeres Array
                 ];
-                if ($q->type === 'single_choice') {
+                if ($q->type === 'single_choice' && $q->relationLoaded('options')) { // Prüfen ob Relation geladen
                     $correctIndex = $q->options->search(fn($o) => $o->is_correct);
                     $data['correct_option'] = $correctIndex !== false ? $correctIndex : null;
                 }
                 return $data;
             })->all();
+        } elseif (!$initialData) {
+             $initialData = []; // Fallback, falls Fragen nicht geladen wurden
         }
-        $questionsJson = json_encode($initialData ?? []);
+        $questionsJson = json_encode($initialData ?? []); // Sicherstellen, dass $initialData existiert
 
-        return view('admin.exams.edit', compact('exam', 'modules', 'questionsJson'));
+        return view('admin.exams.edit', compact('exam', 'questionsJson')); // Ohne 'modules'
     }
+
 
     public function update(UpdateExamRequest $request, Exam $exam)
     {
@@ -106,14 +105,19 @@ class ExamController extends Controller
     {
         $examTitle = $exam->title;
         $examId = $exam->id;
-        $deletedExamData = $exam->toArray(); 
+        $deletedExamData = $exam->toArray(); // Event-Daten sichern
         $exam->delete();
 
         ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'DELETED', 'target_id' => $examId, 'description' => "Prüfung '{$examTitle}' wurde gelöscht."]);
 
         PotentiallyNotifiableActionOccurred::dispatch(
-            'Admin\ExamController@destroy', Auth::user(), (object) $deletedExamData, Auth::user()
+            'Admin\ExamController@destroy',
+            Auth::user(),
+            (object) $deletedExamData, // Als Objekt übergeben
+            Auth::user(),
+            ['title' => $examTitle] // Zusätzliche Daten für den Listener
         );
+
 
         return redirect()->route('admin.exams.index');
     }
