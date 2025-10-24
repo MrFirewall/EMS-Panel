@@ -44,7 +44,7 @@
                             <a href="{{ route('admin.exams.attempts.index') }}" class="btn btn-default"><i class="fas fa-arrow-left"></i> Zurück zur Übersicht</a>
                         </div>
                     @else
-                        <form action="{{ route('exams.finalize', $attempt) }}" method="POST">
+                        <form action="{{ route('admin.exams.attempts.update', $attempt) }}" method="POST">
                             @csrf
                             <div class="card-body">
                                 <p class="lead text-danger">Achtung: Dies ist der finale Schritt und setzt den Modulstatus des Prüflings!</p>
