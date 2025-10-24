@@ -82,14 +82,16 @@
                                         <td>{{ $attempt->completed_at ? $attempt->completed_at->format('d.m.Y H:i') : 'N/A' }}</td>
                                         <td>
                                             {{-- 1. Ergebnis anzeigen --}}
-                                            <a href="{{ route('exams.result', $attempt) }}" class="btn btn-sm btn-outline-info" title="Ergebnis ansehen / Bewerten">
+                                            {{-- ALT: route('exams.result', $attempt) --}}
+                                            <a href="{{ route('admin.exams.attempts.show', $attempt) }}" class="btn btn-sm btn-outline-info" title="Ergebnis ansehen / Bewerten">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             
                                             {{-- 2. Link senden (immer möglich, wenn nicht evaluated) --}}
                                             @can('sendLink', $attempt)
                                                 @if ($attempt->status !== 'evaluated')
-                                                    <form action="{{ route('admin.exams.send.link', $attempt) }}" method="POST" class="d-inline">
+                                                    {{-- ALT: route('admin.exams.send.link', $attempt) --}}
+                                                    <form action="{{ route('admin.exams.attempts.sendLink', $attempt) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-secondary" title="Link erneut senden">
                                                             <i class="fas fa-link"></i>
@@ -110,7 +112,8 @@
                                             {{-- 4. Zurücksetzen (immer möglich, wenn nicht evaluated) --}}
                                             @can('resetAttempt', $attempt)
                                                 @if ($attempt->status !== 'evaluated')
-                                                    <form action="{{ route('admin.exams.reset.attempt', $attempt) }}" method="POST" class="d-inline">
+                                                    {{-- ALT: route('admin.exams.reset.attempt', $attempt) --}}
+                                                    <form action="{{ route('admin.exams.attempts.reset', $attempt) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Versuch zurücksetzen" onclick="return confirm('Achtung: Alle Antworten werden gelöscht und der Link wird wieder nutzbar. Fortfahren?');">
                                                             <i class="fas fa-undo"></i>
@@ -137,7 +140,8 @@
     {{-- Modal für Manuelle Bewertung --}}
     <div class="modal fade" id="evaluateModal{{ $attempt->id }}" tabindex="-1" role="dialog" aria-labelledby="evaluateModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
-            <form action="{{ route('admin.exams.set.evaluated', $attempt) }}" method="POST">
+            {{-- ALT: route('admin.exams.set.evaluated', $attempt) --}}
+            <form action="{{ route('admin.exams.attempts.setEvaluated', $attempt) }}" method="POST">
                 @csrf
                 <div class="modal-content">
                     <div class="modal-header bg-success">
