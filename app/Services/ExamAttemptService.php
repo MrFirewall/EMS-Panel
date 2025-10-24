@@ -144,4 +144,18 @@ class ExamAttemptService
         
         return $attempt;
     }
+
+    /**
+     * Löscht einen Prüfungsversuch und alle zugehörigen Antworten.
+     * VORSICHT: Dies ist ein destruktiver Vorgang.
+     */
+    public function deleteAttempt(ExamAttempt $attempt): void
+    {
+        DB::transaction(function () use ($attempt) {
+            // Erst die Antworten löschen
+            $attempt->answers()->delete();
+            // Dann den Versuch selbst löschen
+            $attempt->delete();
+        });
+    }
 }
