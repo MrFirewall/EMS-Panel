@@ -35,7 +35,7 @@
                         <thead>
                             <tr>
                                 <th>Titel</th>
-                                <th>Zugehöriges Modul</th>
+                                {{-- Zugehöriges Modul Spalte entfernt --}}
                                 <th>Fragen</th>
                                 <th class="text-right">Aktionen</th>
                             </tr>
@@ -44,12 +44,12 @@
                             @forelse($exams as $exam)
                             <tr>
                                 <td><strong>{{ $exam->title }}</strong></td>
-                                <td>{{ $exam->trainingModule->name ?? 'N/A' }}</td>
+                                {{-- Zugehöriges Modul Zelle entfernt --}}
                                 <td>{{ $exam->questions_count }}</td>
                                 <td class="text-right">
                                     <a href="{{ route('admin.exams.show', $exam) }}" class="btn btn-sm btn-outline-info" title="Details anzeigen"><i class="fas fa-eye"></i></a>
                                     <a href="{{ route('admin.exams.edit', $exam) }}" class="btn btn-sm btn-outline-warning" title="Prüfung bearbeiten"><i class="fas fa-edit"></i></a>
-                                    <form action="{{ route('admin.exams.destroy', $exam) }}" method="POST" class="d-inline" onsubmit="return confirm('Sind Sie sicher, dass Sie diese Prüfung löschen möchten?');">
+                                    <form action="{{ route('admin.exams.destroy', $exam) }}" method="POST" class="d-inline" onsubmit="return confirm('Sind Sie sicher, dass Sie diese Prüfung löschen möchten? Alle zugehörigen Versuche werden ebenfalls gelöscht!');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Prüfung löschen"><i class="fas fa-trash"></i></button>
@@ -57,7 +57,7 @@
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="4" class="text-center p-3 text-muted">Es wurden noch keine Prüfungen erstellt.</td></tr>
+                            <tr><td colspan="3" class="text-center p-3 text-muted">Es wurden noch keine Prüfungen erstellt.</td></tr> {{-- Colspan angepasst --}}
                             @endforelse
                         </tbody>
                     </table>
