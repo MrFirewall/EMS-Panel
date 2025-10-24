@@ -5,6 +5,17 @@ use App\Models\User;
 
 class ExamAttemptPolicy
 {
+
+    /**
+     * Determine whether the user can view any exam attempts (index page).
+     */
+    public function viewAny(User $user): bool
+    {
+        // Nur Admins oder User mit der Berechtigung 'exams.manage' 
+        // dürfen die Übersichtsseite aller Versuche sehen.
+        return $user->hasRole('Super-Admin') || $user->can('exams.manage');
+    }
+    
     /**
      * Determine whether the user can take the given exam attempt.
      */
