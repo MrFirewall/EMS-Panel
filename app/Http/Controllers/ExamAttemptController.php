@@ -43,7 +43,7 @@ class ExamAttemptController extends Controller
     public function update(SubmitExamRequest $request, ExamAttempt $attempt)
     {
         // Autorisierung (submit) geschieht bereits im Form Request
-        
+
         $attempt = $this->attemptService->submitAttempt(
             $attempt,
             $request->validated()['answers']
@@ -69,7 +69,7 @@ class ExamAttemptController extends Controller
         // Leitet auf die generische Bestätigungsseite um
         return redirect()->route('exams.submitted');
     }
-    
+
     /**
      * Zeigt die generische "Eingereicht"-Seite.
      */
