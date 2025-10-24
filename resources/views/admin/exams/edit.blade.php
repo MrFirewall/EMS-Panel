@@ -30,21 +30,7 @@
                     <div class="card card-warning card-outline sticky-top">
                         <div class="card-header"><h3 class="card-title">Prüfungsdetails</h3></div>
                         <div class="card-body">
-                           <div class="form-group">
-                                <label for="training_module_id">Zugehöriges Modul</label>
-                                <select name="training_module_id" class="form-control @error('training_module_id') is-invalid @enderror" required>
-                                    {{-- Zeige das aktuell zugewiesene Modul immer an (auch wenn es voll ist) --}}
-                                    <option value="{{ $exam->training_module_id }}">{{ $exam->trainingModule->name }}</option>
-                                    
-                                    @foreach($modules as $module)
-                                        {{-- Zeige die anderen verfügbaren Module an --}}
-                                        @if($module->id !== $exam->training_module_id)
-                                        <option value="{{ $module->id }}" {{ old('training_module_id') == $module->id ? 'selected' : '' }}>{{ $module->name }}</option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                                @error('training_module_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
+                           {{-- Modul-Dropdown entfernt --}}
                             <div class="form-group">
                                 <label for="title">Titel der Prüfung</label>
                                 <input type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title', $exam->title) }}" required>
@@ -57,7 +43,8 @@
                             </div>
                             <div class="form-group">
                                 <label for="description">Beschreibung / Anweisungen</label>
-                                <textarea name="description" class="form-control" rows="3">{{ old('description', $exam->description) }}</textarea>
+                                <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ old('description', $exam->description) }}</textarea>
+                                @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
                     </div>
@@ -75,6 +62,9 @@
                             </div>
                         </div>
                         <div class="card-body" id="questions-container">
+                            {{-- Fehlermeldungen für Fragen anzeigen --}}
+                            @error('questions') <div class="alert alert-danger">{{ $message }}</div> @enderror
+                            @error('questions.*') <div class="alert alert-danger">{{ $message }}</div> @enderror
                             {{-- Container für dynamische Fragen --}}
                         </div>
                         <div class="card-footer">
@@ -90,22 +80,22 @@
 @endsection
 
 @push('scripts')
+{{-- JavaScript für dynamische Fragen (identisch zu create.blade.php, aber mit initialData) --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let questionIndex = 0;
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
 
-    // KORRIGIERT: Daten werden jetzt sauber als JSON vom Controller übergeben
-    // {!! $questionsJson !!} rendert den JSON-String direkt ins JavaScript
-    const initialData = {!! $questionsJson !!};
+    // Daten werden jetzt sauber als JSON vom Controller übergeben
+    const initialData = {!! $questionsJson !!}; // Kommt vom Controller
 
     function addQuestion(questionData = null) {
-        const qIndex = questionIndex;
+        const qIndex = questionIndex; // Aktuellen Index sichern
         const questionId = `q${qIndex}`;
         const isNew = questionData === null;
-        
-        // Daten sicher abrufen, auch wenn sie neu sind
+
+        // Daten sicher abrufen
         const qId = questionData?.id || '';
         const qText = questionData?.question_text || '';
         const qType = questionData?.type || 'single_choice';
@@ -113,7 +103,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionHtml = `
             <div class="question-block card card-outline card-secondary mb-3" id="${questionId}">
                 <div class="card-header">
-                    <h3 class="card-title">${isNew ? 'Neue Frage' : `Frage ${qIndex + 1}`}</h3>
+                     {{-- Titel anpassen für bestehende Fragen --}}
+                    <h3 class="card-title">${qId ? `Frage ${qIndex + 1}` : 'Neue Frage'}</h3>
                     <div class="card-tools"><button type="button" class="btn btn-sm btn-danger remove-question-btn"><i class="fas fa-trash"></i></button></div>
                 </div>
                 <div class="card-body">
@@ -137,78 +128,81 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const newQuestionBlock = document.getElementById(questionId);
         const optionsContainer = newQuestionBlock.querySelector('.options-container');
-        
+
         // Fülle die Optionen basierend auf den `questionData`
-        if (questionData?.options && questionData.options.length > 0) {
-            
+        if (questionData?.options && Array.isArray(questionData.options) && questionData.options.length > 0) {
             // `correct_option` ist der *Index* (0, 1, 2...) aus old() oder DB-Transformation
-            const correctRadioIndex = questionData.correct_option !== undefined ? parseInt(questionData.correct_option) : null;
+            const correctRadioIndex = (questionData.correct_option !== undefined && questionData.correct_option !== null) ? parseInt(questionData.correct_option) : null;
 
             questionData.options.forEach((optionData, oIndex) => {
                 // Setze 'is_correct' für single_choice-Fragen basierend auf dem Index
-                if (qType === 'single_choice') {
-                    // Wenn 'correct_option' (der Index) existiert, nutze ihn.
-                    if (correctRadioIndex !== null) {
-                        optionData.is_correct = (oIndex === correctRadioIndex);
-                    }
-                    // 'is_correct' aus der DB-Transformation wird ebenfalls berücksichtigt
+                if (qType === 'single_choice' && correctRadioIndex !== null) {
+                    optionData.is_correct = (oIndex === correctRadioIndex);
                 }
                 addOption(qIndex, optionsContainer, qType, optionData);
             });
         } else if (isNew && qType !== 'text_field') {
-            // Füge 2 leere Optionen für eine neue Auswahl-Frage hinzu
+            // Füge 2 leere Optionen für eine *neue* Auswahl-Frage hinzu
             addOption(qIndex, optionsContainer, 'single_choice');
             addOption(qIndex, optionsContainer, 'single_choice');
         }
-        
-        questionIndex++;
+
+        questionIndex++; // Index für die nächste Frage erhöhen
     }
 
-    function addOption(qIndex, optionsContainer, type, optionData = null) {
+
+     function addOption(qIndex, optionsContainer, type, optionData = null) {
         const optionIndex = optionsContainer.children.length;
         const inputType = type === 'single_choice' ? 'radio' : 'checkbox';
-        
+
         const optId = optionData?.id || '';
         const optText = optionData?.option_text || '';
-        
-        let inputName, inputValue, checked, required;
-        
-        if(type === 'single_choice') {
+        let isCorrect = optionData?.is_correct || false; // Standardmäßig false
+
+        let inputName, inputValue, checkedAttr = '', requiredAttr = '';
+
+        if (type === 'single_choice') {
             inputName = `questions[${qIndex}][correct_option]`;
-            inputValue = optionIndex; // Der Wert ist der Index der Option
-            // `optionData.is_correct` ist jetzt ein boolean (dank Controller)
-            checked = optionData ? (optionData.is_correct) : (optionIndex === 0); // Standard: Erste Option ist ausgewählt
-            required = 'required';
+            inputValue = optionIndex; // Wert ist der Index
+            // is_correct wird verwendet, um zu bestimmen, ob DIESER Radio-Button checked ist
+            if (isCorrect) {
+                 checkedAttr = 'checked';
+             }
+            requiredAttr = 'required'; // Einer muss ausgewählt sein
         } else { // multiple_choice
             inputName = `questions[${qIndex}][options][${optionIndex}][is_correct]`;
-            inputValue = '1'; // Der Wert ist immer 1, wenn angehakt
-            checked = optionData ? (optionData.is_correct) : false;
-            required = '';
+            inputValue = '1'; // Wert ist immer 1, wenn gecheckt
+            // is_correct bestimmt, ob die Checkbox checked ist
+             if (isCorrect) {
+                 checkedAttr = 'checked';
+             }
+            // Checkboxen sind nie 'required' im Sinne von "mindestens eine" auf HTML-Ebene
         }
 
         const optionHtml = `
             <div class="input-group mt-2">
                 <input type="hidden" name="questions[${qIndex}][options][${optionIndex}][id]" value="${optId}">
-                <div class="input-group-prepend"><div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${checked ? 'checked' : ''} ${required}></div></div>
+                <div class="input-group-prepend"><div class="input-group-text"><input type="${inputType}" name="${inputName}" value="${inputValue}" ${checkedAttr} ${requiredAttr}></div></div>
                 <input type="text" name="questions[${qIndex}][options][${optionIndex}][option_text]" class="form-control" value="${optText}" required>
                 <div class="input-group-append"><button type="button" class="btn btn-outline-danger remove-option-btn"><i class="fas fa-times"></i></button></div>
             </div>`;
         optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
     }
-    
-    // Initiales Rendern des Formulars
-    initialData.forEach(qData => addQuestion(qData));
-    if (initialData.length === 0) {
+
+    // Initiales Rendern des Formulars basierend auf $questionsJson
+    if (Array.isArray(initialData) && initialData.length > 0) {
+         initialData.forEach(qData => addQuestion(qData));
+    } else {
         container.innerHTML = '<p class="text-muted text-center">Fügen Sie die erste Frage hinzu.</p>';
     }
 
-    addQuestionBtn.addEventListener('click', () => {
-        // Wenn vorher keine Fragen da waren, lösche den Platzhaltertext
-        if (questionIndex === 0) {
+    // Event Listener (identisch zu create.blade.php)
+     addQuestionBtn.addEventListener('click', () => {
+         if (container.children.length === 1 && container.children[0].tagName === 'P') {
             container.innerHTML = '';
-        }
-        addQuestion();
-    });
+         }
+         addQuestion();
+     });
 
     container.addEventListener('click', function(e) {
         const removeQuestionBtn = e.target.closest('.remove-question-btn');
@@ -216,14 +210,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const removeOptionBtn = e.target.closest('.remove-option-btn');
 
         if (removeQuestionBtn) {
-            removeQuestionBtn.closest('.question-block').remove();
-            // Optional: Wenn alle Fragen gelöscht wurden, Platzhalter anzeigen
-            if (container.children.length === 0) {
-                questionIndex = 0; // Zähler zurücksetzen
-                container.innerHTML = '<p class="text-muted text-center">Fügen Sie die erste Frage hinzu.</p>';
-            }
+             removeQuestionBtn.closest('.question-block').remove();
+             if (container.children.length === 0) {
+                 questionIndex = 0;
+                 container.innerHTML = '<p class="text-muted text-center">Fügen Sie die erste Frage hinzu.</p>';
+             }
         }
-        
+
         if (addOptionBtn) {
             const qIndex = addOptionBtn.dataset.qindex;
             const questionBlock = addOptionBtn.closest('.question-block');
@@ -233,8 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (removeOptionBtn) {
             const optionsContainer = removeOptionBtn.closest('.options-container');
-            // Erlaube das Löschen, bis nur noch 2 Optionen übrig sind
-            if (optionsContainer.children.length > 2) { 
+            if (optionsContainer.children.length > 2) {
                 removeOptionBtn.closest('.input-group').remove();
             } else {
                 alert('Eine Auswahlfrage muss mindestens zwei Antwortmöglichkeiten haben.');
@@ -243,61 +235,77 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     container.addEventListener('change', function(e) {
-        // Wenn der Fragetyp geändert wird
         if(e.target.classList.contains('question-type-select')) {
             const questionBlock = e.target.closest('.question-block');
             const optionsWrapper = questionBlock.querySelector('.options-wrapper');
             const optionsContainer = optionsWrapper.querySelector('.options-container');
             const newType = e.target.value;
 
+            const optionTextInputs = optionsContainer.querySelectorAll('input[type="text"]');
+            const optionChoiceInputs = optionsContainer.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+
             if (newType === 'text_field') {
                 optionsWrapper.style.display = 'none';
-                // Alte Optionen leeren, um Validierungsfehler zu vermeiden
-                optionsContainer.innerHTML = ''; 
+                optionTextInputs.forEach(input => input.required = false);
+                optionChoiceInputs.forEach(input => input.required = false);
             } else {
                 optionsWrapper.style.display = 'block';
+                optionTextInputs.forEach(input => input.required = true);
+
                 const options = optionsContainer.querySelectorAll('.input-group');
-                let hasCheckedRadio = false; // Stellt sicher, dass nur ein Radio-Button gecheckt wird
-                
-                // Wenn von Textfeld gewechselt wird und keine Optionen da sind, 2 hinzufügen
+                let hasCheckedRadio = false;
+
+                 // Wenn von Textfeld gewechselt wird und keine Optionen da sind, 2 hinzufügen
                 if (options.length === 0) {
-                    const qIndex = questionBlock.querySelector('input[type="hidden"]').name.match(/\[(\d+)\]/)[1];
-                    addOption(qIndex, optionsContainer, newType);
-                    addOption(qIndex, optionsContainer, newType);
-                    return; // Funktion hier beenden, da die Optionen jetzt existieren
-                }
+                     const qIndexMatch = e.target.name.match(/questions\[(\d+)\]/);
+                     if (qIndexMatch) {
+                         const qIndex = qIndexMatch[1];
+                         addOption(qIndex, optionsContainer, newType);
+                         addOption(qIndex, optionsContainer, newType);
+                         // Stelle sicher, dass die erste Radio-Option gecheckt ist
+                         if (newType === 'single_choice') {
+                             optionsContainer.querySelector('input[type="radio"]').checked = true;
+                         }
+                         return; // Frühzeitiger Ausstieg, da Optionen hinzugefügt wurden
+                     }
+                 }
 
                 options.forEach((optionGroup, oIndex) => {
-                    const currentInput = optionGroup.querySelector('input[type="radio"], input[type="checkbox"]');
-                    const nameParts = currentInput.name.split('[');
-                    // Finde den Index der Frage (z.B. 'questions[0][...]')
-                    const qIndex = nameParts[1]?.replace(']', ''); 
-                    
-                    if (qIndex === undefined) return; // Sollte nicht passieren
+                    const currentChoiceInput = optionGroup.querySelector('input[type="radio"], input[type="checkbox"]');
+                    const qIndexMatch = currentChoiceInput.name.match(/questions\[(\d+)\]/);
+                    if (!qIndexMatch) return;
+                    const qIndex = qIndexMatch[1];
 
                     let newElement = document.createElement('input');
+
                     if (newType === 'single_choice') {
                         newElement.type = 'radio';
                         newElement.name = `questions[${qIndex}][correct_option]`;
                         newElement.value = oIndex;
                         newElement.required = true;
-                        // Wähle das erste Element standardmäßig aus
-                        if (!hasCheckedRadio) {
-                            newElement.checked = true;
-                            hasCheckedRadio = true;
-                        }
+                         // Nur die erste Option standardmäßig checken, wenn von Checkbox gewechselt wird
+                         // oder wenn es die erste Option ist und noch keine gecheckt wurde.
+                        if (!hasCheckedRadio && (currentChoiceInput.type === 'checkbox' ? oIndex === 0 : currentChoiceInput.checked)) {
+                             newElement.checked = true;
+                             hasCheckedRadio = true;
+                         } else {
+                             newElement.checked = false; // Alle anderen explizit auf false setzen
+                         }
                     } else { // multiple_choice
                         newElement.type = 'checkbox';
                         newElement.name = `questions[${qIndex}][options][${oIndex}][is_correct]`;
                         newElement.value = '1';
-                        // Behalte den "checked"-Status bei, wenn von Radio gewechselt wird
-                        if (currentInput.checked) {
-                            newElement.checked = true;
+                        newElement.required = false;
+                        if (currentChoiceInput.checked) {
+                             newElement.checked = true;
                         }
                     }
-                    // Ersetze das alte Input-Element durch das neue
-                    currentInput.parentNode.replaceChild(newElement, currentInput);
+                    currentChoiceInput.parentNode.replaceChild(newElement, currentChoiceInput);
                 });
+                // Nochmal sicherstellen, dass bei single_choice genau eine Option ausgewählt ist
+                 if (newType === 'single_choice' && !optionsContainer.querySelector('input[type="radio"]:checked') && optionsContainer.querySelector('input[type="radio"]')) {
+                     optionsContainer.querySelector('input[type="radio"]').checked = true;
+                 }
             }
         }
     });
