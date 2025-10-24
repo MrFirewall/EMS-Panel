@@ -13,8 +13,6 @@
         </div>
     </div>
 
-    {{-- WICHTIG: Der ursprüngliche Alert-Block wird entfernt, da er durch JS ersetzt wird. --}}
-
     <form method="POST" action="{{ route('admin.users.update', $user) }}">
         @csrf
         @method('PUT')
@@ -23,12 +21,11 @@
         <div class="card card-outline card-primary mb-4">
             <div class="card-header"><h3 class="card-title">Stammdaten</h3></div>
             <div class="card-body">
-                {{-- BS5 g-3 row ersetzt durch BS4 row --}}
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="name">Mitarbeiter Name</label>
-                            <input type="text" class="form-control @error('name') is-invalid @enderror" name="name" id="name" value="{{ old('name', $user->name) }}">
+                            <input type="text" class="form-control @error('name') is-invalid @enderror" name="name" id="name" value="{{ old('name', $user->name) }}" required>
                             @error('name')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
                         </div>
                     </div>
@@ -37,11 +34,15 @@
                             <label for="personal_number">Personalnummer</label>
                             <select name="personal_number" id="personal_number" class="form-control @error('personal_number') is-invalid @enderror" required>
                                 <option value="">Bitte wählen...</option>
+                                {{-- Aktuelle Nummer immer anbieten --}}
                                 @if($user->personal_number)
                                     <option value="{{ $user->personal_number }}" selected>{{ $user->personal_number }} (Aktuell)</option>
                                 @endif
+                                {{-- Verfügbare Nummern hinzufügen (außer der aktuellen) --}}
                                 @foreach($availablePersonalNumbers as $number)
-                                    <option value="{{ $number }}" @if(old('personal_number') == $number) selected @endif>{{ $number }}</option>
+                                    @if($number != $user->personal_number)
+                                      <option value="{{ $number }}" @if(old('personal_number') == $number) selected @endif>{{ $number }}</option>
+                                    @endif
                                 @endforeach
                             </select>
                             @error('personal_number')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
@@ -85,7 +86,8 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="hire_date">Einstellungsdatum</label>
-                            <input type="date" class="form-control @error('hire_date') is-invalid @enderror" name="hire_date" id="hire_date" value="{{ old('hire_date', $user->hire_date) }}">
+                            {{-- Formatierung für das date-Input-Feld --}}
+                            <input type="date" class="form-control @error('hire_date') is-invalid @enderror" name="hire_date" id="hire_date" value="{{ old('hire_date', optional($user->hire_date)->format('Y-m-d')) }}">
                             @error('hire_date')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
                         </div>
                     </div>
@@ -102,11 +104,17 @@
                             @error('status')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
                         </div>
                     </div>
+                     <div class="col-md-4">
+                        <div class="form-group">
+                             <label for="special_functions">Sonderfunktionen</label>
+                             <input type="text" class="form-control @error('special_functions') is-invalid @enderror" name="special_functions" id="special_functions" value="{{ old('special_functions', $user->special_functions) }}">
+                             @error('special_functions')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
+                         </div>
+                    </div>
                     <div class="col-md-4">
                         <div class="form-group clearfix mt-4">
-                            {{-- form-check form-switch ersetzt durch icheck-primary --}}
                             <div class="icheck-primary d-inline">
-                                <input type="checkbox" id="second_faction" name="second_faction" @if(old('second_faction', $user->second_faction) == 'Ja') checked @endif>
+                                <input type="checkbox" id="second_faction" name="second_faction" value="1" @if(old('second_faction', $user->second_faction) == 'Ja') checked @endif>
                                 <label for="second_faction">Hat eine Zweitfraktion</label>
                             </div>
                         </div>
@@ -114,7 +122,7 @@
                 </div>
             </div>
         </div>
-        
+
         {{-- Zwei-Spalten-Layout für Rechte --}}
         <div class="row">
             {{-- Spalte für GRUPPEN / RANG --}}
@@ -123,9 +131,11 @@
                     <div class="card-header"><h3 class="card-title">Gruppen / Rang Zuweisung</h3></div>
                     <div class="card-body">
                         <p class="text-muted small">Der höchste hier ausgewählte Rang wird automatisch als Haupt-Rang des Mitarbeiters festgelegt.</p>
+                        @error('roles')<div class="alert alert-danger">{{ $message }}</div>@enderror
+                        @error('roles.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
                         <div class="row">
                             @foreach($roles as $role)
-                                <div class="col-md-6">
+                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
                                     <div class="icheck-primary">
                                         <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" @if(in_array($role->name, old('roles', $user->getRoleNames()->toArray()))) checked @endif>
                                         <label for="role_{{ $role->id }}">{{ $role->name }}</label>
@@ -136,16 +146,18 @@
                     </div>
                 </div>
             </div>
-            @role('ems-director|Super-Admin')
+
             {{-- Spalte für EINZELNE BERECHTIGUNGEN --}}
+            @role('ems-director|Super-Admin')
             <div class="col-md-12">
                 <div class="card card-outline card-warning">
                     <div class="card-header"><h3 class="card-title">Einzelne Berechtigungen (erweitert)</h3></div>
                     <div class="card-body">
                         <p class="text-muted small">Ermöglicht granulare Rechte, die von den zugewiesenen Gruppen abweichen. Nur in Ausnahmefällen verwenden.</p>
+                         @error('permissions.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
                         <div class="row">
                             @foreach($permissions as $permission)
-                                <div class="col-md-6">
+                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
                                     <div class="icheck-primary">
                                         <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" id="perm_{{ $permission->id }}" @if(in_array($permission->name, old('permissions', $user->getPermissionNames()->toArray()))) checked @endif>
                                         <label for="perm_{{ $permission->id }}">{{ $permission->name }}</label>
@@ -157,9 +169,51 @@
                 </div>
             </div>
             @endrole
+
+            {{-- ============================================= --}}
+            {{-- NEUE KARTE: MANUELLE MODULZUWEISUNG           --}}
+            {{-- ============================================= --}}
+            @can('users.manage.modules') {{-- Schützt die ganze Karte --}}
+            <div class="col-md-12">
+                <div class="card card-outline card-success">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-graduation-cap"></i> Manuelle Modulzuweisung</h3></div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Wähle die Module aus, die der Mitarbeiter manuell als "bestanden" zugewiesen bekommen soll.
+                            Dies umgeht das Prüfungssystem. Änderungen werden protokolliert.
+                            Entfernte Module werden komplett aus der Akte des Mitarbeiters gelöscht.
+                        </p>
+                        @error('modules.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
+                        <div class="row">
+                            @forelse($allModules as $module)
+                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
+                                    <div class="icheck-primary">
+                                        <input type="checkbox"
+                                               name="modules[]"
+                                               value="{{ $module->id }}"
+                                               id="module_{{ $module->id }}"
+                                               {{-- Prüft, ob die Modul-ID im Array der bereits zugewiesenen Module ist --}}
+                                               @if(in_array($module->id, old('modules', $userModules ?? []))) checked @endif>
+                                        <label for="module_{{ $module->id }}">
+                                            {{ $module->name }} <small class="text-muted">({{ $module->category }})</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12">
+                                    <p class="text-center text-muted">Keine Trainingsmodule im System vorhanden.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endcan
+            {{-- === ENDE NEUE KARTE === --}}
+
         </div>
-        
-        <div class="mt-4 text-right">
+
+        <div class="mt-4 mb-4 text-right"> {{-- mb-4 hinzugefügt für Abstand --}}
             <a href="{{ route('admin.users.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
             <button type="submit" class="btn btn-primary btn-flat">
                 <i class="fas fa-save me-1"></i> Änderungen speichern
@@ -173,8 +227,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const errors = @json($errors->all());
-        
-        // Formatiert alle Fehler in einem String (für Toast)
         const errorMessage = errors.join('<br>');
 
         if (typeof Swal !== 'undefined') {
@@ -187,9 +239,12 @@
                 showConfirmButton: false,
                 timer: 5000,
                 customClass: {
+                    // Stellt sicher, dass der Toast über AdminLTE-Elementen liegt
                     container: 'adminlte-modal-z-index'
                 }
             });
+        } else if (typeof Toastr !== 'undefined') { // Fallback auf Toastr, falls SweetAlert nicht da ist
+             toastr.error(errorMessage, 'Validierungsfehler!');
         }
     });
 </script>
