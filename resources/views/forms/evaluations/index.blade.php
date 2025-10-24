@@ -73,7 +73,7 @@
                                                         </button>
                                                     </form>
                                                 @elseif($antrag->evaluation_type === 'pruefung_anmeldung')
-                                                    <form action="{{ route('admin.exams.generateLink') }}" method="POST">
+                                                    <form action="{{ route('admin.exams.attempts.store') }}" method="POST">
                                                         @csrf
                                                         <input type="hidden" name="user_id" value="{{ $antrag->user_id }}">
                                                         <input type="hidden" name="module_id" value="{{ $antrag->json_data['module_id'] }}">
