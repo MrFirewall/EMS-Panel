@@ -16,14 +16,12 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
-                {{-- Erfolgsmeldungen für Linkversand oder Reset --}}
+                {{-- Erfolgsmeldungen (bleibt gleich) --}}
                 @if (session('success'))
                     <div class="alert alert-success alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                         <h5><i class="icon fas fa-check"></i> Erfolg!</h5>
                         {{ session('success') }}
-                        
-                        {{-- Zeigt den Link zur manuellen Kopie an --}}
                         @if (session('secure_url'))
                             <p class="mb-0 mt-2">
                                 Link zum manuellen Kopieren: 
@@ -54,7 +52,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($attempts as $attempt)
+                                @forelse ($attempts as $attempt)
                                     <tr>
                                         <td>{{ $attempt->id }}</td>
                                         <td>{{ $attempt->user->name ?? 'Unbekannt' }}</td>
@@ -80,17 +78,15 @@
                                             @endif
                                         </td>
                                         <td>{{ $attempt->completed_at ? $attempt->completed_at->format('d.m.Y H:i') : 'N/A' }}</td>
-                                        <td>
-                                            {{-- 1. Ergebnis anzeigen --}}
-                                            {{-- ALT: route('exams.result', $attempt) --}}
+                                        <td class="btn-group">
+                                            {{-- 1. Ergebnis anzeigen / Final bewerten --}}
                                             <a href="{{ route('admin.exams.attempts.show', $attempt) }}" class="btn btn-sm btn-outline-info" title="Ergebnis ansehen / Bewerten">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             
-                                            {{-- 2. Link senden (immer möglich, wenn nicht evaluated) --}}
+                                            {{-- 2. Link senden (wenn nicht bewertet) --}}
                                             @can('sendLink', $attempt)
                                                 @if ($attempt->status !== 'evaluated')
-                                                    {{-- ALT: route('admin.exams.send.link', $attempt) --}}
                                                     <form action="{{ route('admin.exams.attempts.sendLink', $attempt) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-secondary" title="Link erneut senden">
@@ -100,7 +96,7 @@
                                                 @endif
                                             @endcan
 
-                                            {{-- 3. Manuelle Bewertung (Nur für submitted oder in_progress) --}}
+                                            {{-- 3. Manuelle Schnell-Bewertung (wenn nicht bewertet) --}}
                                             @can('setEvaluated', $attempt)
                                                 @if ($attempt->status !== 'evaluated')
                                                     <button type="button" class="btn btn-sm btn-outline-success" title="Manuell bewerten" data-toggle="modal" data-target="#evaluateModal{{ $attempt->id }}">
@@ -109,21 +105,35 @@
                                                 @endif
                                             @endcan
                                             
-                                            {{-- 4. Zurücksetzen (immer möglich, wenn nicht evaluated) --}}
+                                            {{-- 4. Zurücksetzen (wenn nicht bewertet) --}}
                                             @can('resetAttempt', $attempt)
                                                 @if ($attempt->status !== 'evaluated')
-                                                    {{-- ALT: route('admin.exams.reset.attempt', $attempt) --}}
                                                     <form action="{{ route('admin.exams.attempts.reset', $attempt) }}" method="POST" class="d-inline">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Versuch zurücksetzen" onclick="return confirm('Achtung: Alle Antworten werden gelöscht und der Link wird wieder nutzbar. Fortfahren?');">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Versuch zurücksetzen" onclick="return confirm('Achtung: Alle Antworten werden gelöscht und der Link wird wieder nutzbar. Fortfahren?');">
                                                             <i class="fas fa-undo"></i>
                                                         </button>
                                                     </form>
                                                 @endif
                                             @endcan
+                                            
+                                            {{-- 5. Endgültig löschen (NEU) --}}
+                                            @can('delete', $attempt)
+                                                <form action="{{ route('admin.exams.attempts.destroy', $attempt) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Versuch endgültig löschen" onclick="return confirm('ACHTUNG: Diese Aktion ist endgültig und kann nicht rückgängig gemacht werden. Alle Antworten und der Versuch werden gelöscht. Fortfahren?');">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            @endcan
                                         </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center p-4 text-muted">Es sind keine Prüfungsversuche vorhanden.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -136,11 +146,11 @@
     </div>
 </div>
 
+{{-- Modals (unverändert) --}}
 @foreach ($attempts as $attempt)
-    {{-- Modal für Manuelle Bewertung --}}
+    @can('setEvaluated', $attempt)
     <div class="modal fade" id="evaluateModal{{ $attempt->id }}" tabindex="-1" role="dialog" aria-labelledby="evaluateModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
-            {{-- ALT: route('admin.exams.set.evaluated', $attempt) --}}
             <form action="{{ route('admin.exams.attempts.setEvaluated', $attempt) }}" method="POST">
                 @csrf
                 <div class="modal-content">
@@ -158,7 +168,7 @@
                             <label for="score">Gesamtpunktzahl in Prozent (0-100):</label>
                             <input type="number" name="score" id="score" class="form-control" min="0" max="100" value="{{ round($attempt->score ?? 0) }}" required>
                         </div>
-                        <small class="text-muted">Hinweis: Setzen Sie die Punktzahl, basierend auf der automatischen Bewertung und der manuellen Bewertung der Freitextfelder. Der Status wird automatisch auf "Bewertet (evaluated)" gesetzt, wenn der Score die Mindestpunktzahl erreicht.</small>
+                        <small class="text-muted">Hinweis: Dies ist die Schnell-Bewertung. Der Modulstatus wird hierdurch NICHT gesetzt. Nutzen Sie dafür die "Ansehen" <i class="fas fa-eye"></i> Funktion.</small>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
@@ -168,25 +178,23 @@
             </form>
         </div>
     </div>
+    @endcan
 @endforeach
 
 
 @endsection
 
 @push('scripts')
-
+{{-- JavaScript (unverändert) --}}
 <script>
-// Funktion zum Kopieren des Links (für die manuelle Zwischenablage)
 function copyLink() {
 const linkElement = document.getElementById('secure-link');
 if (linkElement) {
-// Führt den Kopiervorgang aus
 navigator.clipboard.writeText(linkElement.textContent.trim())
 .then(() => {
 alert('Prüfungslink wurde in die Zwischenablage kopiert!');
 })
 .catch(err => {
-// Fallback, falls navigator.clipboard nicht verfügbar ist (z.B. in älteren Browsern oder bestimmten Umgebungen)
 const tempInput = document.createElement('textarea');
 tempInput.value = linkElement.textContent.trim();
 tempInput.style.position = 'fixed';
