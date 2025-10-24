@@ -17,13 +17,17 @@ use App\Http\Controllers\TrainingModuleController;
 use App\Http\Controllers\DutyStatusController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
-use App\Http\Controllers\ExamController;
 use App\Http\Controllers\NotificationController;
 use Lab404\Impersonate\Controllers\ImpersonateController;
 use App\Models\User; // Für die Test-Route benötigt
 use App\Notifications\GeneralNotification; // Für die Test-Route benötigt
 use Illuminate\Support\Facades\Auth; // Für die Test-Route benötigt
 use App\Http\Controllers\Admin\NotificationRuleController;
+
+// NEU: Import der refaktorierten Controller
+use App\Http\Controllers\ExamAttemptController;
+use App\Http\Controllers\Admin\ExamController as AdminExamController;
+use App\Http\Controllers\Admin\ExamAttemptController as AdminExamAttemptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,37 +91,30 @@ Route::middleware('auth.cfx')->group(function () {
         Route::get('modul-anmeldung', [EvaluationController::class, 'modulAnmeldung'])->name('modulAnmeldung');
         Route::get('pruefung-anmeldung', [EvaluationController::class, 'pruefungsAnmeldung'])->name('pruefungsAnmeldung');
     });
-
-    // NEU: Prüfung ablegen (öffentlich zugänglich für den Prüfling mit dem Link)
-    Route::get('/exams/take/{uuid}', [ExamController::class, 'take'])->name('exams.take');
-    Route::post('/exams/submit/{uuid}', [ExamController::class, 'submit'])->name('exams.submit');
     
-    // NEU: Endpunkt für Prüfungsresultate
-    // 1. NEU: Generische Bestätigungsseite nach Submit (für jeden User)
-    Route::get('/exams/submitted', fn() => view('exams.submitted'))->name('exams.submitted');
-    // 2. NEU: Ergebnisseite NUR FÜR ADMINS/TRAINER (muss durch Policy geschützt werden)
-    Route::get('/exams/result/{uuid}', [ExamController::class, 'result'])->name('exams.result');
-    // 3. NEU: Finale Bewertung durch Admin
-    Route::post('/exams/finalize/{uuid}', [ExamController::class, 'finalizeEvaluation'])->name('exams.finalize');
-    
-    Route::resource('modules', TrainingModuleController::class); // NEU: Hier korrekt platziert
+    Route::resource('modules', TrainingModuleController::class);
 
     /*
     |--------------------------------------------------------------------------
-    | NEU: Benachrichtigungs-Archiv und Aktionen
+    | NEU: PRÜFUNGS-ROUTEN (FÜR PRÜFLINGE)
+    |--------------------------------------------------------------------------
+    */
+    // Prüfung ablegen (Nutzt RMB mit 'uuid' dank Model-Definition)
+    Route::get('/exams/take/{attempt:uuid}', [ExamAttemptController::class, 'show'])->name('exams.take');
+    // Prüfung einreichen
+    Route::post('/exams/submit/{attempt:uuid}', [ExamAttemptController::class, 'update'])->name('exams.submit');
+    // Generische Bestätigungsseite nach Submit
+    Route::get('/exams/submitted', [ExamAttemptController::class, 'submitted'])->name('exams.submitted');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Benachrichtigungs-Archiv und Aktionen
     |--------------------------------------------------------------------------
     */
     Route::prefix('notifications')->name('notifications.')->group(function () {
-        // Archiv-Seite
         Route::get('/', [NotificationController::class, 'index'])->name('index');
-        
-        // Aktion: Alle als gelesen markieren
         Route::post('/mark-all-read', [NotificationController::class, 'markAllRead'])->name('markAllRead');
-        
-        // Aktion: Einzelne als gelesen markieren
         Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('markAsRead');
-
-        // Aktion: Einzelne löschen
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
     });
 });
@@ -147,30 +144,53 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     // Detailansicht für Formulare (Bewertungen & Anträge)
     Route::get('forms/evaluations/{evaluation}', [EvaluationController::class, 'show'])->name('forms.evaluations.show');
 
-    // NEU: Aktionen für das Ausbildungsmodul
+    // Aktionen für das Ausbildungsmodul
     Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
-    Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink');
 
-    // NEU: Prüfungsverwaltung
-    Route::resource('exams', \App\Http\Controllers\Admin\ExamController::class);
+    /*
+    |--------------------------------------------------------------------------
+    | NEU: PRÜFUNGS-MANAGEMENT (ADMIN)
+    |--------------------------------------------------------------------------
+    */
     
-    // NEU: Prüfungsversuch-Verwaltung (ExamAttempt Management)
-    Route::prefix('attempts')->name('exams.')->group(function () {
-        // Übersicht über alle Prüfungsversuche
-        Route::get('/', [\App\Http\Controllers\Admin\ExamController::class, 'attemptsIndex'])->name('attempts.index');
+    // 1. CRUD für Exam-Vorlagen (admin.exams.index, .create, .store, etc.)
+    Route::resource('exams', AdminExamController::class);
+    
+    // 2. Management für ExamAttempt-Instanzen
+    Route::prefix('attempts')->name('exams.attempts.')->group(function () {
         
-        // Setzt den Prüfungsversuch zurück (löscht Antworten und setzt Status auf 'in_progress')
-        Route::post('/{attempt}/reset', [\App\Http\Controllers\Admin\ExamController::class, 'resetAttempt'])->name('reset.attempt');
+        // Übersicht (admin.exams.attempts.index)
+        Route::get('/', [AdminExamAttemptController::class, 'index'])->name('index');
         
-        // Manuelle Bewertung durch Admin
-        Route::post('/{attempt}/evaluate', [\App\Http\Controllers\Admin\ExamController::class, 'setEvaluated'])->name('set.evaluated');
+        // Link generieren (Formular ist woanders, dies ist die POST-Aktion)
+        // (admin.exams.attempts.store)
+        Route::post('/', [AdminExamAttemptController::class, 'store'])->name('store');
         
-        // Link erneut senden
-        Route::post('/{attempt}/send-link', [\App\Http\Controllers\Admin\ExamController::class, 'sendLink'])->name('send.link');
+        // Ergebnis-Detailansicht für Admin (admin.exams.attempts.show)
+        Route::get('/{attempt:uuid}', [AdminExamAttemptController::class, 'show'])->name('show');
+        
+        // Finale Bewertung & Modulabschluss (admin.exams.attempts.update)
+        Route::post('/{attempt:uuid}/finalize', [AdminExamAttemptController::class, 'update'])->name('update');
+        
+        // --- Zusätzliche Aktionen ---
+        
+        // Versuch zurücksetzen
+        Route::post('/{attempt:uuid}/reset', [AdminExamAttemptController::class, 'resetAttempt'])->name('reset');
+        
+        // Link erneut senden/anzeigen
+        Route::post('/{attempt:uuid}/send-link', [AdminExamAttemptController::class, 'sendLink'])->name('sendLink');
+        
+        // Manuelle Bewertung (alte Route)
+        Route::post('/{attempt:uuid}/evaluate', [AdminExamAttemptController::class, 'setEvaluated'])->name('setEvaluated');
     });
 
-    // NEU: Benachrichtigungsregeln Verwaltung
-    Route::middleware(['can:notification.rules.manage']) // Stelle sicher, dass das Gate/Permission existiert
+    // ALTE ROUTEN (Jetzt im AdminExamAttemptController)
+    // Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink'); // ERSETZT
+    // Route::get('/exams/result/{uuid}', [ExamController::class, 'result'])->name('exams.result'); // ERSETZT
+    // Route::post('/exams/finalize/{uuid}', [ExamController::class, 'finalizeEvaluation'])->name('exams.finalize'); // ERSETZT
+
+    // Benachrichtigungsregeln Verwaltung
+    Route::middleware(['can:notification.rules.manage'])
          ->resource('notification-rules', NotificationRuleController::class)->except(['show']);
 });
 
@@ -179,58 +199,40 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
 |--------------------------------------------------------------------------
 | Interne API-Routen (für Frontend-AJAX)
 |--------------------------------------------------------------------------
-|
-| Diese Routen werden von der web.php geladen, damit sie
-| die 'web' Middleware-Gruppe (Sessions, Cookies, CSRF) erben.
 */
-Route::middleware('auth.cfx') // Nutzt Ihre existierende Auth-Middleware
-     ->prefix('api') // Stellt sicher, dass die URL /api/... lautet
+Route::middleware('auth.cfx')
+     ->prefix('api')
      ->group(function () {
     
-    // Benachrichtigungen abrufen
     Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])
-        ->name('api.notifications.fetch'); // Name wie von Blade erwartet
+        ->name('api.notifications.fetch');
 
-    // Prüfungsversuch flaggen
-    Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])
-        ->name('api.exams.flag');
+    // HINWEIS: Diese Route muss evtl. angepasst werden, falls der ExamController
+    // die 'flag'-Methode hatte. Sie wurde im Code nicht bereitgestellt.
+    // Route::post('/exams/flag/{uuid}', [ExamController::class, 'flag'])
+    //    ->name('api.exams.flag');
 });
+
 
 /*
 |--------------------------------------------------------------------------
 | TEST-ROUTE (Temporär)
 |--------------------------------------------------------------------------
-| Wichtig: Diese Route testet die Datenbank-Speicherung und den Laravel Echo Broadcast.
-| Sie sollte NACH dem Start von 'php artisan reverb:start' aufgerufen werden.
 */
 Route::get('/test-notification', function() {
-    // Stellen Sie sicher, dass Sie die GeneralNotification Klasse korrekt importiert haben.
-    // (Bereits im Code-Block oben korrigiert)
-
     if (!Auth::check()) {
         return 'Bitte zuerst einloggen.';
     }
-
     $user = Auth::user();
     
-    // Die toDatabase-Methode speichert den Eintrag.
-    // Die broadcastOn-Methode sendet den Event über Reverb.
     $user->notify(new GeneralNotification(
-        'Test 1: Fehler gefunden',
-        'fas fa-exclamation-triangle text-danger',
-        route('dashboard')
+        'Test 1: Fehler gefunden', 'fas fa-exclamation-triangle text-danger', route('dashboard')
     ));
-
     $user->notify(new GeneralNotification(
-        'Test 2: Neue Akte erstellt',
-        'fas fa-file-alt text-info',
-        route('dashboard')
+        'Test 2: Neue Akte erstellt', 'fas fa-file-alt text-info', route('dashboard')
     ));
-
     $user->notify(new GeneralNotification(
-        'Test 3: Mitarbeiter angemeldet',
-        'fas fa-user-plus text-success',
-        route('dashboard')
+        'Test 3: Mitarbeiter angemeldet', 'fas fa-user-plus text-success', route('dashboard')
     ));
     
     return "3 Test-Benachrichtigungen an '{$user->name}' gesendet (DB & Broadcast)!";
