@@ -28,7 +28,7 @@ class TrainingAssignmentController extends Controller
         $user->trainingModules()->syncWithoutDetaching([
             $module->id => [
                 'status' => 'in_ausbildung',
-                'assigned_at' => now() // Optional
+                'updated_at' => now() // Optional
              ]
         ]);
 
