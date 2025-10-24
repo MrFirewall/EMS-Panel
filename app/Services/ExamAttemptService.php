@@ -2,26 +2,21 @@
 
 namespace App\Services;
 
-use App\Models\Exam;
+use App\Models\Exam; // Exam statt TrainingModule importieren
 use App\Models\User;
 use App\Models\ExamAttempt;
-use App\Models\TrainingModule;
+// use App\Models\TrainingModule; // Nicht mehr benötigt
 use Illuminate\Support\Facades\DB;
 
 class ExamAttemptService
 {
     /**
-     * Erstellt einen neuen Prüfungsversuch für einen Benutzer.
+     * Erstellt einen neuen Prüfungsversuch für einen Benutzer für eine spezifische Prüfung.
      */
-    public function generateAttempt(User $user, TrainingModule $module): ExamAttempt
+    public function generateAttempt(User $user, Exam $exam): ExamAttempt // Nimmt jetzt Exam statt TrainingModule
     {
-        if (!$module->exam) {
-            // Dieser Fall sollte idealerweise bereits im Controller/Request abgefangen werden
-            throw new \Exception('Für dieses Modul ist keine Prüfung hinterlegt.');
-        }
-
         return ExamAttempt::create([
-            'exam_id' => $module->exam->id,
+            'exam_id' => $exam->id, // Direkt die ID der Prüfung verwenden
             'user_id' => $user->id,
             'started_at' => now(),
             'status' => 'in_progress',
@@ -37,8 +32,8 @@ class ExamAttemptService
         $questions = $attempt->exam->questions()->with('options')->get()->keyBy('id');
 
         DB::transaction(function () use ($answers, $attempt, &$correctAnswers, $questions) {
-            
-            // Alte Antworten löschen, falls dies ein erneuter Versuch ist (sollte nicht passieren, aber sicher ist sicher)
+
+            // Alte Antworten löschen
             $attempt->answers()->delete();
 
             foreach ($answers as $questionId => $submittedAnswer) {
@@ -62,13 +57,13 @@ class ExamAttemptService
                         $submittedAnswerIds = collect(is_array($submittedAnswer) ? $submittedAnswer : []);
                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id');
                         $isCorrect = $submittedAnswerIds->sort()->values()->all() == $correctOptionIds->sort()->values()->all();
-                        
+
                         if ($isCorrect) $correctAnswers++;
 
                         foreach ($submittedAnswerIds as $optionId) {
                             $option = $question->options->firstWhere('id', $optionId);
                             $isOptionCorrect = $option && $option->is_correct;
-                            
+
                             $attempt->answers()->create([
                                 'question_id' => $questionId,
                                 'option_id' => $optionId,
@@ -91,7 +86,7 @@ class ExamAttemptService
             // Ergebnis berechnen
             $scorableQuestionsCount = $questions->whereIn('type', ['single_choice', 'multiple_choice'])->count();
             $score = ($scorableQuestionsCount > 0) ? round(($correctAnswers / $scorableQuestionsCount) * 100) : 0;
-            
+
             $attempt->update([
                 'completed_at' => now(),
                 'status' => 'submitted',
@@ -103,7 +98,8 @@ class ExamAttemptService
     }
 
     /**
-     * Schließt eine Prüfung final ab und aktualisiert den Modulstatus des Users.
+     * Schließt eine Prüfung final ab (setzt Status und Score).
+     * Entfernt die Modulstatus-Aktualisierung.
      */
     public function finalizeAttempt(ExamAttempt $attempt, array $validatedData): ExamAttempt
     {
@@ -113,15 +109,8 @@ class ExamAttemptService
                 'status' => 'evaluated',
             ]);
 
-            $module = $attempt->exam->trainingModule;
-            if ($module) {
-                $module->users()->updateExistingPivot($attempt->user_id, [
-                    'status' => $validatedData['status_result'],
-                    'completed_at' => now()->toDateString(),
-                    'notes' => 'Abgeschlossen durch Prüfung: ' . $attempt->exam->title,
-                ]);
-            }
-            
+            // --- Modul-Update ENTFERNT ---
+
             return $attempt;
         });
     }
@@ -141,13 +130,12 @@ class ExamAttemptService
                 'started_at' => now(), // Startzeit zurücksetzen
             ]);
         });
-        
+
         return $attempt;
     }
 
     /**
      * Löscht einen Prüfungsversuch und alle zugehörigen Antworten.
-     * VORSICHT: Dies ist ein destruktiver Vorgang.
      */
     public function deleteAttempt(ExamAttempt $attempt): void
     {
