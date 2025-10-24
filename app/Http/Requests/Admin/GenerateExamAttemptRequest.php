@@ -3,12 +3,14 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\TrainingModule;
+// use App\Models\TrainingModule; // Nicht mehr benötigt
+use App\Models\Exam; // NEU
 
 class GenerateExamAttemptRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        // Prüft, ob der User generell Links generieren darf
         return $this->user()->can('generateExamLink', \App\Models\ExamAttempt::class);
     }
 
@@ -16,18 +18,10 @@ class GenerateExamAttemptRequest extends FormRequest
     {
         return [
             'user_id' => 'required|exists:users,id',
-            'module_id' => [
-                'required',
-                'exists:training_modules,id',
-                // Eigene Regel, um sicherzustellen, dass das Modul eine Prüfung hat
-                function ($attribute, $value, $fail) {
-                    $module = TrainingModule::find($value);
-                    if ($module && !$module->exam) {
-                        $fail('Für dieses Modul ist keine Prüfung hinterlegt.');
-                    }
-                },
-            ],
-            'evaluation_id' => 'required|exists:evaluations,id',
+            // ALT: 'module_id' => [...]
+            'exam_id' => 'required|exists:exams,id', // NEU: Prüfung direkt auswählen
+            // Evaluation ID ist jetzt optional, falls der Link nicht aus einem Antrag generiert wird
+            'evaluation_id' => 'nullable|exists:evaluations,id',
         ];
     }
 }
