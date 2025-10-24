@@ -8,7 +8,7 @@ class FinalizeExamRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Wir verwenden die Policy-Methode 'setEvaluated'
+        // Policy prüft, ob der Admin diesen Versuch bewerten darf
         return $this->user()->can('setEvaluated', $this->route('attempt'));
     }
 
@@ -16,7 +16,7 @@ class FinalizeExamRequest extends FormRequest
     {
         return [
             'final_score' => 'required|integer|min:0|max:100',
-            'status_result' => 'required|in:bestanden,nicht_bestanden',
+            // 'status_result' entfernt
         ];
     }
 }
