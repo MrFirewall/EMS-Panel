@@ -181,4 +181,28 @@ class ExamAttemptController extends Controller
 
         return back();
     }
+
+    /**
+     * Löscht einen Prüfungsversuch endgültig.
+     */
+    public function destroy(ExamAttempt $attempt)
+    {
+        $this->authorize('delete', $attempt);
+
+        $attemptTitle = $attempt->exam->title;
+        $attemptUser = $attempt->user->name;
+        $attemptId = $attempt->id;
+
+        $this->attemptService->deleteAttempt($attempt);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'log_type' => 'EXAM',
+            'action' => 'DELETED',
+            'target_id' => $attemptId,
+            'description' => "Prüfungsversuch #{$attemptId} ('{$attemptTitle}') von {$attemptUser} wurde endgültig gelöscht."
+        ]);
+
+        return redirect()->route('admin.exams.attempts.index')->with('success', 'Prüfungsversuch wurde endgültig gelöscht.');
+    }
 }
