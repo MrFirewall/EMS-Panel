@@ -24,4 +24,4 @@ return new class extends Migration
             $table->foreign('training_module_id')->references('id')->on('training_modules')->onDelete('set null'); // Constraint wiederherstellen
         });
     }
-}
+};
