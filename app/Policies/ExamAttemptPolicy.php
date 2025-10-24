@@ -78,4 +78,15 @@ class ExamAttemptPolicy
     {
         return $user->hasRole('Super-Admin') || $user->can('exams.generatelinks');
     }
+
+    /**
+     * Determine whether the user can delete the model.
+     * VORSICHT: Destruktive Aktion.
+     */
+    public function delete(User $user, ExamAttempt $attempt): bool
+    {
+        // Löschen von Versuchen ist ein kritischer Vorgang
+        // und sollte nur Super-Admins erlaubt sein.
+        return $user->hasRole('Super-Admin');
+    }
 }
