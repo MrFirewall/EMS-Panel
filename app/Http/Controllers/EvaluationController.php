@@ -1,57 +1,5 @@
 <?php
 
-namespace App\Http\Controllers;
-
-use App\Models\Evaluation;
-use App\Models\User;
-use App\Models\ActivityLog;
-use App\Models\TrainingModule;
-use App\Models\Exam; // NEU: Exam importieren
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Events\PotentiallyNotifiableActionOccurred;
-// use App\Notifications\GeneralNotification; // Nicht direkt verwendet
-// use Illuminate\Support\Facades\Notification; // Nicht direkt verwendet
-
-class EvaluationController extends Controller
-{
-    // Statische Arrays für Konsistenz
-    public static array $grades = ['Sehr Gut', 'Gut', 'Befriedigend', 'Ausreichend', 'Mangelhaft', 'Ungenügend', 'Nicht feststellbar'];
-    public static array $periods = ['00 - 06 Uhr', '06 - 12 Uhr', '12 - 18 Uhr', '18 - 00 Uhr'];
-
-    // Typen für Anträge und Bewertungen
-    public static array $applicationTypes = ['modul_anmeldung', 'pruefung_anmeldung'];
-    public static array $evaluationTypes = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung'];
-    // Alle Typen kombiniert für Validierung
-    public static array $allTypeLabels = [
-        'azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten',
-        'anmeldung', 'modul_anmeldung', 'pruefung_anmeldung'
-    ];
-
-
-    public function __construct()
-    {
-        // Policy-basierte Autorisierung
-        $this->authorizeResource(Evaluation::class, 'evaluation');
-        // Spezifische Berechtigungen für Formularansichten (optional, falls nicht von 'create' abgedeckt)
-        // $this->middleware('can:create,App\Models\Evaluation')->only([...]);
-    }
-
-    /**
-     * Zeigt die Übersichtsseite für ALLE Anträge und letzte Bewertungen an.
-     */
-Okay, ich verstehe. Du möchtest die Tabs zurückhaben, aber diesmal getrennt nach Anträgen, Bewertungen, Modulen und Prüfungen. Zusätzlich soll der Modul-Tab die Möglichkeit bieten, User direkt zuzuweisen oder den Status zu ändern.
-
-Das direkte Zuweisen/Ändern von Usern innerhalb der Modul-Liste ist etwas komplexer, da man für jedes Modul potenziell alle User laden oder eine Suchfunktion/Modal braucht. Ich baue es erstmal so um, dass du Links zum Bearbeiten des Moduls hast und einen neuen Button, der zu einer (zukünftigen) dedizierten Seite führt, um User für dieses spezifische Modul zu verwalten.
-
-1. Controller: app/Http/Controllers/EvaluationController.php (angepasste index-Methode)
-
-Wir holen wieder alle Daten, wie in der Version mit den vielen Tabs.
-
-PHP
-
-<?php
-
 namespace App\Http{forward-slash}Controllers;
 
 use App\Models\Evaluation;
