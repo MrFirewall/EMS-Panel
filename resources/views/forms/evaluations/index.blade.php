@@ -108,7 +108,7 @@
                                                  @else <span class="badge badge-secondary">{{ ucfirst($antrag->status) }}</span> @endif
                                             </td>
                                             <td>
-                                                <div class="btn-group"> {{ btn-group für saubere Darstellung }}
+                                                <div class="btn-group"> {{-- btn-group für saubere Darstellung --}}
                                                      @if($canViewAll && $antrag->status === 'pending')
                                                         @if($antrag->evaluation_type === 'modul_anmeldung' && isset($antrag->json_data['module_id']))
                                                             @can('assignUser', \App\Models\TrainingModule::class)
