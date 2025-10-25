@@ -147,6 +147,16 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     // Aktionen für das Ausbildungsmodul
     Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
 
+    // Detailansicht für Formulare (Bewertungen & Anträge)
+    Route::get('forms/evaluations/{evaluation}', [EvaluationController::class, 'show'])->name('forms.evaluations.show');
+
+    // NEU: Route zum Löschen von Anträgen/Bewertungen
+    Route::delete('forms/evaluations/{evaluation}', [EvaluationController::class, 'destroy'])->name('forms.evaluations.destroy');
+
+    // Aktionen für das Ausbildungsmodul
+    Route::post('training/assign/{user}/{module}/{evaluation}', [TrainingAssignmentController::class, 'assign'])->name('training.assign');
+
+    
     /*
     |--------------------------------------------------------------------------
     | NEU: PRÜFUNGS-MANAGEMENT (ADMIN)
