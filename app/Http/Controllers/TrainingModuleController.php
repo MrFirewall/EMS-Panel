@@ -50,7 +50,7 @@ class TrainingModuleController extends Controller
     /**
      * Store a newly created training module in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
@@ -76,10 +76,10 @@ class TrainingModuleController extends Controller
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
         PotentiallyNotifiableActionOccurred::dispatch(
-            action: 'TrainingModuleController@store',
-            triggeringUser: null, // Kein spezifischer User "betroffen", Admin erstellt es
-            relatedModel: $module,
-            actorUser: $creator
+            'TrainingModuleController@store', // Action
+            null, // triggeringUser
+            $module, // relatedModel
+            $creator // actorUser
         );
         // ---------------------------------
 
@@ -90,7 +90,7 @@ class TrainingModuleController extends Controller
     /**
      * Display the specified training module and its assigned users.
      *
-     * @param  \App\Models\TrainingModule  $module
+     * @param  \App\Models\TrainingModule  $module
      * @return \Illuminate\View\View
      */
     public function show(TrainingModule $module)
@@ -103,7 +103,7 @@ class TrainingModuleController extends Controller
     /**
      * Show the form for editing the specified training module.
      *
-     * @param  \App\Models\TrainingModule  $module
+     * @param  \App\Models\TrainingModule  $module
      * @return \Illuminate\View\View
      */
     public function edit(TrainingModule $module)
@@ -114,8 +114,8 @@ class TrainingModuleController extends Controller
     /**
      * Update the specified training module in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\TrainingModule  $module
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\TrainingModule  $module
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, TrainingModule $module)
@@ -140,11 +140,12 @@ class TrainingModuleController extends Controller
         ]);
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
+        // KORREKTUR: Named Arguments entfernt, um den ParseError zu beheben.
         PotentiallyNotifiableActionOccurred::dispatch(
-            action: 'TrainingModuleController@update',
-            triggeringUser: null,
-            relatedModel: $module,
-            actorUser: $editor
+            'TrainingModuleController@update', // 1. Action Name
+            null, // 2. triggeringUser
+            $module, // 3. relatedModel
+            $editor // 4. actorUser
         );
         // ---------------------------------
 
@@ -155,7 +156,7 @@ class TrainingModuleController extends Controller
     /**
      * Remove the specified training module from storage.
      *
-     * @param  \App\Models\TrainingModule  $module
+     * @param  \App\Models\TrainingModule  $module
      * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(TrainingModule $module)
@@ -178,12 +179,13 @@ class TrainingModuleController extends Controller
         ]);
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
+        // KORREKTUR: Named Arguments entfernt.
         PotentiallyNotifiableActionOccurred::dispatch(
-            action: 'TrainingModuleController@destroy',
-            triggeringUser: null,
-            relatedModel: null, // Model existiert nicht mehr
-            actorUser: $deleter,
-            additionalData: ['name' => $moduleName] // Name für den Listener übergeben
+            'TrainingModuleController@destroy', // Action Name
+            null, // triggeringUser
+            null, // relatedModel
+            $deleter, // actorUser
+            ['name' => $moduleName] // additionalData
         );
         // ---------------------------------
 
@@ -211,10 +213,12 @@ class TrainingModuleController extends Controller
              // Keine Erfolgs-/Fehlermeldung nötig, einfach zurückleiten
              return redirect()->back();
         }
-        // Benutzer anmelden
-        $module->users()->attach($user->id, [
-            'assigned_by_user_id' => null, // null, da sich der Benutzer selbst "zugewiesen" hat
-        ]);
+
+        // Benutzer anmelden (Status 'angemeldet')
+        // HINWEIS: 'status' wurde in der DB entfernt, daher hier NICHT mehr verwenden.
+        // Die Zuweisungs-ID muss NULL sein (Selbstanmeldung).
+        $module->users()->attach($user->id, ['assigned_by_user_id' => null]);
+
         // Optional: Logeintrag
         ActivityLog::create([
             'user_id' => $user->id,
@@ -225,13 +229,12 @@ class TrainingModuleController extends Controller
         ]);
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
-        // Dies entspricht dem 'EvaluationController@store' für Modulanmeldung
-        // Wir verwenden einen eigenen Action Key
+        // KORREKTUR: Named Arguments entfernt.
         PotentiallyNotifiableActionOccurred::dispatch(
-            action: 'TrainingModuleController@signUp', // Eigene Action
-            triggeringUser: $user, // Der User, der sich anmeldet
-            relatedModel: $module,
-            actorUser: $user // Der User ist auch der Akteur
+            'TrainingModuleController@signUp', // Action
+            $user, // triggeringUser
+            $module, // relatedModel
+            $user // actorUser
         );
         // ------------------------------------
 
@@ -239,4 +242,3 @@ class TrainingModuleController extends Controller
         return redirect()->back();
     }
 }
-
