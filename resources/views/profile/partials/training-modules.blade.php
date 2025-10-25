@@ -19,7 +19,7 @@
                     <td>{{ $module->name }}</td>
                     <td>
                         @if ($module->pivot->assigned_by_user_id)
-                            Zugewiesen (ID: {{ $module->pivot->assigned_by_user_id }})
+                            Zugewiesen: {{ $module->pivot->assigner->name ?? 'System' }}
                         @else
                             <span class="badge bg-danger">Anmeldung</span>
                         @endif

@@ -237,10 +237,8 @@ class UserController extends Controller
     {
         // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
         $user->load([
-            // Wichtig: Laden Sie die 'assigner' Relation auf der Pivot-Tabelle,
-            // falls das User-Modell die Nested Relation 'trainingModules.assigner' unterstützt.
-            // Andernfalls nur 'trainingModules' laden.
             'trainingModules',
+            'trainingModules.assigner',
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
         ]);
