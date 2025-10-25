@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http{forward-slash}Controllers;
+namespace App\Http\Controllers;
 
 use App\Models\Evaluation;
 use App\Models\User;
