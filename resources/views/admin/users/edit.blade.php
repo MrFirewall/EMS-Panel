@@ -125,8 +125,13 @@
 
         {{-- Zwei-Spalten-Layout für Rechte --}}
         <div class="row">
-            {{-- Spalte für GRUPPEN / RANG --}}
+
+            {{-- ============================================= --}}
+            {{-- LINKE HAUPTSPALTE (Gruppen + Module)          --}}
+            {{-- ============================================= --}}
             <div class="col-md-6">
+
+                {{-- Spalte für GRUPPEN / RANG --}}
                 <div class="card card-outline card-info">
                     <div class="card-header"><h3 class="card-title">Gruppen / Rang Zuweisung</h3></div>
                     <div class="card-body">
@@ -135,7 +140,7 @@
                         @error('roles.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
                         <div class="row">
                             @foreach($roles as $role)
-                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
+                                <div class="col-md-4"> {{-- Hier ist col-md-4 korrekt, da es in einer inneren .row liegt --}}
                                     <div class="icheck-primary">
                                         <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" @if(in_array($role->name, old('roles', $user->getRoleNames()->toArray()))) checked @endif>
                                         <label for="role_{{ $role->id }}">{{ $role->name }}</label>
@@ -145,64 +150,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            @role('ems-director|Super-Admin')
-            <div class="col-md-6">
-                <div class="card card-outline card-warning">
-                    <div class="card-header"><h3 class="card-title">Einzelne Berechtigungen (erweitert)</h3></div>
-                    <div class="card-body">
-                        <p class="text-muted small">Ermöglicht granulare Rechte, die von den zugewiesenen Gruppen abweichen. Nur in Ausnahmefällen verwenden.</p>
-                        @error('permissions.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
-
-                        {{-- === START DER ÄNDERUNG === --}}
-                        
-                        <div class="row">
-                            {{-- Iteriere durch die neue $groupedPermissions Variable --}}
-                            @forelse($permissions as $module => $modulePermissions)
-                                <div class="col-md-4 mb-4">
-                                    {{-- Styling von role.index übernommen, aber mit "warning"-Farbe --}}
-                                    <div class="card card-body p-3 border-warning h-100"> 
-                                        <h6 class="text-warning text-capitalize mb-3">{{ $module }} Modul</h6>
-                                        
-                                        @foreach($modulePermissions as $permission)
-                                            <div class="icheck-primary">
-                                                <input type="checkbox" name="permissions[]" 
-                                                    value="{{ $permission->name }}" id="perm_{{ $permission->id }}"
-                                                    {{-- Prüft gegen 'old' (bei Validierungsfehler) oder die direkten Rechte des Nutzers --}}
-                                                    {{ in_array($permission->name, old('permissions', $userDirectPermissions)) ? 'checked' : '' }}>
-                                                
-                                                {{-- Label-Logik aus role.index übernommen --}}
-                                                <label for="perm_{{ $permission->id }}" class="small">
-                                                    {{-- Zeigt einen sauberen Namen an, z.B. "Create" statt "users-create" --}}
-                                                    {{ ucfirst(str_replace('-', ' ', str_replace($module . '-', '', $permission->description ?? $permission->name))) }}
-                                                    
-                                                    {{-- Zeigt den vollen Namen der Berechtigung darunter an --}}
-                                                    <small class="text-muted d-block">({{ $permission->name }})</small>
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="col-12">
-                                    <p class="text-center text-muted">Keine Berechtigungen im System vorhanden.</p>
-                                </div>
-                            @endforelse
-                        </div>
-
-                        {{-- === ENDE DER ÄNDERUNG === --}}
-                    </div>
-                </div>
-            </div>
-            @endrole
-
-            {{-- ============================================= --}}
-            {{-- NEUE KARTE: MANUELLE MODULZUWEISUNG           --}}
-            {{-- ============================================= --}}
-            @can('users.manage.modules') {{-- Schützt die ganze Karte --}}
-            <div class="col-md-4">
-                <div class="card card-outline card-success">
+                @can('users.manage.modules')
+                {{-- Beachte: Die Klasse "col-md-4" wurde hier entfernt! --}}
+                <div class="card card-outline card-success"> 
                     <div class="card-header"><h3 class="card-title"><i class="fas fa-graduation-cap"></i> Manuelle Modulzuweisung</h3></div>
                     <div class="card-body">
                         <p class="text-muted small">
@@ -213,13 +164,12 @@
                         @error('modules.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
                         <div class="row">
                             @forelse($allModules as $module)
-                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
+                                <div class="col-md-4"> {{-- Hier ist col-md-4 korrekt, da es in einer inneren .row liegt --}}
                                     <div class="icheck-primary">
                                         <input type="checkbox"
                                                name="modules[]"
                                                value="{{ $module->id }}"
                                                id="module_{{ $module->id }}"
-                                               {{-- Prüft, ob die Modul-ID im Array der bereits zugewiesenen Module ist --}}
                                                @if(in_array($module->id, old('modules', $userModules ?? []))) checked @endif>
                                         <label for="module_{{ $module->id }}">
                                             {{ $module->name }} <small class="text-muted">({{ $module->category }})</small>
@@ -234,11 +184,60 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            @endcan
-            {{-- === ENDE NEUE KARTE === --}}
+                @endcan
+                {{-- === ENDE NEUE KARTE === --}}
 
-        </div>
+            </div> {{-- Ende der linken Hauptspalte (col-md-6) --}}
+
+
+            {{-- ============================================= --}}
+            {{-- RECHTE HAUPTSPALTE (Nur Berechtigungen)      --}}
+            {{-- ============================================= --}}
+            <div class="col-md-6">
+                
+                {{-- Spalte für EINZELNE BERECHTIGUNGEN --}}
+                @role('ems-director|Super-Admin')
+                <div class="card card-outline card-warning">
+                    <div class="card-header"><h3 class="card-title">Einzelne Berechtigungen (erweitert)</h3></div>
+                    <div class="card-body">
+                        <p class="text-muted small">Ermöglicht granulare Rechte, die von den zugewiesenen Gruppen abweichen. Nur in Ausnahmefällen verwenden.</p>
+                        @error('permissions.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
+
+                        {{-- === START DER ÄNDERUNG (aus vorheriger Antwort) === --}}
+                        <div class="row">
+                            @forelse($permissions as $module => $modulePermissions)
+                                <div class="col-md-4 mb-4"> {{-- Hier evtl. auf col-md-6 ändern, wenn es nur 2 Spalten sein sollen --}}
+                                    <div class="card card-body p-3 border-warning h-100"> 
+                                        <h6 class="text-warning text-capitalize mb-3">{{ $module }} Modul</h6>
+                                        
+                                        @foreach($modulePermissions as $permission)
+                                            <div class="icheck-primary">
+                                                <input type="checkbox" name="permissions[]" 
+                                                       value="{{ $permission->name }}" id="perm_{{ $permission->id }}"
+                                                       {{ in_array($permission->name, old('permissions', $userDirectPermissions)) ? 'checked' : '' }}>
+                                                
+                                                <label for="perm_{{ $permission->id }}" class="small">
+                                                    {{ ucfirst(str_replace('-', ' ', str_replace($module . '-', '', $permission->description ?? $permission->name))) }}
+                                                    <small class="text-muted d-block">({{ $permission->name }})</small>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12">
+                                    <p class="text-center text-muted">Keine Berechtigungen im System vorhanden.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                        {{-- === ENDE DER ÄNDERUNG === --}}
+                    </div>
+                </div>
+                @endrole
+
+            </div> {{-- Ende der rechten Hauptspalte (col-md-6) --}}
+
+        </div> {{-- Ende der äußeren .row --}}
 
         <div class="mt-4 mb-4 text-right"> {{-- mb-4 hinzugefügt für Abstand --}}
             <a href="{{ route('admin.users.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
