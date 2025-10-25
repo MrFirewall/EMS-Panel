@@ -65,9 +65,6 @@
                     </p>
                 </a>
                 <ul class="nav nav-treeview">
-                    @can('evaluations.view.all')
-                    <li class="nav-item"><a href="{{ route('forms.evaluations.index') }}" class="nav-link {{ Request::routeIs('forms.evaluations.index') ? 'active' : '' }}"><i class="far fa-dot-circle nav-icon"></i><p>Übersicht</p></a></li>
-                    @endcan
                     @can('evaluations.create')
                     <li class="nav-item"><a href="{{ route('forms.evaluations.azubi') }}" class="nav-link {{ Request::routeIs('forms.evaluations.azubi') ? 'active' : '' }}"><i class="far fa-dot-circle nav-icon"></i><p>Azubibewertung</p></a></li>
                     <li class="nav-item"><a href="{{ route('forms.evaluations.praktikant') }}" class="nav-link {{ Request::routeIs('forms.evaluations.praktikant') ? 'active' : '' }}"><i class="far fa-dot-circle nav-icon"></i><p>Praktikantenbewertung</p></a></li>
@@ -156,7 +153,9 @@
             </a>
         </li>
         @endcan
-        
+        @can('evaluations.view.all')
+            <li class="nav-item"><a href="{{ route('forms.evaluations.index') }}" class="nav-link {{ Request::routeIs('forms.evaluations.index') ? 'active' : '' }}"><i class="far fa-dot-circle nav-icon"></i><p>Anmeldungen und Bewertungen</p></a></li>
+        @endcan
         @can('training.view')
         <li class="nav-item">
             <a href="{{ route('modules.index') }}" class="nav-link {{ Request::routeIs('modules.*') ? 'active' : '' }}">
