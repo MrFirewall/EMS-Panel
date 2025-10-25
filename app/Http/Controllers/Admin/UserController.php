@@ -245,7 +245,7 @@ class UserController extends Controller
 
         // 1. Prüfungsversuche laden
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam.trainingModule')
+                                    ->with('exam')
                                     ->latest('completed_at') // Sortiert nach Abschlussdatum
                                     ->get();
 
