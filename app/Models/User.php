@@ -250,7 +250,7 @@ class User extends Authenticatable
     public function trainingModules()
     {
         return $this->belongsToMany(TrainingModule::class, 'training_module_user')
-                    ->withPivot('status', 'completed_at', 'notes')
+                    ->withPivot('assigned_by_user_id', 'completed_at', 'notes')
                     ->withTimestamps();
     }
 
