@@ -16,47 +16,156 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.bootstrap4.min.css">
 
-    {{-- SELECT2 CSS --}}
+    {{-- SELECT2 CSS HINZUGEFÜGT --}}
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+
 
     {{-- Custom Styles & Dark Mode Fixes --}}
     <style>
         /* Preloader */
-        .preloader { background-color: #343a40; }
-        .ekg-loader { width: 20vw; height: 10vw; max-width: 300px; max-height: 150px; min-width: 120px; min-height: 60px; }
-        .ekg-loader path { stroke: #007bff; stroke-width: 4; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw 2s linear infinite; }
-        @keyframes draw { to { stroke-dashoffset: 0; } }
+        .preloader {
+            background-color: #343a40; /* Dunkler Hintergrund, verhindert "Aufblitzen" */
+        }
+        .ekg-loader {
+            width: 20vw;
+            height: 10vw;
+            max-width: 300px;
+            max-height: 150px;
+            min-width: 120px;
+            min-height: 60px;
+        }
+        .ekg-loader path {
+            stroke: #007bff;
+            stroke-width: 4;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s linear infinite;
+        }
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
 
         /* Dark Mode: List Group */
-        .dark-mode .list-group-item { background-color: #343a40; border-color: #454d55; color: #f8f9fa; }
-        .dark-mode a.list-group-item:hover, .dark-mode a.list-group-item:focus { background-color: #495057; color: #ffffff; }
-        .dark-mode .text-muted { color: #adb5bd !important; }
+        .dark-mode .list-group-item {
+            background-color: #343a40;
+            border-color: #454d55;
+            color: #f8f9fa;
+        }
+        .dark-mode a.list-group-item:hover, .dark-mode a.list-group-item:focus {
+            background-color: #495057;
+            color: #ffffff;
+        }
+        .dark-mode .text-muted {
+            color: #adb5bd !important;
+        }
 
-        /* Dark Mode: Select2 Overrides */
+        /* Dark Mode: Select2 Overrides (Hier behalten oder in eigene CSS auslagern) */
         .dark-mode .select2-container--bootstrap4 .select2-selection,
-        .dark-mode .select2-dropdown { background-color: #343a40; border-color: #6c757d; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered { color: #fff; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b { border-color: #fff transparent transparent transparent; }
-        .dark-mode .select2-search--dropdown .select2-search__field { background-color: #454d55; color: #fff; }
-        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted { background-color: #007bff; color: #fff; }
-        .dark-mode .select2-container--bootstrap4 .select2-results__option { color: #dee2e6; }
+        .dark-mode .select2-dropdown {
+            background-color: #343a40;
+            border-color: #6c757d;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+            color: #fff;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow b {
+            border-color: #fff transparent transparent transparent;
+        }
+        .dark-mode .select2-search--dropdown .select2-search__field {
+            background-color: #454d55;
+            color: #fff;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-results__option--highlighted {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-results__option {
+            color: #dee2e6;
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+            color: #fff;
+        }
 
-        /* Select2: Multi-Select Tag Styling */
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice { background-color: #007bff; color: #fff !important; margin-top: 2px !important; margin-bottom: 2px !important; float: left; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice { background-color: #3f6791; }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove { color: #fff !important; text-shadow: 0 1px 0 #495057; font-size: 1.5rem; line-height: 1; opacity: .5; background-color: transparent; border: 0; float: left; padding: 0 3px; margin: 0 1px 0 3px; font-weight: 700; }
-        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover { color: #fff; text-decoration: none; }
 
-        /* Select2 Multi Height Fixes */
-        .select2-container--bootstrap4 .select2-selection--multiple { min-height: 38px; height: auto !important; padding-top: 5px !important; padding-bottom: 5px !important; }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__rendered { line-height: normal; display: block; padding: 0; margin: 0; }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-search--inline { float: none !important; display: inline-block; width: 100%; }
-        .select2-container--bootstrap4 .select2-selection--multiple .select2-search__field { min-width: 100px !important; }
+        /* Select2: Multi-Select Tag Styling (Standard & Dark Mode) */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #007bff;
+            color: #fff !important;
+            /* NEU: Weniger Margin, damit die Tags besser ineinander fließen */
+            margin-top: 2px !important; 
+            margin-bottom: 2px !important;
+            float: left; /* Beibehalten, damit Tags nebeneinander liegen */
+        }
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice {
+            background-color: #3f6791; /* Primärfarbe für bessere Sichtbarkeit im Dark Mode */
+        }
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove {
+            color: #fff !important;
+            text-shadow: 0 1px 0 #495057;
+            font-size: 1.5rem;
+            line-height: 1;
+            opacity: .5;
+            background-color: transparent;
+            border: 0;
+            float: left;
+            padding-right: 3px;
+            padding-left: 3px;
+            margin-right: 1px;
+            margin-left: 3px;
+            font-weight: 700;
+        }
+        
+        /* 🔥 FIXES FÜR DYNAMISCHE HÖHE (Multi-Select) 🔥 */
+        .select2-container--bootstrap4 .select2-selection--multiple {
+            min-height: 38px;
+            /* ZWINGEND: Ermöglicht das Wachstum über mehrere Zeilen */
+            height: auto !important; 
+            /* Erhöht das interne Padding oben und unten für mehr Platz für die Tags */
+            padding-top: 5px !important; 
+            padding-bottom: 5px !important; 
+        }
+
+        /* Wichtig: Sicherstellen, dass die Eingabezeile genug Platz hat */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__rendered {
+            line-height: normal; 
+            /* Muss 'block' sein, damit es die Tags korrekt umbricht und die Höhe berechnet */
+            display: block; 
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* 🔥 NEUE KRITISCHE REGELN: Zwingt Suchfeld zum Umbruch 🔥 */
+        /* Zielt auf das umschließende Element der Sucheingabe */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-search--inline {
+            /* Entfernt das Float, das oft die Höhenberechnung blockiert */
+            float: none !important; 
+            display: inline-block;
+            /* Ermöglicht Umbruch nach den Tags */
+            width: 100%; 
+        }
+        
+        /* Zielt auf das eigentliche Texteingabefeld */
+        .select2-container--bootstrap4 .select2-selection--multiple .select2-search__field {
+             /* Wichtig, um die Sucheingabe sichtbar zu machen und Umbrüche zu erzwingen */
+            min-width: 100px !important; 
+        }
+        
+        .dark-mode .select2-container--bootstrap4 .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #fff;
+            text-decoration: none;
+        }
 
         /* Navbar: Notification Badge Size */
-        .main-header .navbar-badge { font-size: 0.75rem; padding: 3px 6px; top: 6px; right: 3px; font-weight: 700; }
+        .main-header .navbar-badge {
+            font-size: 0.75rem;
+            padding: 3px 6px;
+            top: 6px;
+            right: 3px;
+            font-weight: 700;
+        }
     </style>
     @stack('styles')
 </head>
@@ -93,6 +202,7 @@
                     <span class="badge badge-warning navbar-badge" id="notification-count" style="display: none;"></span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" id="notification-list">
+                    {{-- Content is loaded via JavaScript --}}
                     <div class="dropdown-item">Lade Benachrichtigungen...</div>
                 </div>
             </li>
@@ -100,13 +210,13 @@
             {{-- User Dropdown --}}
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
-                    @if(Auth::check())
+                    @if(Auth::check()) {{-- Sicherstellen, dass der Benutzer eingeloggt ist --}}
                         <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
                         <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
                     @endif
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                    @if(Auth::check())
+                    @if(Auth::check()) {{-- Sicherstellen, dass der Benutzer eingeloggt ist --}}
                         <li class="user-header bg-primary">
                             <img src="{{ Auth::user()->avatar }}" class="img-circle elevation-2" alt="User Image">
                             <p>
@@ -115,7 +225,6 @@
                             </p>
                         </li>
                         <li class="user-footer">
-                            <a href="{{ route('profile.show') }}" class="btn btn-default btn-flat">Profil</a> {{-- Profil-Link Hinzugefügt --}}
                             <a href="#" class="btn btn-default btn-flat float-right"
                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                                 Abmelden
@@ -155,9 +264,6 @@
 
     {{-- FOOTER --}}
     <footer class="main-footer">
-        {{-- Button für Push-Benachrichtigungen hier im Footer platziert --}}
-        <button id="enable-push" class="btn btn-sm btn-info float-left mr-3">Desktop-Benachrichtigungen aktivieren</button>
-
         <div class="float-right d-none d-sm-inline">Version 1.0</div>
         <strong>Copyright &copy; 2025 EMS Panel.</strong> All rights reserved.
     </footer>
@@ -168,6 +274,7 @@
 
 {{-- AJAX CSRF Setup --}}
 <script>
+    // Stellt das CSRF-Token für alle jQuery-AJAX-Anfragen ein
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -187,119 +294,99 @@
 {{-- SWEETALERT2 --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-{{-- SELECT2 JS --}}
+{{-- SELECT2 JS HINZUGEFÜGT --}}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 
-{{-- ECHO & PUSHER DEPENDENCIES --}}
-{{-- <script src="https://js.pusher.com/7.0/pusher.min.js"></script> --}} {{-- Wird für Reverb nicht unbedingt gebraucht --}}
-<script src="{{ asset('js/echo.js') }}"></script> {{-- Angepasst für lokale Echo.js --}}
+{{-- ECHO & PUSHER DEPENDENCIES (FÜR ECHTZEIT) --}}
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.0/echo.iife.min.js"></script>
 
 <script>
     // ------------------------------------------------------------------------
-    // WICHTIG: Alles in $(document).ready() oder DOMContentLoaded packen
+    // THEME-LOGIK
     // ------------------------------------------------------------------------
-    $(document).ready(function() {
+    (() => {
+        'use strict'
+        const getStoredTheme = () => localStorage.getItem('theme')
+        const setStoredTheme = theme => localStorage.setItem('theme', theme)
 
-        console.log("DOM ready. Initialisiere Skripte..."); // DEBUGGING
+        const getPreferredTheme = () => {
+            const storedTheme = getStoredTheme()
+            if (storedTheme) return storedTheme
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
 
-        // ------------------------------------------------------------------------
-        // THEME-LOGIK
-        // ------------------------------------------------------------------------
-        console.log("Initialisiere Theme-Logik..."); // DEBUGGING
-        (() => {
-            'use strict'
-            const getStoredTheme = () => localStorage.getItem('theme')
-            const setStoredTheme = theme => localStorage.setItem('theme', theme)
+        const applyTheme = theme => {
+            const body = document.body;
+            const navbar = document.getElementById('mainNavbar');
+            const sidebar = document.getElementById('mainSidebar');
+            const toggleIcon = document.getElementById('darkModeToggle').querySelector('i');
 
-            const getPreferredTheme = () => {
-                const storedTheme = getStoredTheme()
-                if (storedTheme) return storedTheme
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-            }
+            if (theme === 'dark') {
+                body.classList.add('dark-mode');
 
-            const applyTheme = theme => {
-                console.log("Anwenden Theme:", theme); // DEBUGGING
-                const body = document.body;
-                const navbar = document.getElementById('mainNavbar');
-                const sidebar = document.getElementById('mainSidebar');
-                const toggleIcon = document.getElementById('darkModeToggle')?.querySelector('i'); // Sicherstellen, dass Element existiert
+                navbar.classList.add('navbar-dark');
+                navbar.classList.remove('navbar-white', 'navbar-light');
 
-                if (!navbar || !sidebar || !toggleIcon) {
-                    console.warn("Theme-Elemente nicht gefunden (Navbar, Sidebar oder ToggleIcon)"); // DEBUGGING
-                    return;
-                }
+                sidebar.classList.add('sidebar-dark-primary');
+                sidebar.classList.remove('sidebar-light-primary');
 
-                if (theme === 'dark') {
-                    body.classList.add('dark-mode');
-                    navbar.classList.add('navbar-dark');
-                    navbar.classList.remove('navbar-white', 'navbar-light');
-                    sidebar.classList.add('sidebar-dark-primary');
-                    sidebar.classList.remove('sidebar-light-primary');
-                    toggleIcon.classList.replace('fa-moon', 'fa-sun');
-                } else {
-                    body.classList.remove('dark-mode');
-                    navbar.classList.add('navbar-white', 'navbar-light');
-                    navbar.classList.remove('navbar-dark');
-                    sidebar.classList.add('sidebar-light-primary');
-                    sidebar.classList.remove('sidebar-dark-primary');
-                    toggleIcon.classList.replace('fa-sun', 'fa-moon');
-                }
-            }
-
-            applyTheme(getPreferredTheme());
-
-            const darkModeToggle = document.getElementById('darkModeToggle');
-            if (darkModeToggle) {
-                darkModeToggle.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log("Dark Mode Toggle geklickt."); // DEBUGGING
-                    const currentTheme = getStoredTheme() === 'dark' ? 'light' : 'dark';
-                    setStoredTheme(currentTheme);
-                    applyTheme(currentTheme);
-                });
+                toggleIcon.classList.replace('fa-moon', 'fa-sun');
             } else {
-                 console.warn("Dark Mode Toggle Button nicht gefunden."); // DEBUGGING
+                body.classList.remove('dark-mode');
+
+                navbar.classList.add('navbar-white', 'navbar-light');
+                navbar.classList.remove('navbar-dark');
+
+                sidebar.classList.add('sidebar-light-primary');
+                sidebar.classList.remove('sidebar-dark-primary');
+
+                toggleIcon.classList.replace('fa-sun', 'fa-moon');
             }
-
-        })();
-
-
-        // ------------------------------------------------------------------------
-        // SWEETALERT2 INTEGRATION
-        // ------------------------------------------------------------------------
-        console.log("Initialisiere SweetAlert..."); // DEBUGGING
-        function decodeHtml(str) {
-            if (!str) return '';
-            const doc = new DOMParser().parseFromString(str, "text/html");
-            return doc.documentElement.textContent;
         }
 
-        function showSweetAlert(type, message) {
-            console.log("Zeige SweetAlert:", type, message); // DEBUGGING
-            setTimeout(() => {
-                if (typeof Swal === 'undefined') {
-                     console.error("Swal (SweetAlert2) ist nicht definiert!"); // DEBUGGING
-                     return;
-                }
-                let title = type === 'success' ? 'Erfolg!' : 'Fehler!';
-                let timer = type === 'success' ? 3000 : 5000;
-                const decodedMessage = decodeHtml(message);
+        applyTheme(getPreferredTheme());
 
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: type,
-                    title: title,
-                    text: decodedMessage,
-                    showConfirmButton: false,
-                    timer: timer
-                });
-            }, 50);
-        }
+        document.getElementById('darkModeToggle').addEventListener('click', (e) => {
+            e.preventDefault();
+            const currentTheme = getStoredTheme() === 'dark' ? 'light' : 'dark';
+            setStoredTheme(currentTheme);
+            applyTheme(currentTheme);
+        });
+    })();
 
-        const successMessage = ('{{ session("success") }}' || '').trim();
-        const errorMessage = ('{{ session("error") }}' || '').trim();
+
+    // ------------------------------------------------------------------------
+    // SWEETALERT2 INTEGRATION
+    // ------------------------------------------------------------------------
+    function decodeHtml(str) {
+        const doc = new DOMParser().parseFromString(str, "text/html");
+        return doc.documentElement.textContent;
+    }
+
+    function showSweetAlert(type, message) {
+        setTimeout(() => {
+            if (typeof Swal === 'undefined') return;
+            let title = type === 'success' ? 'Erfolg!' : 'Fehler!';
+            let timer = type === 'success' ? 3000 : 5000;
+            const decodedMessage = decodeHtml(message);
+
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: title,
+                text: decodedMessage,
+                showConfirmButton: false,
+                timer: timer
+            });
+        }, 50);
+    }
+
+    $(document).ready(function() {
+        const successMessage = '{{ session("success") }}'.trim();
+        const errorMessage = '{{ session("error") }}'.trim();
         const validationErrors = @json($errors->all() ?? []);
 
         if (successMessage.length > 0) {
@@ -309,279 +396,149 @@
         }
 
         if (validationErrors.length > 0) {
-            console.log("Zeige Validierungsfehler-Swal:", validationErrors); // DEBUGGING
-            const errorHtml = validationErrors.map(err => `<li>${decodeHtml(err)}</li>`).join('');
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Validierungsfehler!',
-                    html: `Bitte korrigiere die folgenden Fehler:<ul>${errorHtml}</ul>`,
-                    showConfirmButton: true,
-                    confirmButtonText: 'Verstanden'
-                });
-            } else {
-                 console.error("Swal nicht definiert, kann Validierungsfehler nicht anzeigen."); // DEBUGGING
-            }
+            const errorHtml = validationErrors.map(err => `<li>${err}</li>`).join('');
+            Swal.fire({
+                icon: 'error',
+                title: 'Validierungsfehler!',
+                html: `Bitte korrigiere die folgenden Fehler:<ul>${errorHtml}</ul>`,
+                showConfirmButton: true,
+                confirmButtonText: 'Verstanden'
+            });
         }
+    });
 
 
-        // ------------------------------------------------------------------------
-        // ECHO INITIALISIERUNG
-        // ------------------------------------------------------------------------
-        console.log("Initialisiere Laravel Echo..."); // DEBUGGING
-        if (typeof Echo !== 'undefined') {
-            const isHttps = window.location.protocol === 'https:';
+    // ------------------------------------------------------------------------
+    // ECHO INITIALISIERUNG
+    // ------------------------------------------------------------------------
+    window.Pusher = Pusher;
 
-            //window.Echo = new Echo({ // Annahme: Echo ist global in echo.js definiert
-                // broadcaster: 'reverb',
-                // key: '{{ env("REVERB_APP_KEY") }}',
-                // wsHost: '{{ env("REVERB_HOST") }}',
-                // wsPort: {{ env("REVERB_PORT") ?? 8080 }},
-                // wssPort: {{ env("REVERB_PORT") ?? 443 }},
-                // forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
-                // //enabledTransports: ['ws', 'wss'], // Optional
-                // // Cluster etc., falls Pusher verwendet wird
-            //});
+    const isHttps = window.location.protocol === 'https:';
 
-             // Wichtige Einstellung für Reverb mit Laravel Sanctum/Session Auth
-             window.Echo.options.auth = {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    // Optional, falls Cookies nicht automatisch gesendet werden (SameSite etc.)
-                    // 'X-Requested-With': 'XMLHttpRequest'
-                },
-             };
+    window.Echo = new Echo({
+        broadcaster: 'pusher',
+        key: '{{ env("REVERB_APP_KEY") }}',
 
+        wsHost: '{{ env("REVERB_HOST") }}',
+        wssHost: '{{ env("REVERB_HOST") }}',
 
-            window.Echo.connector.reverb.connection.bind('error', function(err) {
-              console.error("Reverb Verbindungsfehler:", err);
-            });
-            window.Echo.connector.reverb.connection.bind('connected', function() {
-              console.info("WebSocket-Verbindung (Reverb) erfolgreich hergestellt.");
-            });
-             window.Echo.connector.reverb.connection.bind('connecting', function() {
-              console.info("Verbinde mit Reverb WebSocket...");
-            });
-             window.Echo.connector.reverb.connection.bind('disconnected', function() {
-              console.warn("Reverb WebSocket getrennt.");
-            });
+        wsPort: {{ env("REVERB_PORT") ?? 443 }},
+        wssPort: {{ env("REVERB_PORT") ?? 443 }},
 
-        } else {
-            console.error("Echo (Laravel Echo) ist nicht definiert! Stelle sicher, dass echo.js korrekt geladen wird."); // DEBUGGING
-        }
+        forceTLS: isHttps || ('{{ env("REVERB_SCHEME") }}' === 'https'),
 
+        path: '/app',
 
-        // ------------------------------------------------------------------------
-        // JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig)
-        // ------------------------------------------------------------------------
-        console.log("Initialisiere Benachrichtigungs-Logik..."); // DEBUGGING
-        function fetchNotifications() {
-            console.log("fetchNotifications() aufgerufen."); // DEBUGGING
-            const notificationCount = $('#notification-count');
-            const notificationList = $('#notification-list');
-            const fetchUrl = '{{ route("api.notifications.fetch") }}';
+        disableStats: true,
 
-            let openGroups = [];
-            $('#notification-list .collapse.show').each(function() {
-                openGroups.push($(this).attr('id'));
-            });
-            console.log("Offene Gruppen vor Fetch:", openGroups); // DEBUGGING
-
-            $.ajax({
-                url: fetchUrl,
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    console.log("AJAX Success - Notifications:", response); // DEBUGGING
-                    const htmlContent = response.items_html;
-
-                    if (response.count > 0) {
-                        notificationCount.text(response.count).show();
-                    } else {
-                        notificationCount.hide();
-                    }
-
-                    if (htmlContent) {
-                        notificationList.html(htmlContent);
-                        openGroups.forEach(function(id) {
-                            $(`#${id}`).collapse('show');
-                        });
-                        console.log("Gruppen nach Update geöffnet:", openGroups); // DEBUGGING
-                    } else {
-                       notificationList.html('<a href="#" class="dropdown-item"><span class="text-muted">Keine neuen Meldungen.</span></a>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Fehler beim Laden der Benachrichtigungen via AJAX:', status, error, xhr.responseText); // DEBUGGING mit mehr Details
-                    notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
+        authorizer: (channel, options) => {
+            return {
+                authorize: (socketId, callback) => {
+                    $.post('/broadcasting/auth', {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        socket_id: socketId,
+                        channel_name: channel.name
+                    })
+                    .done(response => {
+                        callback(false, response);
+                    })
+                    .fail(error => {
+                        console.error('Laravel Echo Authorisierung fehlgeschlagen:', error.responseJSON || error);
+                        callback(true, error);
+                    });
                 }
-            });
-        }
+            };
+        },
+    });
 
+    // Optional: Listener für Verbindungsfehler (kann für Produktionslogging nützlich sein)
+    window.Echo.connector.pusher.connection.bind('error', function(err) {
+      console.error("Pusher Verbindungsfehler:", err);
+    });
+
+    // Optional: Bestätigung bei erfolgreicher Verbindung
+    window.Echo.connector.pusher.connection.bind('connected', function() {
+      console.info("WebSocket-Verbindung erfolgreich hergestellt.");
+    });
+
+
+    // ------------------------------------------------------------------------
+    // JAVASCRIPT FÜR BENACHRICHTIGUNGEN (Echtzeit-fähig)
+    // ------------------------------------------------------------------------
+    function fetchNotifications() {
+        const notificationCount = $('#notification-count');
+        const notificationList = $('#notification-list');
+        const fetchUrl = '{{ route("api.notifications.fetch") }}';
+
+        // Zustand speichern: IDs aller geöffneten Collapse-Gruppen sammeln
+        let openGroups = [];
+        $('#notification-list .collapse.show').each(function() {
+            openGroups.push($(this).attr('id'));
+        });
+
+        $.ajax({
+            url: fetchUrl,
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                const htmlContent = response.items_html;
+
+                // Zähler aktualisieren
+                if (response.count > 0) {
+                    notificationCount.text(response.count).show();
+                } else {
+                    notificationCount.hide();
+                }
+
+                // Dropdown-Liste mit dem NEUEN HTML aus dem Partial füllen
+                if (htmlContent) {
+                    notificationList.html(htmlContent);
+
+                    // Zustand wiederherstellen: Geöffnete Gruppen erneut öffnen
+                    openGroups.forEach(function(id) {
+                        $(`#${id}`).collapse('show');
+                    });
+
+                } else {
+                   notificationList.html('<a href="#" class="dropdown-item"><span class="text-muted">Keine neuen Meldungen.</span></a>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Fehler beim Laden der Benachrichtigungen via AJAX:', status, error);
+                notificationList.html('<a href="#" class="dropdown-item"><i class="fas fa-exclamation-triangle text-danger mr-2"></i> Fehler beim Laden.</a>');
+            }
+        });
+    }
+
+    $(document).ready(function() {
         // Führe die Funktion sofort beim Laden der Seite aus
         fetchNotifications();
 
+        // --------------------------------------------------------------------
         // ECHTE ECHTZEIT-LOGIK (Laravel Echo)
+        // --------------------------------------------------------------------
         @auth
-        if (typeof window.Echo !== 'undefined') {
-            console.log("Versuche, Echo-Kanal zu abonnieren: users.{{ Auth::id() }}"); // DEBUGGING
-            window.Echo.private(`users.{{ Auth::id() }}`)
-                .listen('.new.ems.notification', (e) => {
-                    console.log("Echo Event empfangen!", e); // DEBUGGING
-                    fetchNotifications();
-                    // Optional: Visuelles Feedback, z.B. kurzes Aufleuchten der Glocke
-                    $('#notification-dropdown .fa-bell').addClass('text-warning').delay(500).queue(function(next){
-                        $(this).removeClass('text-warning');
-                        next();
-                    });
-                })
-                .error((error) => {
-                    console.error('Echo Kanal-Fehler:', error); // DEBUGGING
-                });
-        } else {
-             console.warn("Echo nicht definiert, kann Kanal nicht abonnieren."); // DEBUGGING
-        }
+        // Lauscht auf den privaten Kanal des eingeloggten Benutzers
+        window.Echo.private(`users.{{ Auth::id() }}`)
+            // Lauscht auf den im Backend definierten broadcastAs-Namen
+            .listen('.new.ems.notification', (e) => {
+                // Lädt das Dropdown nur, wenn ein Event eintrifft
+                fetchNotifications();
+            });
         @endauth
+        // --------------------------------------------------------------------
 
-        // FIX: Verhindert Schließen des Dropdowns bei Klick auf Untergruppen
-        $(document).on('click', '#notification-dropdown .dropdown-menu', function (e) {
-            const isToggle = $(e.target).closest('a[data-toggle="collapse"]').length > 0;
-            const isContent = $(e.target).closest('.collapse').length > 0;
-            // Verhindere Schließen auch bei Klick auf Formulare/Buttons innen
-            const isFormElement = $(e.target).closest('form, button[type="submit"]').length > 0;
+    });
 
-            if (isToggle || isContent || isFormElement) {
-                 e.stopPropagation();
-            }
-        });
+    // FIX: Verhindert, dass das Haupt-Dropdown-Menü schließt, wenn auf Toggle- oder Content-Elemente der Untergruppen geklickt wird.
+    $(document).on('click', '#notification-dropdown .dropdown-menu', function (e) {
+        const isToggle = $(e.target).closest('a[data-toggle="collapse"]').length > 0;
+        const isContent = $(e.target).closest('.collapse').length > 0;
 
-        // =========================================================================
-        // === PUSH BENACHRICHTIGUNGS-LOGIK MIT DEBUGGING ===
-        // =========================================================================
-        console.log("Initialisiere Push-Benachrichtigungs-Logik..."); // DEBUGGING
-
-        // (1) VAPID Key
-        const VAPID_PUBLIC_KEY = '{{ config('webpush.vapid.public_key') }}';
-        if (!VAPID_PUBLIC_KEY) {
-            console.error("VAPID_PUBLIC_KEY ist nicht konfiguriert!"); // DEBUGGING
-        } else {
-            console.log("VAPID Public Key vorhanden."); // DEBUGGING
+        if (isToggle || isContent) {
+             e.stopPropagation();
         }
-
-
-        // (2) Hilfsfunktion
-        function urlBase64ToUint8Array(base64String) {
-            // (Code bleibt gleich)
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
-            return outputArray;
-        }
-
-        // (3) Abo-Funktion
-        function subscribeUser() {
-            console.log("subscribeUser() aufgerufen."); // DEBUGGING
-            navigator.serviceWorker.ready.then(registration => {
-                console.log("Service Worker ist bereit für Abo."); // DEBUGGING
-                const subscribeOptions = {
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                };
-                
-                return registration.pushManager.subscribe(subscribeOptions);
-            })
-            .then(pushSubscription => {
-                console.log('Push-Abo vom Browser erhalten:', pushSubscription); // DEBUGGING
-                sendSubscriptionToServer(pushSubscription);
-            })
-            .catch(error => {
-                console.error('Push-Abo fehlgeschlagen:', error); // DEBUGGING
-                alert('Aktivierung fehlgeschlagen. Haben Sie Benachrichtigungen im Browser blockiert oder ist der VAPID Key ungültig?');
-            });
-        }
-
-        // (4) Sende-Funktion
-        function sendSubscriptionToServer(subscription) {
-            console.log("sendSubscriptionToServer() aufgerufen mit:", subscription); // DEBUGGING
-            fetch('{{ route('push.subscribe') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify(subscription)
-            })
-            .then(response => {
-                console.log("Server Antwort Status:", response.status); // DEBUGGING
-                if (!response.ok) {
-                     return response.text().then(text => { // Mehr Details bei Fehler
-                         throw new Error(`Server-Antwort war nicht ok (${response.status}): ${text}`);
-                     });
-                }
-                return response.json(); // Nur parsen, wenn ok
-            })
-             .then(data => { // Verarbeite das JSON, wenn erfolgreich
-                console.log('Abo auf Server gespeichert.', data); // DEBUGGING
-                alert('Desktop-Benachrichtigungen sind jetzt aktiv!');
-                const pushButton = document.getElementById('enable-push');
-                if(pushButton) pushButton.style.display = 'none';
-             })
-            .catch(error => {
-                 console.error("Fehler beim Senden des Abos an den Server:", error); // DEBUGGING
-                 alert("Fehler: Das Abo konnte nicht auf dem Server gespeichert werden.");
-            });
-        }
-
-        // (5) Hauptlogik und Klick-Event
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            console.log("Browser unterstützt Service Worker und Push Manager."); // DEBUGGING
-
-            // Service Worker registrieren (schon vorher vorhanden, jetzt nur Log)
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log("Service Worker erfolgreich registriert.", reg)) // DEBUGGING
-                .catch(err => console.error('SW-Registrierung fehlgeschlagen:', err)); // DEBUGGING
-
-            const pushButton = document.getElementById('enable-push');
-            if (pushButton) {
-                console.log("Push Button gefunden."); // DEBUGGING
-                pushButton.addEventListener('click', () => {
-                    console.log("Push Button geklickt!"); // DEBUGGING
-                    Notification.requestPermission().then(permission => {
-                        console.log("Berechtigungs-Ergebnis:", permission); // DEBUGGING
-                        if (permission === 'granted') {
-                            subscribeUser();
-                        } else {
-                            alert('Sie müssen Benachrichtigungen erlauben, um diese Funktion zu nutzen.');
-                        }
-                    });
-                });
-
-                // Button verstecken, wenn schon abonniert
-                navigator.serviceWorker.ready.then(reg => {
-                    console.log("Prüfe bestehendes Abo..."); // DEBUGGING
-                     reg.pushManager.getSubscription().then(sub => {
-                         if (sub) {
-                             console.log("Benutzer ist bereits abonniert.", sub); // DEBUGGING
-                             pushButton.style.display = 'none';
-                         } else {
-                              console.log("Benutzer ist noch nicht abonniert."); // DEBUGGING
-                         }
-                     }).catch(err => console.error("Fehler beim Prüfen des Abos:", err)); // DEBUGGING
-                }).catch(err => console.error("Fehler beim Warten auf Service Worker ready:", err)); // DEBUGGING
-
-            } else {
-                 console.warn("Push Button ('enable-push') nicht im DOM gefunden!"); // DEBUGGING
-            }
-        } else {
-            console.warn('Push Messaging oder Service Worker wird von diesem Browser nicht unterstützt.'); // DEBUGGING
-            const pushButton = document.getElementById('enable-push');
-            if(pushButton) pushButton.style.display = 'none';
-        }
-        // === ENDE PUSH BENACHRICHTIGUNGS-LOGIK ===
-
-    }); // Ende von $(document).ready()
+    });
 </script>
 
 
