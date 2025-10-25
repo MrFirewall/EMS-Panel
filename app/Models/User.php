@@ -270,7 +270,7 @@ class User extends Authenticatable
         return $this->hasMany(ExamAttempt::class);
     }
 
-    public function pushSubscriptions() {
+    public function webPushSubscriptions() {
         return $this->hasMany(\App\Models\PushSubscription::class);
     }
 }
