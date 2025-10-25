@@ -155,7 +155,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center p-4 text-muted">Es sind keine Prüfungsversuche vorhanden.</td> {{ Colspan angepasst }}
+                                            <td colspan="8" class="text-center p-4 text-muted">Es sind keine Prüfungsversuche vorhanden.</td> {{-- Colspan angepasst --}}
                                         </tr>
                                     @endforelse
                                 </tbody>
