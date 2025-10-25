@@ -215,25 +215,97 @@
 @endsection
 
 @push('scripts')
-{{-- JavaScript zum Kopieren (unverändert) --}}
 <script>
 function copyLink() {
-const linkElement = document.getElementById('secure-link');
-if (linkElement) {
-navigator.clipboard.writeText(linkElement.textContent.trim())
-.then(() => {
-alert('Prüfungslink wurde in die Zwischenablage kopiert!');
-})
-.catch(err => {
-const tempInput = document.createElement('textarea');
-tempInput.value = linkElement.textContent.trim();
-document.body.appendChild(tempInput);
-tempInput.select();
-document.execCommand('copy');
-document.body.removeChild(tempInput);
-alert('Prüfungslink wurde in die Zwischenablage kopiert (Fallback)!');
-});
+    const linkElement = document.getElementById('secure-link');
+    const copyButton = event.currentTarget; // Den geklickten Button holen
+    const originalButtonHtml = copyButton.innerHTML; // Originalen Button-Text speichern
+
+    if (!linkElement) {
+        console.error('Element mit ID "secure-link" nicht gefunden.');
+        alert('Fehler: Link-Element nicht gefunden.');
+        return;
+    }
+
+    const textToCopy = linkElement.textContent.trim();
+
+    // Moderne Methode (bevorzugt)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+                // Feedback direkt am Button geben
+                copyButton.innerHTML = '<i class="fas fa-check"></i> Kopiert!';
+                copyButton.classList.remove('btn-outline-secondary');
+                copyButton.classList.add('btn-success');
+                // Nach 2 Sekunden zurücksetzen
+                setTimeout(() => {
+                    copyButton.innerHTML = originalButtonHtml;
+                    copyButton.classList.remove('btn-success');
+                    copyButton.classList.add('btn-outline-secondary');
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Fehler beim Kopieren mit Clipboard API: ', err);
+                fallbackCopyLink(textToCopy, copyButton, originalButtonHtml); // Fallback versuchen
+            });
+    } else {
+        // Fallback für ältere Browser
+        fallbackCopyLink(textToCopy, copyButton, originalButtonHtml);
+    }
 }
+
+// Fallback-Funktion
+function fallbackCopyLink(text, button, originalHtml) {
+    const tempInput = document.createElement('textarea');
+    tempInput.value = text;
+    // Style, um es unsichtbar zu machen, aber auswählbar
+    tempInput.style.position = 'absolute';
+    tempInput.style.left = '-9999px';
+    tempInput.style.top = '0';
+
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            // Feedback am Button
+            button.innerHTML = '<i class="fas fa-check"></i> Kopiert!';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        } else {
+             alert('Kopieren fehlgeschlagen (Fallback).');
+        }
+    } catch (err) {
+        console.error('Fallback-Kopieren fehlgeschlagen: ', err);
+        alert('Kopieren fehlgeschlagen (Fallback).');
+    }
+    document.body.removeChild(tempInput);
 }
+
+// Optional: Zeige Modal wieder an, wenn Validierungsfehler auftreten
+// Dies erfordert Anpassungen im Controller, um Fehler in einem benannten Error Bag zurückzugeben
+@if ($errors->any()) // Prüft auf *irgendwelche* Fehler nach dem Reload
+    @php
+        // Versucht, die ID des Versuchs aus den 'old input' Daten zu extrahieren,
+        // falls ein Modal-Submit fehlschlug (sehr unzuverlässig!)
+        // Besser wäre es, die ID im Controller bei Fehlern explizit mitzugeben.
+        $errorAttemptId = null;
+        // Beispiel: Annahme, dass bei Modal-Fehler die ID als 'error_attempt_id' zurückgegeben wird
+        if (session('error_attempt_id')) {
+            $errorAttemptId = session('error_attempt_id');
+        }
+    @endphp
+    @if($errorAttemptId)
+        $(document).ready(function() {
+            $('#evaluateModal{{ $errorAttemptId }}').modal('show');
+        });
+    @endif
+@endif
+
 </script>
 @endpush
