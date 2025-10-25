@@ -16,6 +16,8 @@ use Illuminate\Validation\Rule;
 use App\Models\ActivityLog;
 use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
 
+use App\Models\Pivots\TrainingModuleUser;
+
 class UserController extends Controller
 {
     /**

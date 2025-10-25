@@ -21,7 +21,7 @@ class TrainingModule extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'training_module_user')
-        ->using(\App\Models\TrainingModuleUser::class)
+        ->using(\App\Models\Pivots\TrainingModuleUser::class)
         ->withPivot('assigned_by_user_id', 'completed_at', 'notes')
         ->withTimestamps();
     }

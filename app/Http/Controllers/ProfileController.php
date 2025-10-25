@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Evaluation;
 use App\Models\ExamAttempt;
+use App\Models\Pivots\TrainingModuleUser;
 
 class ProfileController extends Controller
 {
