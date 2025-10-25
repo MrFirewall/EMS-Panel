@@ -40,46 +40,99 @@ class EvaluationController extends Controller
     /**
      * Zeigt die Übersichtsseite für ALLE Anträge und letzte Bewertungen an.
      */
+Okay, ich verstehe. Du möchtest die Tabs zurückhaben, aber diesmal getrennt nach Anträgen, Bewertungen, Modulen und Prüfungen. Zusätzlich soll der Modul-Tab die Möglichkeit bieten, User direkt zuzuweisen oder den Status zu ändern.
+
+Das direkte Zuweisen/Ändern von Usern innerhalb der Modul-Liste ist etwas komplexer, da man für jedes Modul potenziell alle User laden oder eine Suchfunktion/Modal braucht. Ich baue es erstmal so um, dass du Links zum Bearbeiten des Moduls hast und einen neuen Button, der zu einer (zukünftigen) dedizierten Seite führt, um User für dieses spezifische Modul zu verwalten.
+
+1. Controller: app/Http/Controllers/EvaluationController.php (angepasste index-Methode)
+
+Wir holen wieder alle Daten, wie in der Version mit den vielen Tabs.
+
+PHP
+
+<?php
+
+namespace App\Http{forward-slash}Controllers;
+
+use App\Models\Evaluation;
+use App\Models\User;
+use App\Models\ActivityLog;
+use App\Models\TrainingModule;
+use App\Models\Exam;
+use App\Models\ExamAttempt; // Importieren für Berechtigungsprüfung
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Events\PotentiallyNotifiableActionOccurred;
+
+class EvaluationController extends Controller
+{
+    // ... (Statische Arrays bleiben gleich) ...
+    public static array $applicationTypes = ['modul_anmeldung', 'pruefung_anmeldung'];
+    public static array $evaluationTypes = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung'];
+    public static array $allTypeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung', 'modul_anmeldung', 'pruefung_anmeldung'];
+
+
+    public function __construct()
+    {
+        // Policy-basierte Autorisierung (viewAny wird hier geprüft)
+        $this->authorizeResource(Evaluation::class, 'evaluation');
+    }
+
+    /**
+     * Zeigt die Übersichtsseite mit Tabs für Anträge, Bewertungen, Module, Prüfungen.
+     */
     public function index()
     {
-        $canViewAll = Auth::user()->can('evaluations.view.all');
+        $canViewAll = Auth::user()->can('evaluations.view.all'); // Nützlich für Anträge/Bewertungen
         $userId = Auth::id();
 
-        // 1. Lade ALLE Anträge (nicht nur 'pending'), paginiert
+        // 1. Lade ALLE Anträge (paginiert)
         $applicationsQuery = Evaluation::whereIn('evaluation_type', self::$applicationTypes)
-                                        ->latest('created_at'); // Neueste zuerst
-
+                                        ->latest('created_at');
         if (!$canViewAll) {
-            $applicationsQuery->where('user_id', $userId); // Nur eigene Anträge
+            $applicationsQuery->where('user_id', $userId);
         }
-        // Paginieren mit eigenem Namen, falls benötigt
-        $applications = $applicationsQuery->with('user')->paginate(20, ['*'], 'applicationsPage');
+        $applications = $applicationsQuery->with('user')->paginate(15, ['*'], 'applicationsPage');
 
-        // 2. Lade letzte eingereichte Bewertungen (paginiert)
+        // 2. Lade letzte Bewertungen (paginiert)
         $evaluationsQuery = Evaluation::whereIn('evaluation_type', self::$evaluationTypes)
-                                       ->latest('created_at'); // Neueste zuerst
+                                       ->latest('created_at');
          if (!$canViewAll) {
             $evaluationsQuery->where(function ($query) use ($userId) {
                 $query->where('user_id', $userId)
                       ->orWhere('evaluator_id', $userId);
             });
         }
-        // Paginieren mit eigenem Namen
         $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->paginate(15, ['*'], 'evaluationsPage');
 
-        // 3. Lade alle User für das "Link generieren"-Modal (nur wenn benötigt und berechtigt)
+        // 3. Lade ALLE Trainingsmodule (paginiert, falls Berechtigung vorhanden)
+        $trainingModules = collect();
+        if (Auth::user()->can('training.view')) { // Berechtigung anpassen
+             // Lade die Anzahl der zugewiesenen Benutzer mit
+             $trainingModules = TrainingModule::withCount('users')->orderBy('category')->orderBy('name')->paginate(15, ['*'], 'modulesPage');
+        }
+
+        // 4. Lade ALLE Prüfungen (paginiert, falls Berechtigung vorhanden)
+        $exams = collect();
+        if (Auth::user()->can('exams.manage')) { // Berechtigung anpassen
+            $exams = Exam::withCount('questions')->latest()->paginate(15, ['*'], 'examsPage');
+        }
+
+        // 5. Lade alle User für das "Link generieren"-Modal (falls Berechtigung vorhanden)
         $usersForModal = collect();
-         if ($canViewAll && Auth::user()->can('generateExamLink', ExamAttempt::class)) {
+         if (Auth::user()->can('generateExamLink', ExamAttempt::class)) {
              $usersForModal = User::orderBy('name')->get(['id', 'name']);
          }
 
-        // Counts sind jetzt weniger relevant, da wir keine Tabs mehr haben, können aber bleiben
+        // Counts optional
         $counts = $this->getEvaluationCounts();
 
-        // Übergabe der Daten an die View (ohne Module & Exams)
+        // Übergabe aller Daten an die View
         return view('forms.evaluations.index', compact(
             'applications',
             'evaluations',
+            'trainingModules', // Wieder hinzugefügt
+            'exams',           // Wieder hinzugefügt
             'counts',
             'canViewAll',
             'usersForModal'
