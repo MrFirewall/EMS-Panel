@@ -5,46 +5,55 @@ namespace App\Http\Controllers;
 use App\Models\Evaluation;
 use App\Models\User;
 use App\Models\ActivityLog;
-use App\Models\TrainingModule;
-use App\Models\Exam;
-use App\Models\ExamAttempt; // Importieren für Berechtigungsprüfung
+use App\Models\TrainingModule; // Wird für Model-Bezüge benötigt
+use App\Models\Exam; // Wird für Model-Bezüge benötigt
+use App\Models\ExamAttempt; // Wird für Berechtigungsprüfung benötigt
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Events\PotentiallyNotifiableActionOccurred;
 
 class EvaluationController extends Controller
 {
-    // ... (Statische Arrays bleiben gleich) ...
+    // Statische Arrays für Konsistenz
+    public static array $grades = ['Sehr Gut', 'Gut', 'Befriedigend', 'Ausreichend', 'Mangelhaft', 'Ungenügend', 'Nicht feststellbar'];
+    public static array $periods = ['00 - 06 Uhr', '06 - 12 Uhr', '12 - 18 Uhr', '18 - 00 Uhr'];
+
+    // Typen für Anträge und Bewertungen
     public static array $applicationTypes = ['modul_anmeldung', 'pruefung_anmeldung'];
     public static array $evaluationTypes = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung'];
-    public static array $allTypeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten', 'anmeldung', 'modul_anmeldung', 'pruefung_anmeldung'];
+    // Alle Typen kombiniert für Validierung
+    public static array $allTypeLabels = [
+        'azubi', 'praktikant', 'mitarbeiter', 'leitstelle', 'gutachten',
+        'anmeldung', 'modul_anmeldung', 'pruefung_anmeldung'
+    ];
 
 
     public function __construct()
     {
-        // Policy-basierte Autorisierung (viewAny wird hier geprüft)
+        // Policy-basierte Autorisierung
         $this->authorizeResource(Evaluation::class, 'evaluation');
     }
 
     /**
-     * Zeigt die Übersichtsseite mit Tabs für Anträge, Bewertungen, Module, Prüfungen.
+     * Zeigt die Übersichtsseite für ALLE Anträge und letzte Bewertungen an.
      */
     public function index()
     {
-        $canViewAll = Auth::user()->can('evaluations.view.all'); // Nützlich für Anträge/Bewertungen
+        $canViewAll = Auth::user()->can('evaluations.view.all');
         $userId = Auth::id();
 
-        // 1. Lade ALLE Anträge (paginiert)
+        // 1. Lade ALLE Anträge (nicht nur 'pending'), paginiert
         $applicationsQuery = Evaluation::whereIn('evaluation_type', self::$applicationTypes)
-                                        ->latest('created_at');
-        if (!$canViewAll) {
-            $applicationsQuery->where('user_id', $userId);
-        }
-        $applications = $applicationsQuery->with('user')->paginate(15, ['*'], 'applicationsPage');
+                                        ->latest('created_at'); // Neueste zuerst
 
-        // 2. Lade letzte Bewertungen (paginiert)
+        if (!$canViewAll) {
+            $applicationsQuery->where('user_id', $userId); // Nur eigene Anträge
+        }
+        $applications = $applicationsQuery->with('user')->paginate(20, ['*'], 'applicationsPage');
+
+        // 2. Lade letzte eingereichte Bewertungen (paginiert)
         $evaluationsQuery = Evaluation::whereIn('evaluation_type', self::$evaluationTypes)
-                                       ->latest('created_at');
+                                       ->latest('created_at'); // Neueste zuerst
          if (!$canViewAll) {
             $evaluationsQuery->where(function ($query) use ($userId) {
                 $query->where('user_id', $userId)
@@ -53,34 +62,19 @@ class EvaluationController extends Controller
         }
         $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->paginate(15, ['*'], 'evaluationsPage');
 
-        // 3. Lade ALLE Trainingsmodule (paginiert, falls Berechtigung vorhanden)
-        $trainingModules = collect();
-        if (Auth::user()->can('training.view')) { // Berechtigung anpassen
-             // Lade die Anzahl der zugewiesenen Benutzer mit
-             $trainingModules = TrainingModule::withCount('users')->orderBy('category')->orderBy('name')->paginate(15, ['*'], 'modulesPage');
-        }
-
-        // 4. Lade ALLE Prüfungen (paginiert, falls Berechtigung vorhanden)
-        $exams = collect();
-        if (Auth::user()->can('exams.manage')) { // Berechtigung anpassen
-            $exams = Exam::withCount('questions')->latest()->paginate(15, ['*'], 'examsPage');
-        }
-
-        // 5. Lade alle User für das "Link generieren"-Modal (falls Berechtigung vorhanden)
+        // 3. Lade alle User für das "Link generieren"-Modal (nur wenn benötigt und berechtigt)
         $usersForModal = collect();
-         if (Auth::user()->can('generateExamLink', ExamAttempt::class)) {
+         if ($canViewAll && Auth::user()->can('generateExamLink', ExamAttempt::class)) {
              $usersForModal = User::orderBy('name')->get(['id', 'name']);
          }
 
         // Counts optional
         $counts = $this->getEvaluationCounts();
 
-        // Übergabe aller Daten an die View
+        // Übergabe der Daten an die View (ohne Module & Exams)
         return view('forms.evaluations.index', compact(
             'applications',
             'evaluations',
-            'trainingModules', // Wieder hinzugefügt
-            'exams',           // Wieder hinzugefügt
             'counts',
             'canViewAll',
             'usersForModal'
@@ -93,7 +87,6 @@ class EvaluationController extends Controller
     private function getEvaluationCounts()
     {
         $currentUserId = Auth::id();
-        // Zähle nur die relevanten Bewertungstypen
         $relevantTypes = array_merge(self::$applicationTypes, self::$evaluationTypes);
         $counts = ['verfasst' => [], 'erhalten' => [], 'gesamt' => []];
 
@@ -103,7 +96,6 @@ class EvaluationController extends Controller
             $counts['gesamt'][$type] = 0;
         }
 
-        // Effizientere Zählung mit DB-Abfragen
         $allCounts = Evaluation::selectRaw('evaluation_type, user_id, evaluator_id, count(*) as count')
                                 ->whereIn('evaluation_type', $relevantTypes)
                                 ->groupBy('evaluation_type', 'user_id', 'evaluator_id')
@@ -111,7 +103,7 @@ class EvaluationController extends Controller
 
         foreach ($allCounts as $countData) {
             $type = $countData->evaluation_type;
-            if (!isset($counts['gesamt'][$type])) continue; // Überspringe unbekannte Typen
+            if (!isset($counts['gesamt'][$type])) continue;
 
             $counts['gesamt'][$type] += $countData->count;
             if ($countData->evaluator_id === $currentUserId) {
@@ -130,41 +122,33 @@ class EvaluationController extends Controller
 
     public function azubi()
     {
-        // authorize('create') wird durch authorizeResource abgedeckt
-        $users = User::role('emt-trainee')->orderBy('name')->get(['id', 'name']); // Nur nötige Spalten laden
+        $users = User::role('emt-trainee')->orderBy('name')->get(['id', 'name']);
         return view('forms.evaluations.azubi', ['users' => $users, 'evaluationType' => 'azubi']);
     }
 
     public function praktikant()
     {
-        // authorize('create') wird durch authorizeResource abgedeckt
-        // Keine User-Auswahl nötig, da Name manuell eingegeben wird
         return view('forms.evaluations.praktikant', ['evaluationType' => 'praktikant']);
     }
 
     public function leitstelle()
     {
-       // authorize('create') wird durch authorizeResource abgedeckt
-        $users = User::orderBy('name')->get(['id', 'name']); // Nur nötige Spalten laden
+        $users = User::orderBy('name')->get(['id', 'name']);
         return view('forms.evaluations.leitstelle', ['users' => $users, 'evaluationType' => 'leitstelle']);
     }
 
     public function mitarbeiter()
     {
-        // authorize('create') wird durch authorizeResource abgedeckt
-        $exemptRoles = ['emt-trainee', 'praktikant']; // Rollen, die ausgeschlossen werden sollen
+        $exemptRoles = ['emt-trainee', 'praktikant'];
         $users = User::whereDoesntHave('roles', function ($query) use ($exemptRoles) {
             $query->whereIn('name', $exemptRoles);
-        })->orderBy('name')->get(['id', 'name']); // Nur nötige Spalten laden
+        })->orderBy('name')->get(['id', 'name']);
         return view('forms.evaluations.mitarbeiter', ['users' => $users, 'evaluationType' => 'mitarbeiter']);
     }
 
     public function modulAnmeldung()
     {
-       // authorize('create') wird durch authorizeResource abgedeckt
-        // IDs der Module, für die der User *irgendeinen* Eintrag hat (unabhängig vom Status)
         $existingModuleIds = Auth::user()->trainingModules()->pluck('training_module_id');
-        // Lade nur Module, für die der User *noch keinen* Eintrag hat
         $availableModules = TrainingModule::whereNotIn('id', $existingModuleIds)->orderBy('name')->get(['id', 'name']);
 
         return view('forms.evaluations.modul_anmeldung', [
@@ -173,17 +157,12 @@ class EvaluationController extends Controller
         ]);
     }
 
-    public function pruefungsAnmeldung() // <<<--- HIER ÄNDERUNGEN
+    public function pruefungsAnmeldung()
     {
-        // authorize('create') wird durch authorizeResource abgedeckt
-
-        // Lade ALLE verfügbaren Prüfungen, statt Module
         $availableExams = Exam::orderBy('title')->get(['id', 'title']);
-
         return view('forms.evaluations.pruefung_anmeldung', [
             'evaluationType' => 'pruefung_anmeldung',
-            // ALT: 'modules' => $modulesInTraining
-            'exams' => $availableExams // Übergebe die Prüfungen an die View
+            'exams' => $availableExams
         ]);
     }
 
@@ -191,94 +170,78 @@ class EvaluationController extends Controller
     // DATEN SPEICHERN & DETAILANSICHT
     // =========================================================================
 
-    public function store(Request $request) // <<<--- HIER ÄNDERUNGEN
+    public function store(Request $request)
     {
-        // authorize('create') wird durch authorizeResource abgedeckt
-
         $evaluationType = $request->input('evaluation_type');
 
-        // Basis-Validierungsregeln
         $validationRules = [
             'evaluation_type' => 'required|in:' . implode(',', self::$allTypeLabels),
-            'description' => 'nullable|string|max:5000', // Max Länge hinzugefügt
+            'description' => 'nullable|string|max:5000',
             'evaluation_date' => 'required|date',
-            'period' => 'required|string', // Beibehalten, falls für andere Typen nötig
-            'data' => 'nullable|array', // Für JSON-Daten
+            'period' => 'required|string',
+            'data' => 'nullable|array',
         ];
 
         // Typspezifische Validierung
         if ($evaluationType === 'modul_anmeldung') {
             $validationRules['target_module_id'] = 'required|exists:training_modules,id';
-            // Optional: Prüfen, ob User das Modul nicht schon hat
-            // $validationRules['target_module_id'] .= '|unique:training_module_user,training_module_id,NULL,id,user_id,' . Auth::id();
-        } elseif ($evaluationType === 'pruefung_anmeldung') { // NEUE Validierung für Prüfung
-            $validationRules['target_exam_id'] = 'required|exists:exams,id'; // Prüft auf Exam-ID
+        } elseif ($evaluationType === 'pruefung_anmeldung') {
+            $validationRules['target_exam_id'] = 'required|exists:exams,id';
         } elseif ($evaluationType === 'praktikant') {
             $validationRules['target_name'] = 'required|string|max:255';
-            // Spezifische Daten validieren, falls nötig (Beispiel)
-            // $validationRules['data.feedback'] = 'required|string';
-        } elseif (in_array($evaluationType, self::$evaluationTypes)) { // Für alle anderen Bewertungs-Typen
+        } elseif (in_array($evaluationType, self::$evaluationTypes)) {
             $validationRules['user_id'] = 'required|exists:users,id';
-             // Spezifische Daten validieren, falls nötig (Beispiel)
-             // if($evaluationType === 'azubi') {
-             //    $validationRules['data.skill_level'] = 'required|integer|min:1|max:5';
-             // }
         }
 
         $validated = $request->validate($validationRules);
 
-        // Daten für die Erstellung vorbereiten
         $data = [
-            'evaluator_id' => Auth::id(), // Der Ersteller
+            'evaluator_id' => Auth::id(),
             'evaluation_type' => $validated['evaluation_type'],
             'evaluation_date' => $validated['evaluation_date'],
             'period' => $validated['period'],
-            'json_data' => $validated['data'] ?? [], // Nimmt zusätzliche Daten aus dem Formular auf
+            'json_data' => $validated['data'] ?? [],
             'description' => $validated['description'] ?? null,
-            'status' => 'pending', // Standardmäßig auf 'pending' für Anträge, für Bewertungen ggf. anpassen?
+            'status' => 'pending',
         ];
 
         $logDescription = '';
-        $relatedModel = null; // Für das Event
+        $relatedModel = null;
 
-        // Typspezifische Datenaufbereitung und Log-Beschreibung
         if ($evaluationType === 'modul_anmeldung') {
             $module = TrainingModule::find($validated['target_module_id']);
-            $data['user_id'] = Auth::id(); // Antragsteller
-            $data['target_name'] = Auth::user()->name; // Name des Antragstellers speichern
-            // Relevante Modulinfos im JSON speichern
+            $data['user_id'] = Auth::id();
+            $data['target_name'] = Auth::user()->name;
             $data['json_data']['module_id'] = $module->id;
             $data['json_data']['module_name'] = $module->name;
             $logDescription = "Antrag auf Modulanmeldung für '{$module->name}' von {$data['target_name']} eingereicht.";
-            $relatedModel = $module; // Modul als relatedModel für Event
+            $relatedModel = $module;
 
-        } elseif ($evaluationType === 'pruefung_anmeldung') { // NEUE Logik für Prüfungsanmeldung
-            $exam = Exam::find($validated['target_exam_id']); // Prüfung finden
-            $data['user_id'] = Auth::id(); // Antragsteller
-            $data['target_name'] = Auth::user()->name; // Name des Antragstellers speichern
-            // Relevante Prüfungsinfos im JSON speichern
+        } elseif ($evaluationType === 'pruefung_anmeldung') {
+            $exam = Exam::find($validated['target_exam_id']);
+            $data['user_id'] = Auth::id();
+            $data['target_name'] = Auth::user()->name;
             $data['json_data']['exam_id'] = $exam->id;
             $data['json_data']['exam_title'] = $exam->title;
             $logDescription = "Antrag auf Prüfungsanmeldung für '{$exam->title}' von {$data['target_name']} eingereicht.";
-            $relatedModel = $exam; // Prüfung als relatedModel für Event
+            $relatedModel = $exam;
 
         } elseif ($evaluationType === 'praktikant') {
-            $data['user_id'] = null; // Kein registrierter User
+            $data['user_id'] = null;
             $data['target_name'] = $validated['target_name'];
             $logDescription = "Neue Bewertung für Praktikant/in '{$data['target_name']}' ({$evaluationType}) erstellt.";
             $data['status'] = 'processed'; // Bewertungen sind direkt "erledigt"
 
-        } elseif (in_array($evaluationType, self::$evaluationTypes)) { // Andere Bewertungen
-            $data['user_id'] = $validated['user_id']; // Der bewertete User
+        } elseif (in_array($evaluationType, self::$evaluationTypes)) {
+            $data['user_id'] = $validated['user_id'];
             $targetUser = User::find($data['user_id']);
             $data['target_name'] = $targetUser->name;
             $logDescription = "Neue Bewertung für '{$data['target_name']}' ({$evaluationType}) erstellt.";
-            $data['status'] = 'processed'; // Bewertungen sind direkt "erledigt"
+            $data['status'] = 'processed';
         }
 
         $evaluation = Evaluation::create($data);
 
-        // Activity Log Eintrag
         ActivityLog::create([
              'user_id' => Auth::id(),
              'log_type' => 'EVALUATION',
@@ -287,44 +250,35 @@ class EvaluationController extends Controller
              'description' => $logDescription,
          ]);
 
-        // Benachrichtigung via Event (nur bei Anträgen)
         if (in_array($evaluationType, self::$applicationTypes)) {
              PotentiallyNotifiableActionOccurred::dispatch(
                  'EvaluationController@store',
-                 Auth::user(),      // Der Antragsteller (triggering user)
-                 $evaluation,      // Die erstellte Evaluation
-                 Auth::user(),      // Der Antragsteller (actor user)
-                 ['related_model_type' => $relatedModel ? get_class($relatedModel) : null] // Typ des relatedModel übergeben
+                 Auth::user(),
+                 $evaluation,
+                 Auth::user(),
+                 ['related_model_type' => $relatedModel ? get_class($relatedModel) : null]
              );
         }
-        // Ggf. anderes Event für erstellte Bewertungen auslösen
 
-        return redirect()->route('forms.evaluations.index'); // Ohne success
+        return redirect()->route('forms.evaluations.index');
     }
 
     public function show(Evaluation $evaluation)
     {
-        // authorize('view') wird durch authorizeResource abgedeckt
-        // $this->authorize('view', $evaluation);
+        $evaluation->load(['user', 'evaluator']);
 
-        $evaluation->load(['user', 'evaluator']); // Lade Relationen
-
-        // JSON-Daten sicher dekodieren (falls es kein Array ist)
         $evaluationData = is_array($evaluation->json_data)
             ? $evaluation->json_data
-            : json_decode($evaluation->json_data, true) ?? []; // Fallback auf leeres Array
+            : json_decode($evaluation->json_data, true) ?? [];
 
-        // Zielnamen bestimmen
         $targetName = $evaluation->target_name ?? $evaluation->user?->name ?? 'Unbekannt';
 
-        // Lade ggf. das zugehörige Modul oder die Prüfung für die Anzeige
         $relatedItem = null;
         if ($evaluation->evaluation_type === 'modul_anmeldung' && isset($evaluationData['module_id'])) {
             $relatedItem = TrainingModule::find($evaluationData['module_id']);
         } elseif ($evaluation->evaluation_type === 'pruefung_anmeldung' && isset($evaluationData['exam_id'])) {
             $relatedItem = Exam::find($evaluationData['exam_id']);
         }
-
 
         return view('forms.evaluations.show', compact('evaluation', 'evaluationData', 'targetName', 'relatedItem'));
     }
