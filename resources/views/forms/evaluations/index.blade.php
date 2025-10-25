@@ -85,7 +85,7 @@
                                         <th>Betreff</th>
                                         <th>Datum</th>
                                         <th>Status</th>
-                                        <th style="min-width: 150px;">Aktion</th> {{ Breite für Buttons angepasst }}
+                                        <th style="min-width: 150px;">Aktion</th> {{-- Breite für Buttons angepasst --}}
                                     </tr>
                                 </thead>
                                 <tbody>
