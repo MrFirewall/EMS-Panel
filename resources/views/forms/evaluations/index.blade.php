@@ -156,7 +156,7 @@
                     </div>
                     {{-- Paginierung für Anträge --}}
                     @if ($applications->hasPages())
-                       <div class="card-footer clearfix"> {{ clearfix für float Paginierung }}
+                       <div class="card-footer clearfix"> {{-- clearfix für float Paginierung --}}
                            {{ $applications->appends(['evaluationsPage' => $evaluations->currentPage()])->links() }}
                        </div>
                    @endif
