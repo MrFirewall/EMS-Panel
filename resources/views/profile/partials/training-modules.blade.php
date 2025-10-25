@@ -21,7 +21,7 @@
                         @if ($module->pivot->assigned_by_user_id)
                             Zugewiesen (ID: {{ $module->pivot->assigned_by_user_id }})
                         @else
-                            <span class="badge bg-info text-dark">Anmeldung</span>
+                            <span class="badge bg-danger">Anmeldung</span>
                         @endif
                     </td>
                 </tr>
