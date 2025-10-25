@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Pivots;
 
 use Illuminate\Database\Eloquent\Relations\Pivot;
+
+use App\Models\User;
 
 class TrainingModuleUser extends Pivot
 {
