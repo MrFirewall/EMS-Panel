@@ -1,5 +1,4 @@
 @extends('layouts.app')
-{{-- Titel angepasst --}}
 @section('title', 'Anträge & Bewertungen')
 
 @section('content')
@@ -7,13 +6,11 @@
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                 {{-- Titel angepasst --}}
                 <h1 class="m-0"><i class="fas fa-folder-open nav-icon"></i> Anträge & Bewertungen</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                     {{-- Breadcrumb angepasst --}}
                     <li class="breadcrumb-item active">Anträge & Bewertungen</li>
                 </ol>
             </div>
@@ -24,12 +21,14 @@
 <div class="content">
     <div class="container-fluid">
 
-        {{-- Erfolgs-/Fehlermeldungen und Link-Kopieren (bleibt wie zuvor) --}}
-        @if(session('success') && session('secure_url'))
+        {{-- Erfolgs-/Fehlermeldungen --}}
+        @if(session('success'))
             <div class="alert alert-success alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                 <h5><i class="icon fas fa-check"></i> Erfolg!</h5>
-                <p>{{ session('success') }}</p>
+                <p>{!! session('success') !!}</p> {{ Erlaube HTML für den Fall, dass wir es brauchen }}
+
+                @if(session('secure_url'))
                 <div class="input-group mt-2">
                     <input type="text" id="secure-link-input" class="form-control" value="{{ session('secure_url') }}" readonly>
                     <div class="input-group-append">
@@ -39,14 +38,10 @@
                     </div>
                 </div>
                  <small id="copy-success-msg" class="text-muted" style="display: none;">Link wurde in die Zwischenablage kopiert!</small>
+                @endif
             </div>
-        @elseif(session('success'))
-             <div class="alert alert-success alert-dismissible">
-                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                <h5><i class="icon fas fa-check"></i> Erfolg!</h5>
-                <p>{{ session('success') }}</p>
-            </div>
-        @elseif(session('error'))
+        @endif
+         @if(session('error'))
             <div class="alert alert-danger alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                 <h5><i class="icon fas fa-ban"></i> Fehler!</h5>
@@ -73,7 +68,6 @@
                            <i class="fas fa-history mr-1"></i> Letzte Bewertungen
                         </a>
                     </li>
-                    {{-- Tabs für Module und Prüfungen (Vorlagen) entfernt --}}
                 </ul>
             </div>
             <div class="card-body">
@@ -91,7 +85,7 @@
                                         <th>Betreff</th>
                                         <th>Datum</th>
                                         <th>Status</th>
-                                        <th>Aktion</th>
+                                        <th style="min-width: 150px;">Aktion</th> {{ Breite für Buttons angepasst }}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -114,22 +108,35 @@
                                                  @else <span class="badge badge-secondary">{{ ucfirst($antrag->status) }}</span> @endif
                                             </td>
                                             <td>
-                                                 @if($canViewAll && $antrag->status === 'pending')
-                                                    @if($antrag->evaluation_type === 'modul_anmeldung' && isset($antrag->json_data['module_id']))
-                                                        @can('assignUser', \App\Models\TrainingModule::class)
-                                                        <form action="{{ route('admin.training.assign', ['user' => $antrag->user_id, 'module' => $antrag->json_data['module_id'], 'evaluation' => $antrag->id]) }}" method="POST" onsubmit="return confirm('Ausbildung starten?');"> @csrf <button type="submit" class="btn btn-xs btn-success" title="Ausbildung starten"><i class="fas fa-play-circle"></i> Starten</button></form>
-                                                        @endcan
-                                                    @elseif($antrag->evaluation_type === 'pruefung_anmeldung' && isset($antrag->json_data['exam_id']))
-                                                        @can('generateExamLink', \App\Models\ExamAttempt::class)
-                                                        <form action="{{ route('admin.exams.attempts.store') }}" method="POST"> @csrf <input type="hidden" name="user_id" value="{{ $antrag->user_id }}"><input type="hidden" name="exam_id" value="{{ $antrag->json_data['exam_id'] }}"><input type="hidden" name="evaluation_id" value="{{ $antrag->id }}"><button type="submit" class="btn btn-xs btn-info" title="Prüfungslink generieren"><i class="fas fa-link"></i> Link</button></form>
-                                                        @endcan
-                                                    @endif
-                                                     <a href="{{ route('admin.forms.evaluations.show', $antrag) }}" class="btn btn-xs btn-outline-primary ml-1" title="Antrag Details ansehen"><i class="fas fa-eye"></i></a>
-                                                 @else
+                                                <div class="btn-group"> {{ btn-group für saubere Darstellung }}
+                                                     @if($canViewAll && $antrag->status === 'pending')
+                                                        @if($antrag->evaluation_type === 'modul_anmeldung' && isset($antrag->json_data['module_id']))
+                                                            @can('assignUser', \App\Models\TrainingModule::class)
+                                                            <form action="{{ route('admin.training.assign', ['user' => $antrag->user_id, 'module' => $antrag->json_data['module_id'], 'evaluation' => $antrag->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('Ausbildung starten?');"> @csrf <button type="submit" class="btn btn-xs btn-success" title="Ausbildung starten"><i class="fas fa-play-circle"></i></button></form>
+                                                            @endcan
+                                                        @elseif($antrag->evaluation_type === 'pruefung_anmeldung' && isset($antrag->json_data['exam_id']))
+                                                            @can('generateExamLink', \App\Models\ExamAttempt::class)
+                                                            <form action="{{ route('admin.exams.attempts.store') }}" method="POST" class="d-inline"> @csrf <input type="hidden" name="user_id" value="{{ $antrag->user_id }}"><input type="hidden" name="exam_id" value="{{ $antrag->json_data['exam_id'] }}"><input type="hidden" name="evaluation_id" value="{{ $antrag->id }}"><button type="submit" class="btn btn-xs btn-info" title="Prüfungslink generieren"><i class="fas fa-link"></i></button></form>
+                                                            @endcan
+                                                        @endif
+                                                     @endif
+                                                     
+                                                     {{-- Details-Button --}}
                                                      @can('view', $antrag)
                                                         <a href="{{ route('admin.forms.evaluations.show', $antrag) }}" class="btn btn-xs btn-outline-primary" title="Details ansehen"><i class="fas fa-eye"></i></a>
-                                                     @else - @endcan
-                                                 @endif
+                                                     @endcan
+
+                                                    {{-- NEU: Delete Button --}}
+                                                    @can('delete', $antrag)
+                                                        <form action="{{ route('admin.forms.evaluations.destroy', $antrag) }}" method="POST" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Antrag wirklich endgültig löschen?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-xs btn-danger" title="Antrag löschen">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endcan
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
@@ -141,7 +148,6 @@
                         {{-- Paginierung für Anträge --}}
                         @if ($applications->hasPages())
                            <div class="card-footer clearfix bg-light border-top-0">
-                               {{-- Paginierungslinks angepasst: Nur noch 'evaluationsPage' wird angehängt --}}
                                {{ $applications->appends(['evaluationsPage' => $evaluations->currentPage()])->links() }}
                            </div>
                        @endif
@@ -165,9 +171,24 @@
                                             <td>{{ $evaluation->evaluator->name ?? 'N/A' }}</td>
                                             <td>{{ $evaluation->created_at->format('d.m.Y H:i') }}</td>
                                             <td>
-                                                @can('view', $evaluation)
-                                                <a href="{{ route('admin.forms.evaluations.show', $evaluation) }}" class="btn btn-xs btn-outline-primary"><i class="fas fa-eye"></i> Details</a>
-                                                 @else - @endcan
+                                                <div class="btn-group">
+                                                    @can('view', $evaluation)
+                                                    <a href="{{ route('admin.forms.evaluations.show', $evaluation) }}" class="btn btn-xs btn-outline-primary" title="Details ansehen">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    @endcan
+                                                    
+                                                    {{-- NEU: Delete Button --}}
+                                                    @can('delete', $evaluation)
+                                                        <form action="{{ route('admin.forms.evaluations.destroy', $evaluation) }}" method="POST" class="d-inline" onsubmit="return confirm('Möchten Sie diese Bewertung wirklich endgültig löschen?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-xs btn-danger" title="Bewertung löschen">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endcan
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
@@ -179,13 +200,10 @@
                          {{-- Paginierung für Bewertungen --}}
                          @if ($evaluations->hasPages())
                             <div class="card-footer clearfix bg-light border-top-0">
-                                {{-- Paginierungslinks angepasst: Nur noch 'applicationsPage' wird angehängt --}}
                                 {{ $evaluations->appends(['applicationsPage' => $applications->currentPage()])->links() }}
                             </div>
                         @endif
                     </div>
-
-                    {{-- Tab-Inhalte für Module und Prüfungen entfernt --}}
 
                 </div> {{-- /.tab-content --}}
             </div> {{-- /.card-body --}}
@@ -193,37 +211,16 @@
     </div> {{-- /.container-fluid --}}
 </div> {{-- /.content --}}
 
-{{-- Modal zum Generieren des Prüfungslinks (bleibt erhalten) --}}
+{{-- Modal zum Generieren des Prüfungslinks (bleibt unverändert) --}}
 @can('generateExamLink', \App\Models\ExamAttempt::class)
 <div class="modal fade" id="generateLinkModal" tabindex="-1" role="dialog" aria-labelledby="generateLinkModalLabel" aria-hidden="true">
+    {{-- ... (Modal-Code bleibt unverändert) ... --}}
     <div class="modal-dialog" role="document">
-        <form action="{{ route('admin.exams.attempts.store') }}" method="POST">
-            @csrf
-            <input type="hidden" name="exam_id" id="modal_exam_id">
+        <form action="{{ route('admin.exams.attempts.store') }}" method="POST"> @csrf <input type="hidden" name="exam_id" id="modal_exam_id">
             <div class="modal-content">
-                <div class="modal-header bg-info">
-                    <h5 class="modal-title" id="generateLinkModalLabel">Prüfungslink generieren für: <span id="modal_exam_title"></span></h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="modal_user_id">Benutzer auswählen</label>
-                        <select name="user_id" id="modal_user_id" class="form-control select2 @error('user_id', 'generateLinkErrorBag') is-invalid @enderror" style="width: 100%;" required>
-                            <option value="">Bitte Benutzer auswählen...</option>
-                            @foreach($usersForModal as $user)
-                                <option value="{{ $user->id }}">{{ $user->name }} (ID: {{ $user->id }})</option>
-                            @endforeach
-                        </select>
-                         @php $errorBagName = 'generateLinkErrorBag'; @endphp
-                         @error('user_id', $errorBagName) <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
-                         @error('exam_id', $errorBagName) <span class="text-danger d-block mt-2">{{ $message }}</span> @enderror
-                    </div>
-                    <p class="text-muted small">Generiert einen einmaligen Link für den ausgewählten Benutzer, um diese Prüfung abzulegen.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-info"><i class="fas fa-link mr-1"></i> Link generieren</button>
-                </div>
+                <div class="modal-header bg-info"> <h5 class="modal-title" id="generateLinkModalLabel">Link generieren für: <span id="modal_exam_title"></span></h5> <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button> </div>
+                <div class="modal-body"> <div class="form-group"> <label for="modal_user_id">Benutzer auswählen</label> <select name="user_id" id="modal_user_id" class="form-control select2 @error('user_id', 'generateLinkErrorBag') is-invalid @enderror" style="width: 100%;" required> <option value="">Bitte auswählen...</option> @foreach($usersForModal as $user) <option value="{{ $user->id }}">{{ $user->name }} (ID: {{ $user->id }})</option> @endforeach </select> @php $errorBagName = 'generateLinkErrorBag'; @endphp @error('user_id', $errorBagName) <span class="invalid-feedback d-block">{{ $message }}</span> @enderror @error('exam_id', $errorBagName) <span class="text-danger d-block mt-2">{{ $message }}</span> @enderror </div> <p class="text-muted small">Generiert einen einmaligen Link für den ausgewählten Benutzer.</p> </div>
+                <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button> <button type="submit" class="btn btn-info"><i class="fas fa-link mr-1"></i> Link generieren</button> </div>
             </div>
         </form>
     </div>
@@ -238,7 +235,6 @@
 function copyToClipboard(elementSelector) {
     const inputElement = document.querySelector(elementSelector);
     if (!inputElement) return;
-
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(inputElement.value)
             .then(() => {
@@ -256,7 +252,6 @@ function copyToClipboard(elementSelector) {
         fallbackCopyTextToClipboard(inputElement);
     }
 }
-
 function fallbackCopyTextToClipboard(inputElement) {
     inputElement.select();
     try {
@@ -265,13 +260,8 @@ function fallbackCopyTextToClipboard(inputElement) {
         if (successful && msgElement) {
                  msgElement.style.display = 'inline';
                  setTimeout(() => { msgElement.style.display = 'none'; }, 2000);
-        } else if (!successful) {
-             alert('Kopieren fehlgeschlagen.');
-        }
-    } catch (err) {
-        console.error('Fallback-Kopieren fehlgeschlagen: ', err);
-        alert('Kopieren fehlgeschlagen.');
-    }
+        } else if (!successful) { alert('Kopieren fehlgeschlagen.'); }
+    } catch (err) { console.error('Fallback-Kopieren fehlgeschlagen: ', err); alert('Kopieren fehlgeschlagen.'); }
 }
 
 // JavaScript für das "Link generieren"-Modal
