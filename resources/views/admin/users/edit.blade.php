@@ -159,7 +159,7 @@
                         
                         <div class="row">
                             {{-- Iteriere durch die neue $groupedPermissions Variable --}}
-                            @forelse($groupedPermissions as $module => $modulePermissions)
+                            @forelse($permissions as $module => $modulePermissions)
                                 <div class="col-md-4 mb-4">
                                     {{-- Styling von role.index übernommen, aber mit "warning"-Farbe --}}
                                     <div class="card card-body p-3 border-warning h-100"> 
