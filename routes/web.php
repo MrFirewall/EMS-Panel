@@ -19,16 +19,16 @@ use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\NotificationController;
 use Lab404\Impersonate\Controllers\ImpersonateController;
-use App\Models\User; // Für die Test-Route benötigt
-use App\Notifications\GeneralNotification; // Für die Test-Route benötigt
-use Illuminate\Support\Facades\Auth; // Für die Test-Route benötigt
+use App\Models\User;
+use App\Notifications\GeneralNotification;
+use Illuminate\Support\Facades\Auth; 
 use App\Http\Controllers\Admin\NotificationRuleController;
-
-// NEU: Import der refaktorierten Controller
 use App\Http\Controllers\ExamAttemptController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
 use App\Http\Controllers\Admin\ExamAttemptController as AdminExamAttemptController;
 
+
+use App\Http\Controllers\PushSubscriptionController;
 /*
 |--------------------------------------------------------------------------
 | Öffentliche Routen & Authentifizierung
@@ -117,7 +117,8 @@ Route::middleware('auth.cfx')->group(function () {
         Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('markAsRead');
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
     });
-});
+
+    Route::post('/push-subscribe', [PushSubscriptionController::class, 'store'])->middleware('auth')->name('push.subscribe'); });
 
 
 /*

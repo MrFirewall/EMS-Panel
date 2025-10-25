@@ -86,5 +86,6 @@
 
 {{-- Benachrichtigungs-Footer --}}
 <div class="dropdown-divider"></div>
+<button id="enable-push" class="btn btn-primary">Desktop-Benachrichtigungen aktivieren</button>
 <a href="{{ route('notifications.index') }}" class="dropdown-item dropdown-footer">Alle Benachrichtigungen anzeigen</a>
 

@@ -539,6 +539,92 @@
              e.stopPropagation();
         }
     });
+
+    // (1) VAPID Key von Laravel Blade an JavaScript übergeben
+    const VAPID_PUBLIC_KEY = '{{ config('webpush.vapid.public_key') }}';
+
+    // (2) Hilfsfunktion
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    // (3) Abo-Funktion
+    function subscribeUser() {
+        navigator.serviceWorker.ready.then(registration => {
+            const subscribeOptions = {
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            };
+            
+            return registration.pushManager.subscribe(subscribeOptions);
+        })
+        .then(pushSubscription => {
+            console.log('Push-Abo erhalten:', pushSubscription);
+            sendSubscriptionToServer(pushSubscription);
+        })
+        .catch(error => {
+            console.error('Push-Abo fehlgeschlagen:', error);
+            alert('Aktivierung fehlgeschlagen. Haben Sie Benachrichtigungen im Browser blockiert?');
+        });
+    }
+
+    // (4) Sende-Funktion
+    function sendSubscriptionToServer(subscription) {
+        fetch('{{ route('push.subscribe') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(subscription)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Server-Antwort war nicht ok.');
+            console.log('Abo auf Server gespeichert.');
+            alert('Desktop-Benachrichtigungen sind jetzt aktiv!');
+            document.getElementById('enable-push').style.display = 'none'; // Button verstecken
+        })
+        .catch(error => console.error(error));
+    }
+
+    // (5) Hauptlogik und Klick-Event
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        // Service Worker registrieren (siehe Schritt 2.6)
+        navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW-Registrierung fehlgeschlagen:', err));
+
+        const pushButton = document.getElementById('enable-push');
+        if (pushButton) {
+            pushButton.addEventListener('click', () => {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        subscribeUser();
+                    } else {
+                        alert('Sie müssen Benachrichtigungen erlauben.');
+                    }
+                });
+            });
+
+            // Button verstecken, wenn schon abonniert
+            navigator.serviceWorker.ready.then(reg => {
+                reg.pushManager.getSubscription().then(sub => {
+                    if (sub) {
+                        pushButton.style.display = 'none';
+                    }
+                });
+            });
+        }
+    } else {
+        console.warn('Push Messaging wird von diesem Browser nicht unterstützt.');
+        const pushButton = document.getElementById('enable-push');
+        if(pushButton) pushButton.style.display = 'none';
+    }
 </script>
 
 

@@ -9,11 +9,11 @@ use Spatie\Permission\Traits\HasRoles;
 use Lab404\Impersonate\Models\Impersonate;
 use Illuminate\Database\Eloquent\Casts\Attribute; // Wichtig für den Accessor
 use Illuminate\Support\Carbon; // Wichtig für Datumsberechnungen
-
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, Impersonate;
+    use HasFactory, Notifiable, HasRoles, Impersonate, HasPushSubscriptions;
 
     /**
      * The attributes that are mass assignable.
@@ -268,6 +268,10 @@ class User extends Authenticatable
     public function examAttempts()
     {
         return $this->hasMany(ExamAttempt::class);
+    }
+
+    public function pushSubscriptions() {
+        return $this->hasMany(\App\Models\PushSubscription::class);
     }
 }
 

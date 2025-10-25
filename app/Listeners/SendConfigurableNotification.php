@@ -22,6 +22,9 @@ use Illuminate\Support\Facades\Route; // Wichtig für Route::has()
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
+use NotificationChannels\WebPush\WebPushMessage;
+use NotificationChannels\WebPush\WebPushChannel;
+use Illuminate\Notifications\Notification as BaseNotification;
 
 class SendConfigurableNotification
 {
@@ -509,10 +512,28 @@ class SendConfigurableNotification
         }
 
 
-        // --- Fallback oder gemeinsamer Sendeaufruf für die Fälle oben, die kein 'return;' hatten ---
-        if ($uniqueRecipients->isNotEmpty()) {
-            // Log::info("[Notify] Sende Standard-Benachrichtigung für {$event->controllerAction} an {$uniqueRecipients->count()} Empfänger: {$notificationText}");
-            Notification::send($uniqueRecipients, new GeneralNotification($notificationText, $notificationIcon, $notificationUrl));
+        if (!empty($notificationText) && $uniqueRecipients->isNotEmpty()) {
+
+            // Erstelle die Web-Push-Nachricht
+            $webPushMessage = (new WebPushMessage)
+                ->title('EMS Panel Benachrichtigung') // Standardtitel
+                ->icon('/img/logo_192x192.png') // Dein Icon
+                ->body($notificationText) // Der Text, den wir oben ermittelt haben
+                ->action('Ansehen', 'view')
+                ->data(['url' => $notificationUrl]); // Die URL, die wir ermittelt haben
+
+            foreach ($uniqueRecipients as $user) {
+                // 1. Sende die DB-Benachrichtigung (Glocke)
+                $user->notify(new GeneralNotification($notificationText, $notificationIcon, $notificationUrl));
+
+                // 2. Sende die Web-Push-Nachricht (Desktop)
+                $user->notify(new class($webPushMessage) extends BaseNotification {
+                    private $message;
+                    public function __construct($message) { $this->message = $message; }
+                    public function via($notifiable) { return [WebPushChannel::class]; }
+                    public function toWebPush($notifiable, $notification) { return $this->message; }
+                });
+            }
         } else {
             // Log::warning("[Notify] Keine Empfänger nach Filterung für {$event->controllerAction} gefunden.");
         }
