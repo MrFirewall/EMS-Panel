@@ -282,4 +282,49 @@ class EvaluationController extends Controller
 
         return view('forms.evaluations.show', compact('evaluation', 'evaluationData', 'targetName', 'relatedItem'));
     }
+
+    /**
+     * NEU: Löscht einen Antrag oder eine Bewertung.
+     */
+    public function destroy(Evaluation $evaluation)
+    {
+        // Die Autorisierung erfolgt automatisch über authorizeResource und die EvaluationPolicy.
+        // $this->authorize('delete', $evaluation);
+
+        $logDescription = "Eintrag #{$evaluation->id} (Typ: {$evaluation->evaluation_type})";
+        $applicantName = $evaluation->target_name ?? $evaluation->user->name ?? 'Unbekannt';
+
+        if (in_array($evaluation->evaluation_type, self::$applicationTypes)) {
+            $subject = $evaluation->json_data['module_name'] ?? $evaluation->json_data['exam_title'] ?? 'N/A';
+            $logDescription = "Antrag '{$subject}' von {$applicantName} (ID: {$evaluation->id}) wurde gelöscht.";
+        } else {
+            $logDescription = "Bewertung (Typ: {$evaluation->evaluation_type}) für {$applicantName} (ID: {$evaluation->id}) wurde gelöscht.";
+        }
+
+        // Kopie der Daten für das Event erstellen, bevor gelöscht wird
+        $deletedData = $evaluation->toArray();
+        $triggeringUser = $evaluation->user ?? Auth::user(); // Der Antragsteller, falls vorhanden
+
+        $evaluation->delete();
+
+        // Activity Log Eintrag
+        ActivityLog::create([
+             'user_id' => Auth::id(), // Der Admin, der löscht
+             'log_type' => 'EVALUATION',
+             'action' => 'DELETED',
+             'target_id' => $deletedData['id'], // ID aus den alten Daten nehmen
+             'description' => $logDescription,
+         ]);
+
+        // Benachrichtigung via Event
+        PotentiallyNotifiableActionOccurred::dispatch(
+            'EvaluationController@destroy',
+            $triggeringUser,    // Der ursprüngliche Antragsteller
+            (object) $deletedData, // Die gelöschte Evaluation als relatedModel
+            Auth::user(),       // Der Admin (actor user)
+            ['description' => $logDescription] // Zusätzliche Daten
+        );
+
+        return redirect()->route('forms.evaluations.index')->with('success', 'Eintrag erfolgreich gelöscht.');
+    }
 }
