@@ -313,6 +313,7 @@ class UserController extends Controller
             $parts = explode('.', $item->name, 2); // Split by '.'
             return $parts[0];
         });
+        $userDirectPermissions = $user->getPermissionNames()->toArray();
 
         $allPossibleNumbers = range(1, 150);
         // Schließe nur Nummern von AKTIVEN Usern aus (außer dem aktuellen User selbst)
@@ -328,6 +329,7 @@ class UserController extends Controller
             'user',
             'roles',
             'permissions',
+            'userDirectPermissions',
             'availablePersonalNumbers',
             'statuses',
             'allModules',     // <-- NEU übergeben
