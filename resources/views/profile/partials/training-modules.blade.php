@@ -15,7 +15,7 @@
                 @forelse($user->trainingModules as $module)
                 <tr>
                     
-                    <td>{{ $pivot->created_at ? \Carbon\Carbon::parse($pivot->created_at)->format('d.m.Y') : '-' }}</td>
+                    <td>{{ $module->created_at ? \Carbon\Carbon::parse($module->created_at)->format('d.m.Y') : '-' }}</td>
                     <td>{{ $module->name }}</td>
                     <td>{{ $module->assigned_by_user_id ?? 'Angemeldet' }}</td>
                 </tr>
