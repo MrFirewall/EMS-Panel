@@ -237,17 +237,25 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
+       // Laden der einfachen Relationen
         $user->load([
-            'trainingModules.assigner',
+            // 'trainingModules.assigner' HIER ENTFERNEN!
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
         ]);
 
-        // 1. Prüfungsversuche laden
+        // 1. Lade die Module
+        $user->load('trainingModules');
+
+        // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte (verhindert N+1 Queries)
+        if ($user->trainingModules->isNotEmpty()) {
+            $user->trainingModules->pluck('pivot')->load('assigner');
+        }
+
+        // 1. Prüfungsversuche laden (dein bestehender Code)
         $examAttempts = ExamAttempt::where('user_id', $user->id)
                                     ->with('exam.trainingModule')
-                                    ->latest('completed_at') // Sortiert nach Abschlussdatum
+                                    ->latest('completed_at') 
                                     ->get();
 
         // 2. Weitere Variablen laden, die der View erwartet

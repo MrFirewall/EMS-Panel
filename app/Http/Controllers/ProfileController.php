@@ -28,14 +28,22 @@ class ProfileController extends Controller
 
         // Laden Sie alle benötigten Relationen
         $user->load([
-            'trainingModules.assigner',
+            // 'trainingModules' HIER ENTFERNEN!
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
         ]);
+
+        // 1. Lade die Module
+        $user->load('trainingModules');
+
+        // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte
+        if ($user->trainingModules->isNotEmpty()) {
+            $user->trainingModules->pluck('pivot')->load('assigner');
+        }
         
-        // NEU: Laden Sie die Prüfungsversuche
+        // NEU: Laden Sie die Prüfungsversuche (dein bestehender Code)
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam.trainingModule') // Laden des zugehörigen Moduls und der Prüfung
+                                    ->with('exam.trainingModule')
                                     ->latest('completed_at')
                                     ->get();
         

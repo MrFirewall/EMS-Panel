@@ -248,12 +248,12 @@ class User extends Authenticatable
     }
 
     public function trainingModules()
-    {
-        return $this->belongsToMany(TrainingModule::class, 'training_module_user')
-        ->using(\App\Models\Pivots\TrainingModuleUser::class)
-        ->withPivot('assigned_by_user_id', 'completed_at', 'notes')
-        ->withTimestamps();
-    }
+        {
+            return $this->belongsToMany(TrainingModule::class, 'training_module_user')
+                        ->using(\App\Models\Pivots\TrainingModuleUser::class) // <-- HINZUFÜGEN
+                        ->withPivot('assigned_by_user_id', 'completed_at', 'notes')
+                        ->withTimestamps();
+        }
 
     /**
      * Hilfsfunktion: Gibt nur die Module zurück, die der User bestanden hat.
