@@ -51,7 +51,7 @@
                          {{-- Optional: Filter hinzufügen? --}}
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive"> {{ Wichtig für kleinere Bildschirme }}
+                        <div class="table-responsive"> {{-- Wichtig für kleinere Bildschirme --}}
                             <table class="table table-striped table-hover">
                                 <thead>
                                     <tr>
@@ -62,7 +62,7 @@
                                         <th>Score</th>
                                         <th>Gestartet</th>
                                         <th>Abgeschlossen</th>
-                                        <th style="min-width: 210px;">Aktionen</th> {{ Mindestbreite für Buttons }}
+                                        <th style="min-width: 210px;">Aktionen</th> {{-- Mindestbreite für Buttons --}}
                                     </tr>
                                 </thead>
                                 <tbody>
