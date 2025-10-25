@@ -259,7 +259,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="4" class="text-center text-muted p-3">Keine Ausbildungsmodule gefunden.</td></tr> {{ Colspan angepasst }}
+                                        <tr><td colspan="4" class="text-center text-muted p-3">Keine Ausbildungsmodule gefunden.</td></tr> {{-- Colspan angepasst --}}
                                     @endforelse
                                 </tbody>
                             </table>
