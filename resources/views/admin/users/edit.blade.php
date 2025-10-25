@@ -147,24 +147,51 @@
                 </div>
             </div>
 
-            {{-- Spalte für EINZELNE BERECHTIGUNGEN --}}
             @role('ems-director|Super-Admin')
             <div class="col-md-12">
                 <div class="card card-outline card-warning">
                     <div class="card-header"><h3 class="card-title">Einzelne Berechtigungen (erweitert)</h3></div>
                     <div class="card-body">
                         <p class="text-muted small">Ermöglicht granulare Rechte, die von den zugewiesenen Gruppen abweichen. Nur in Ausnahmefällen verwenden.</p>
-                         @error('permissions.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
+                        @error('permissions.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
+
+                        {{-- === START DER ÄNDERUNG === --}}
+                        
                         <div class="row">
-                            @foreach($permissions as $permission)
-                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
-                                    <div class="icheck-primary">
-                                        <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" id="perm_{{ $permission->id }}" @if(in_array($permission->name, old('permissions', $user->getPermissionNames()->toArray()))) checked @endif>
-                                        <label for="perm_{{ $permission->id }}">{{ $permission->name }}</label>
+                            {{-- Iteriere durch die neue $groupedPermissions Variable --}}
+                            @forelse($groupedPermissions as $module => $modulePermissions)
+                                <div class="col-md-4 mb-4">
+                                    {{-- Styling von role.index übernommen, aber mit "warning"-Farbe --}}
+                                    <div class="card card-body p-3 border-warning h-100"> 
+                                        <h6 class="text-warning text-capitalize mb-3">{{ $module }} Modul</h6>
+                                        
+                                        @foreach($modulePermissions as $permission)
+                                            <div class="icheck-primary">
+                                                <input type="checkbox" name="permissions[]" 
+                                                    value="{{ $permission->name }}" id="perm_{{ $permission->id }}"
+                                                    {{-- Prüft gegen 'old' (bei Validierungsfehler) oder die direkten Rechte des Nutzers --}}
+                                                    {{ in_array($permission->name, old('permissions', $userDirectPermissions)) ? 'checked' : '' }}>
+                                                
+                                                {{-- Label-Logik aus role.index übernommen --}}
+                                                <label for="perm_{{ $permission->id }}" class="small">
+                                                    {{-- Zeigt einen sauberen Namen an, z.B. "Create" statt "users-create" --}}
+                                                    {{ ucfirst(str_replace('-', ' ', str_replace($module . '-', '', $permission->description ?? $permission->name))) }}
+                                                    
+                                                    {{-- Zeigt den vollen Namen der Berechtigung darunter an --}}
+                                                    <small class="text-muted d-block">({{ $permission->name }})</small>
+                                                </label>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
-                            @endforeach
+                            @empty
+                                <div class="col-12">
+                                    <p class="text-center text-muted">Keine Berechtigungen im System vorhanden.</p>
+                                </div>
+                            @endforelse
                         </div>
+
+                        {{-- === ENDE DER ÄNDERUNG === --}}
                     </div>
                 </div>
             </div>
