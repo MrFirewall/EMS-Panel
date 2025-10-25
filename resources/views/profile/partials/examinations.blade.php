@@ -1,6 +1,6 @@
 <div class="card card-primary card-outline mb-4">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-file-signature me-2"></i> Prüfungsergebnisse & Einstufungen</h3>
+        <h3 class="card-title"><i class="fas fa-file-signature me-2"></i> Prüfungsergebnisse</h3>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm mb-0 table-striped">
