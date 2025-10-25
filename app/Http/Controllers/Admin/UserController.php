@@ -249,7 +249,11 @@ class UserController extends Controller
 
         // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte (verhindert N+1 Queries)
         if ($user->trainingModules->isNotEmpty()) {
-            $user->trainingModules->pluck('pivot')->load('assigner');
+            // 1. Hole die Sammlung der Pivot-Objekte (als normale Collection)
+            $pivots = $user->trainingModules->pluck('pivot'); 
+            
+            // 2. Erstelle eine NEUE Eloquent Collection daraus und lade die Beziehung
+            (new \Illuminate\Database\Eloquent\Collection($pivots))->load('assigner');
         }
 
         // 1. Prüfungsversuche laden (dein bestehender Code)
