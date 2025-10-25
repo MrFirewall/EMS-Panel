@@ -268,6 +268,10 @@ class User extends Authenticatable
     public function examAttempts()
     {
         return $this->hasMany(ExamAttempt::class);
+    }    
+
+    public function pushSubscriptions() {
+        return $this->hasMany(\App\Models\PushSubscription::class);
     }
 }
 

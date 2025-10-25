@@ -10,7 +10,7 @@ class PushSubscriptionController extends Controller {
             'keys.auth' => 'required',
         ]);
 
-        auth()->user()->webPushSubscriptions()->updateOrCreate(
+        auth()->user()->pushSubscriptions()->updateOrCreate(
             ['endpoint' => $request->endpoint],
             [
                 'public_key' => $request->input('keys.p256dh'),
@@ -19,7 +19,7 @@ class PushSubscriptionController extends Controller {
         );
         return response()->json(['success' => true], 201);
     }
-
+    
     public function destroy(Request $request)
         {
             $request->validate([
@@ -28,7 +28,7 @@ class PushSubscriptionController extends Controller {
 
             // Finde und lösche das Abo anhand des Endpoints *nur für diesen User*
             $deleted = auth()->user()
-                             ->webPushSubscriptions() // Nutzt die Relation im User Model
+                             ->pushSubscriptions() // Nutzt die Relation im User Model
                              ->where('endpoint', $request->endpoint)
                              ->delete();
 
