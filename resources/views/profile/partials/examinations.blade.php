@@ -60,7 +60,7 @@
                 {{-- Annahme: $examinations ist eine andere Variable für manuelle Einstufungen? --}}
                 @if($examAttempts->isEmpty() && (!isset($examinations) || $examinations->isEmpty()))
                     <tr>
-                        <td colspan="3" class="text-center text-muted p-3">Keine Prüfungseinträge oder Modulabschlüsse vorhanden.</td>
+                        <td colspan="3" class="text-center text-muted p-3">Keine Prüfungseinträge.</td>
                     </tr>
                 @endif
             </tbody>
