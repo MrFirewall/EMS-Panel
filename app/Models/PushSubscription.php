@@ -1,11 +1,22 @@
 <?php
+
 namespace App\Models;
-use Illuminate\Database\Eloquent\Model;
 
-class PushSubscription extends Model {
-    protected $fillable = ['endpoint', 'public_key', 'auth_token']; // HINZUFÜGEN
+// Nutze die Klasse des Pakets als Alias
+use NotificationChannels\WebPush\PushSubscription as WebPushPackageSubscription;
 
-    public function user() { // HINZUFÜGEN
-        return $this->belongsTo(User::class);
-    }
+// Dein Model MUSS die Klasse des Pakets erweitern (extend)
+class PushSubscription extends WebPushPackageSubscription 
+{
+    // Die Basisklasse erbt bereits von Model.
+    // Wir definieren fillable neu, um sicherzustellen, dass die Daten gespeichert werden können.
+    
+    protected $fillable = [
+        'endpoint', 
+        'public_key', 
+        'auth_token', 
+        'user_id'
+    ];
+    
+    // Keine weiteren Anpassungen nötig.
 }
