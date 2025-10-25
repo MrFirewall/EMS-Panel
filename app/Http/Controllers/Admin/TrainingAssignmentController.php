@@ -27,7 +27,7 @@ class TrainingAssignmentController extends Controller
         // Optional: Füge 'assigned_at' hinzu, falls deine Pivot-Tabelle das unterstützt
         $user->trainingModules()->syncWithoutDetaching([
             $module->id => [
-                'status' => 'in_ausbildung',
+                'assigned_by_user_id' => $adminUser->id,
                 'updated_at' => now() // Optional
              ]
         ]);

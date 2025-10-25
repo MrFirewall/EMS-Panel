@@ -21,8 +21,8 @@ class TrainingModule extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'training_module_user')
-                    ->withPivot('status', 'completed_at', 'notes') // Diese Zusatzinfos laden
-                    ->withTimestamps();
+                    ->withPivot('assigned_by_user_id', 'completed_at', 'notes') // Zusatzinfos laden
+                    ->withTimestamps(); // Lädt created_at (Zugewiesen am) und updated_at
     }
 
     /**

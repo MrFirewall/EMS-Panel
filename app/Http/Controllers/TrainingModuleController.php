@@ -211,10 +211,10 @@ class TrainingModuleController extends Controller
              // Keine Erfolgs-/Fehlermeldung nötig, einfach zurückleiten
              return redirect()->back();
         }
-
-        // Benutzer anmelden (Status 'angemeldet')
-        $module->users()->attach($user->id, ['status' => 'angemeldet', 'assigned_at' => now()]);
-
+        // Benutzer anmelden
+        $module->users()->attach($user->id, [
+            'assigned_by_user_id' => null, // null, da sich der Benutzer selbst "zugewiesen" hat
+        ]);
         // Optional: Logeintrag
         ActivityLog::create([
             'user_id' => $user->id,
