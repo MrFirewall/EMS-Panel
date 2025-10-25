@@ -244,9 +244,11 @@
                                                  <div class="btn-group">
                                                     {{-- NEU: Link zur User-Verwaltungsseite (Route muss erstellt werden!) --}}
                                                     @can('assignUser', $module) {{-- Policy anpassen/erstellen --}}
-                                                        <a href="{{ route('admin.modules.assignments.index', $module) }}" class="btn btn-xs btn-outline-secondary" title="Benutzerzuweisungen verwalten">
+                                                        {{-- === AUSKOMMENTIERT BIS ROUTE EXISTIERT === --}}
+                                                        {{-- <a href="{{ route('admin.modules.assignments.index', $module) }}" class="btn btn-xs btn-outline-secondary" title="Benutzerzuweisungen verwalten">
                                                             <i class="fas fa-users-cog"></i> Verwalten
-                                                        </a>
+                                                        </a> --}}
+                                                        {{-- === ENDE AUSKOMMENTIERT === --}}
                                                     @endcan
                                                     <a href="{{ route('modules.show', $module) }}" class="btn btn-xs btn-outline-primary" title="Details ansehen"><i class="fas fa-eye"></i></a>
                                                      @can('update', $module)
