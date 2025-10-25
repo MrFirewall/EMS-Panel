@@ -126,7 +126,7 @@
         {{-- Zwei-Spalten-Layout für Rechte --}}
         <div class="row">
             {{-- Spalte für GRUPPEN / RANG --}}
-            <div class="col-md-12">
+            <div class="col-md-6">
                 <div class="card card-outline card-info">
                     <div class="card-header"><h3 class="card-title">Gruppen / Rang Zuweisung</h3></div>
                     <div class="card-body">
@@ -148,7 +148,7 @@
             </div>
 
             @role('ems-director|Super-Admin')
-            <div class="col-md-12">
+            <div class="col-md-6">
                 <div class="card card-outline card-warning">
                     <div class="card-header"><h3 class="card-title">Einzelne Berechtigungen (erweitert)</h3></div>
                     <div class="card-body">
@@ -201,7 +201,7 @@
             {{-- NEUE KARTE: MANUELLE MODULZUWEISUNG           --}}
             {{-- ============================================= --}}
             @can('users.manage.modules') {{-- Schützt die ganze Karte --}}
-            <div class="col-md-12">
+            <div class="col-md-4">
                 <div class="card card-outline card-success">
                     <div class="card-header"><h3 class="card-title"><i class="fas fa-graduation-cap"></i> Manuelle Modulzuweisung</h3></div>
                     <div class="card-body">
