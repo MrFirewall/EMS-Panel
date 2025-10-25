@@ -58,7 +58,7 @@
 
         {{-- Card mit Tabs wiederhergestellt --}}
         <div class="card card-primary card-tabs">
-            <div class="card-header p-0 pt-1 border-bottom-0"> {{ border-bottom-0 hinzugefügt }}
+            <div class="card-header p-0 pt-1 border-bottom-0"> {{-- border-bottom-0 hinzugefügt --}}
                 <ul class="nav nav-tabs" id="overview-tabs" role="tablist">
                     {{-- Tab 1: Alle Anträge --}}
                     <li class="nav-item">
