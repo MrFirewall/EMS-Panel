@@ -26,7 +26,7 @@
             <div class="alert alert-success alert-dismissible">
                 <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
                 <h5><i class="icon fas fa-check"></i> Erfolg!</h5>
-                <p>{!! session('success') !!}</p> {{ Erlaube HTML für den Fall, dass wir es brauchen }}
+                <p>{!! session('success') !!}</p> {{-- Erlaube HTML für den Fall, dass wir es brauchen --}}
 
                 @if(session('secure_url'))
                 <div class="input-group mt-2">
