@@ -38,39 +38,68 @@ class EvaluationController extends Controller
     }
 
     /**
-     * Zeigt die Übersichtsseite für alle Formulare/Bewertungen an.
+     * Zeigt die Übersichtsseite für alle Formulare, Anträge, Module und Prüfungen.
      */
     public function index()
     {
-        // authorize('viewAny') wird bereits durch authorizeResource abgedeckt
-        // $this->authorize('viewAny', Evaluation::class);
+        // Berechtigungsprüfung für die Seite selbst
+        $this->authorize('viewAny', Evaluation::class);
 
         $canViewAll = Auth::user()->can('evaluations.view.all');
+        $userId = Auth::id();
 
-        // 1. Lade NUR offene Anträge
+        // 1. Lade offene Anträge (wie bisher)
         $offeneAntraegeQuery = Evaluation::where('status', 'pending')
                                            ->whereIn('evaluation_type', self::$applicationTypes);
-
-        // 2. Lade NUR reguläre Bewertungen
-        $evaluationsQuery = Evaluation::whereIn('evaluation_type', self::$evaluationTypes);
-
-
-        // Filtern für Nicht-Admins
         if (!$canViewAll) {
-            $userId = Auth::id();
-            $offeneAntraegeQuery->where('user_id', $userId); // Eigene offene Anträge
-            $evaluationsQuery->where(function ($query) use ($userId) { // Erhaltene ODER erstellte Bewertungen
+            $offeneAntraegeQuery->where('user_id', $userId);
+        }
+        $offeneAntraege = $offeneAntraegeQuery->with('user')->latest('created_at')->get();
+
+        // 2. Lade letzte eingereichte Bewertungen (wie bisher, aber paginiert)
+        $evaluationsQuery = Evaluation::whereIn('evaluation_type', self::$evaluationTypes);
+         if (!$canViewAll) {
+            $evaluationsQuery->where(function ($query) use ($userId) {
                 $query->where('user_id', $userId)
                       ->orWhere('evaluator_id', $userId);
             });
         }
+        $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->latest('created_at')->paginate(15, ['*'], 'evaluationsPage'); // Eigener Paginator Name
 
-        $offeneAntraege = $offeneAntraegeQuery->with('user')->latest('created_at')->get();
-        $evaluations = $evaluationsQuery->with(['user', 'evaluator'])->latest('created_at')->paginate(15); // Paginieren
+        // 3. Lade ALLE Trainingsmodule (paginiert)
+        // Lade nur, wenn der User die Berechtigung hat, Module zu sehen (Annahme: training.view)
+        $trainingModules = collect(); // Standardmäßig leer
+        if (Auth::user()->can('training.view')) { // Passe Permission an
+             $trainingModules = \App\Models\TrainingModule::orderBy('category')->orderBy('name')->paginate(15, ['*'], 'modulesPage'); // Eigener Paginator Name
+        }
 
+        // 4. Lade ALLE Prüfungen (paginiert)
+        // Lade nur, wenn der User die Berechtigung hat, Prüfungen zu sehen (Annahme: exams.manage)
+        $exams = collect(); // Standardmäßig leer
+        if (Auth::user()->can('exams.manage')) { // Passe Permission an
+            $exams = \App\Models\Exam::withCount('questions')->latest()->paginate(15, ['*'], 'examsPage'); // Eigener Paginator Name
+        }
+
+        // 5. Lade alle User für das "Link generieren"-Modal (nur wenn benötigt)
+        $usersForModal = collect();
+         if (Auth::user()->can('generateExamLink', \App\Models\ExamAttempt::class)) { // Prüfe Berechtigung zum Link generieren
+             $usersForModal = \App\Models\User::orderBy('name')->get(['id', 'name']);
+         }
+
+
+        // $counts bleibt optional
         $counts = $this->getEvaluationCounts();
 
-        return view('forms.evaluations.index', compact('offeneAntraege', 'evaluations', 'counts', 'canViewAll'));
+        // Übergabe aller Daten an die View
+        return view('forms.evaluations.index', compact(
+            'offeneAntraege',
+            'evaluations',
+            'trainingModules',
+            'exams',
+            'counts',
+            'canViewAll',
+            'usersForModal' // User für Modal übergeben
+        ));
     }
 
     /**
