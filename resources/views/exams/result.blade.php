@@ -67,7 +67,7 @@
 
                     @if ($attempt->status === 'evaluated')
                         <div class="card-body text-center">
-                            <p><i class="fas fa-check-circle text-success mr-1"></i>Diese Prüfung wurde bereits final bewertet.</p>
+                            <p><i class="fas fa-check-circle mr-1"></i>Diese Prüfung wurde bereits final bewertet.</p>
                             <a href="{{ route('admin.exams.attempts.index') }}" class="btn btn-sm btn-default mt-2"><i class="fas fa-arrow-left"></i> Zur Übersicht</a>
                         </div>
                     @else
@@ -83,7 +83,7 @@
                                      @error('final_score')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 {{-- Select für Modulstatus entfernt --}}
-                                <p class="text-danger small mt-3"><i class="fas fa-exclamation-triangle mr-1"></i>Das Speichern setzt den Status des Versuchs auf "evaluated" und ist der finale Schritt.</p>
+                                <p class="small mt-3"><i class="fas fa-exclamation-triangle mr-1"></i>Das Speichern setzt den Status des Versuchs auf "evaluated" und ist der finale Schritt.</p>
                             </div>
                             <div class="card-footer">
                                 <button type="submit" class="btn btn-success btn-block">
@@ -164,14 +164,14 @@
                                                             @if($option->is_correct)
                                                                 <i class="fas fa-check-circle text-success mr-1"></i>
                                                             @elseif($userOptionId == $option->id && !$option->is_correct)
-                                                                <i class="fas fa-times-circle text-danger mr-1"></i>
+                                                                <i class="fas fa-times-circle mr-1"></i>
                                                             @else
                                                                 <i class="far fa-circle text-muted mr-1"></i>
                                                             @endif
                                                             <span class="{{ $userOptionId == $option->id ? 'font-weight-bold' : '' }}">{{ $option->option_text }}</span>
                                                         </li>
                                                     @empty
-                                                        <li class="text-danger">Keine Optionen definiert!</li>
+                                                        <li>Keine Optionen definiert!</li>
                                                     @endforelse
                                                 </ul>
                                                 @break
@@ -184,7 +184,7 @@
                                                             @if($option->is_correct && $userOptionIds->contains($option->id))
                                                                 <i class="fas fa-check-square text-success mr-1"></i>
                                                             @elseif(!$option->is_correct && $userOptionIds->contains($option->id))
-                                                                <i class="fas fa-times-circle text-danger mr-1"></i>
+                                                                <i class="fas fa-times-circle mr-1"></i>
                                                             @elseif($option->is_correct && !$userOptionIds->contains($option->id))
                                                                 <i class="far fa-square text-muted mr-1"></i>
                                                             @else
@@ -193,7 +193,7 @@
                                                             <span>{{ $option->option_text }}</span>
                                                         </li>
                                                      @empty
-                                                          <li class="text-danger">Keine Optionen definiert!</li>
+                                                          <li>Keine Optionen definiert!</li>
                                                      @endforelse
                                                 </ul>
                                                 @break
@@ -208,7 +208,7 @@
                                                 @break
 
                                             @default
-                                                 <p class="text-danger">Unbekannter Fragetyp.</p>
+                                                 <p>Unbekannter Fragetyp.</p>
                                         @endswitch
                                     </div>
                                 </div> {{-- /.callout --}}
