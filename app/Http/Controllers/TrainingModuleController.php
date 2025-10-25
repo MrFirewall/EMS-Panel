@@ -75,9 +75,10 @@ class TrainingModuleController extends Controller
         ]);
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
+        // KORREKTUR: $creator (der handelnde Admin) als triggeringUser verwenden, da null nicht erlaubt ist.
         PotentiallyNotifiableActionOccurred::dispatch(
             'TrainingModuleController@store', // Action
-            null, // triggeringUser
+            $creator, // triggeringUser
             $module, // relatedModel
             $creator // actorUser
         );
@@ -140,10 +141,10 @@ class TrainingModuleController extends Controller
         ]);
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
-        // KORREKTUR: Named Arguments entfernt, um den ParseError zu beheben.
+        // KORREKTUR: $editor (der handelnde Admin) als triggeringUser verwenden, da null nicht erlaubt ist.
         PotentiallyNotifiableActionOccurred::dispatch(
             'TrainingModuleController@update', // 1. Action Name
-            null, // 2. triggeringUser
+            $editor, // 2. triggeringUser
             $module, // 3. relatedModel
             $editor // 4. actorUser
         );
@@ -179,10 +180,10 @@ class TrainingModuleController extends Controller
         ]);
 
         // --- BENACHRICHTIGUNG VIA EVENT ---
-        // KORREKTUR: Named Arguments entfernt.
+        // KORREKTUR: $deleter (der handelnde Admin) als triggeringUser verwenden, da null nicht erlaubt ist.
         PotentiallyNotifiableActionOccurred::dispatch(
             'TrainingModuleController@destroy', // Action Name
-            null, // triggeringUser
+            $deleter, // triggeringUser
             null, // relatedModel
             $deleter, // actorUser
             ['name' => $moduleName] // additionalData
