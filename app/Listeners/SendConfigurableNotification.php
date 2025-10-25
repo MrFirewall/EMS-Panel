@@ -589,28 +589,24 @@ class SendConfigurableNotification // Optional: implements ShouldQueue
      * @param WebPushMessage $message Die zu sendende Nachricht
      */
     private function sendWebPush($users, WebPushMessage $message): void
-    {
-        // Setze Standard-Icon/Badge, falls nicht bereits in der Nachricht definiert
-        if (empty($message->icon)) {
-            $message->icon('/img/logo_192x192.png'); // Pfad zu deinem Haupt-Icon
-        }
-        // if (empty($message->badge)) {
-        //     $message->badge('/img/logo_72x72.png'); // Pfad zu deinem Badge-Icon
-        // }
+        {
+            // Wir verwenden KEINE Fallback-Icons hier, um Konflikte zu vermeiden.
+            // Das Icon MUSS in der WebPushMessage selbst oder im Service Worker definiert sein.
+            
+            // Erstelle die anonyme Notification-Klasse
+            $notification = new class($message) extends BaseNotification {
+                private $message;
+                public function __construct($message) { $this->message = $message; }
+                public function via($notifiable) { return [WebPushChannel::class]; }
+                public function toWebPush($notifiable, $notification) { return $this->message; }
+            };
 
-        // Erstelle die anonyme Notification-Klasse
-        $notification = new class($message) extends BaseNotification {
-            private $message;
-            public function __construct($message) { $this->message = $message; }
-            public function via($notifiable) { return [WebPushChannel::class]; }
-            public function toWebPush($notifiable, $notification) { return $this->message; }
-        };
-
-        // Sende an die User (funktioniert für einzelne User und Collections)
-        try {
-             Notification::send($users, $notification);
-        } catch (\Exception $e) {
-             Log::error("[WebPush] Fehler beim Senden: " . $e->getMessage());
+            // Sende an die User (funktioniert für einzelne User und Collections)
+            try {
+                Notification::send($users, $notification);
+            } catch (\Exception $e) {
+                // Loggen, aber den Prozess nicht unterbrechen
+                Log::error("[WebPush] Fehler beim Senden: " . $e->getMessage());
+            }
         }
-    }
 }
