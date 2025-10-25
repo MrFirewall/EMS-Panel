@@ -215,8 +215,6 @@ class TrainingModuleController extends Controller
              return redirect()->back();
         }
 
-        // Benutzer anmelden (Status 'angemeldet')
-        // HINWEIS: 'status' wurde in der DB entfernt, daher hier NICHT mehr verwenden.
         // Die Zuweisungs-ID muss NULL sein (Selbstanmeldung).
         $module->users()->attach($user->id, ['assigned_by_user_id' => null]);
 

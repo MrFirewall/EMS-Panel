@@ -27,7 +27,6 @@ class ProfileController extends Controller
 
         // Laden Sie alle benötigten Relationen
         $user->load([
-            'trainingModules',
             'trainingModules.assigner',
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),

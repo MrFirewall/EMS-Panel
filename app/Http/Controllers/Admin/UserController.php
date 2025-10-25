@@ -237,7 +237,6 @@ class UserController extends Controller
     {
         // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
         $user->load([
-            'trainingModules',
             'trainingModules.assigner',
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
