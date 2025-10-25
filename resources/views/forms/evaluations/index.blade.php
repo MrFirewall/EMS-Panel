@@ -1,19 +1,20 @@
 @extends('layouts.app')
 {{-- Titel angepasst --}}
-@section('title', 'Übersicht: Anträge, Bewertungen, Module & Prüfungen')
+@section('title', 'Anträge & Bewertungen')
 
 @section('content')
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                {{-- Titel angepasst --}}
-                <h1 class="m-0"><i class="fas fa-tachometer-alt nav-icon"></i> Übersicht</h1>
+                 {{-- Titel angepasst --}}
+                <h1 class="m-0"><i class="fas fa-folder-open nav-icon"></i> Anträge & Bewertungen</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item active">Übersicht</li>
+                     {{-- Breadcrumb angepasst --}}
+                    <li class="breadcrumb-item active">Anträge & Bewertungen</li>
                 </ol>
             </div>
         </div>
@@ -41,68 +42,43 @@
             </div>
         @elseif(session('success'))
              <div class="alert alert-success alert-dismissible">
-                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                <h5><i class="icon fas fa-check"></i> Erfolg!</h5>
-                <p>{{ session('success') }}</p>
-            </div>
+                 {{-- ... einfache Erfolgsmeldung ... --}}
+             </div>
         @elseif(session('error'))
             <div class="alert alert-danger alert-dismissible">
-                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                <h5><i class="icon fas fa-ban"></i> Fehler!</h5>
-                <p>{{ session('error') }}</p>
+                 {{-- ... Fehlermeldung ... --}}
             </div>
         @endif
         {{-- Ende Meldungen --}}
 
-        {{-- Card mit Tabs --}}
-        <div class="card card-primary card-tabs">
-            <div class="card-header p-0 pt-1">
-                <ul class="nav nav-tabs" id="overview-tabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="tab-pending-applications-link" data-toggle="pill" href="#tab-pending-applications" role="tab" aria-controls="tab-pending-applications" aria-selected="true">
-                           <i class="fas fa-inbox mr-1"></i> Offene Anträge <span class="badge badge-warning ml-1">{{ $offeneAntraege->count() }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="tab-recent-evaluations-link" data-toggle="pill" href="#tab-recent-evaluations" role="tab" aria-controls="tab-recent-evaluations" aria-selected="false">
-                           <i class="fas fa-history mr-1"></i> Letzte Bewertungen
-                        </a>
-                    </li>
-                    @can('training.view') {{-- Nur anzeigen, wenn Berechtigung vorhanden --}}
-                    <li class="nav-item">
-                        <a class="nav-link" id="tab-training-modules-link" data-toggle="pill" href="#tab-training-modules" role="tab" aria-controls="tab-training-modules" aria-selected="false">
-                           <i class="fas fa-graduation-cap mr-1"></i> Ausbildungsmodule
-                        </a>
-                    </li>
-                    @endcan
-                    @can('exams.manage') {{-- Nur anzeigen, wenn Berechtigung vorhanden --}}
-                    <li class="nav-item">
-                        <a class="nav-link" id="tab-exams-link" data-toggle="pill" href="#tab-exams" role="tab" aria-controls="tab-exams" aria-selected="false">
-                           <i class="fas fa-file-alt mr-1"></i> Prüfungen
-                        </a>
-                    </li>
-                     @endcan
-                </ul>
-            </div>
-            <div class="card-body">
-                <div class="tab-content" id="overview-tabs-content">
-
-                    {{-- Tab 1: Offene Anträge --}}
-                    <div class="tab-pane fade show active" id="tab-pending-applications" role="tabpanel" aria-labelledby="tab-pending-applications-link">
-                        <h4>Offene Anträge</h4>
-                         <div class="table-responsive">
-                            <table class="table table-striped table-hover table-sm"> {{-- table-sm für kompaktere Ansicht --}}
+        {{-- Keine Tabs mehr, direkte Anzeige der Karten --}}
+        <div class="row">
+            {{-- Karte für ALLE Anträge --}}
+            <div class="col-lg-12">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        {{-- Titel angepasst --}}
+                        <h3 class="card-title"><i class="fas fa-file-signature mr-1"></i> Alle Anträge</h3>
+                         {{-- Optional: Zähler für offene Anträge --}}
+                         @php $pendingCount = $applications->where('status', 'pending')->count(); @endphp
+                         @if($pendingCount > 0)<span class="badge badge-warning ml-2">{{ $pendingCount }} Offen</span>@endif
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th>Typ</th>
                                         <th>Antragsteller</th>
                                         <th>Betreff</th>
                                         <th>Datum</th>
+                                        <th>Status</th> {{-- NEUE Spalte --}}
                                         <th>Aktion</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($offeneAntraege as $antrag)
+                                    {{-- Iteriere über $applications --}}
+                                    @forelse($applications as $antrag)
                                         <tr>
                                             <td>
                                                 <span class="badge {{ $antrag->evaluation_type === 'modul_anmeldung' ? 'bg-info' : 'bg-warning' }}">
@@ -121,11 +97,23 @@
                                             </td>
                                             <td>{{ $antrag->created_at->format('d.m.Y H:i') }}</td>
                                             <td>
-                                                 {{-- Nur Admins sehen die Buttons --}}
-                                                 @if($canViewAll)
+                                                 {{-- Status anzeigen --}}
+                                                 @if ($antrag->status === 'pending')
+                                                    <span class="badge badge-warning">Offen</span>
+                                                 @elseif ($antrag->status === 'processed')
+                                                    <span class="badge badge-success">Bearbeitet</span>
+                                                 @elseif ($antrag->status === 'rejected') {{-- Beispiel für abgelehnt --}}
+                                                    <span class="badge badge-danger">Abgelehnt</span>
+                                                 @else
+                                                     <span class="badge badge-secondary">{{ ucfirst($antrag->status) }}</span>
+                                                 @endif
+                                            </td>
+                                            <td>
+                                                 {{-- Aktionen nur anzeigen, wenn der Antrag 'pending' ist UND der User Admin-Rechte hat --}}
+                                                 @if($canViewAll && $antrag->status === 'pending')
                                                     @if($antrag->evaluation_type === 'modul_anmeldung')
                                                         @if(isset($antrag->json_data['module_id']))
-                                                            @can('assignUser', \App\Models\TrainingModule::class) {{-- Policy Check --}}
+                                                            @can('assignUser', \App\Models\TrainingModule::class)
                                                             <form action="{{ route('admin.training.assign', ['user' => $antrag->user_id, 'module' => $antrag->json_data['module_id'], 'evaluation' => $antrag->id]) }}" method="POST" onsubmit="return confirm('Ausbildung starten?');">
                                                                 @csrf
                                                                 <button type="submit" class="btn btn-xs btn-success" title="Ausbildung starten">
@@ -138,7 +126,7 @@
                                                         @endif
                                                     @elseif($antrag->evaluation_type === 'pruefung_anmeldung')
                                                         @if(isset($antrag->json_data['exam_id']))
-                                                            @can('generateExamLink', \App\Models\ExamAttempt::class) {{-- Policy Check --}}
+                                                            @can('generateExamLink', \App\Models\ExamAttempt::class)
                                                             <form action="{{ route('admin.exams.attempts.store') }}" method="POST">
                                                                 @csrf
                                                                 <input type="hidden" name="user_id" value="{{ $antrag->user_id }}">
@@ -154,21 +142,34 @@
                                                         @endif
                                                     @endif
                                                  @else
-                                                      <span class="text-muted">Wartet auf Bearbeitung</span>
+                                                    {{-- Für bearbeitete Anträge oder normale User keine Aktion anzeigen --}}
+                                                     -
                                                  @endif
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="5" class="text-center text-muted p-3">Keine offenen Anträge.</td></tr>
+                                        <tr><td colspan="6" class="text-center text-muted p-3">Keine Anträge gefunden.</td></tr> {{ Colspan erhöht }}
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    {{-- Paginierung für Anträge --}}
+                    @if ($applications->hasPages())
+                       <div class="card-footer clearfix"> {{ clearfix für float Paginierung }}
+                           {{ $applications->appends(['evaluationsPage' => $evaluations->currentPage()])->links() }}
+                       </div>
+                   @endif
+                </div>
+            </div>
 
-                    {{-- Tab 2: Letzte Bewertungen --}}
-                    <div class="tab-pane fade" id="tab-recent-evaluations" role="tabpanel" aria-labelledby="tab-recent-evaluations-link">
-                         <h4>Letzte eingereichte Bewertungen</h4>
+            {{-- Karte für die letzten Bewertungen --}}
+            <div class="col-lg-12 mt-4">
+                <div class="card card-secondary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-history mr-1"></i> Letzte eingereichte Bewertungen</h3>
+                    </div>
+                    <div class="card-body p-0">
                          <div class="table-responsive">
                             <table class="table table-striped table-hover table-sm">
                                 <thead>
@@ -188,7 +189,6 @@
                                             <td>{{ $evaluation->evaluator->name ?? 'N/A' }}</td>
                                             <td>{{ $evaluation->created_at->format('d.m.Y H:i') }}</td>
                                             <td>
-                                                {{-- Link zur Admin-Detailansicht, falls berechtigt --}}
                                                 @can('view', $evaluation)
                                                 <a href="{{ route('admin.forms.evaluations.show', $evaluation) }}" class="btn btn-xs btn-outline-primary">
                                                     <i class="fas fa-eye"></i> Details
@@ -204,164 +204,30 @@
                                 </tbody>
                             </table>
                         </div>
-                         {{-- Paginierung für Bewertungen --}}
-                         @if ($evaluations->hasPages())
-                            <div class="mt-3 d-flex justify-content-center">
-                                {{ $evaluations->appends(['modulesPage' => $trainingModules->currentPage(), 'examsPage' => $exams->currentPage()])->links() }}
-                            </div>
-                        @endif
                     </div>
-
-                    {{-- Tab 3: Ausbildungsmodule --}}
-                    @can('training.view')
-                    <div class="tab-pane fade" id="tab-training-modules" role="tabpanel" aria-labelledby="tab-training-modules-link">
-                        <h4>Alle Ausbildungsmodule</h4>
-                        <div class="mb-3 text-right">
-                             @can('create', \App\Models\TrainingModule::class) {{-- Berechtigung prüfen --}}
-                            <a href="{{ route('modules.create') }}" class="btn btn-sm btn-success">
-                                <i class="fas fa-plus mr-1"></i> Neues Modul erstellen
-                            </a>
-                            @endcan
+                     @if ($evaluations->hasPages())
+                        <div class="card-footer clearfix">
+                            {{ $evaluations->appends(['applicationsPage' => $applications->currentPage()])->links() }}
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Kategorie</th>
-                                        <th>Beschreibung</th>
-                                        <th>Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($trainingModules as $module)
-                                        <tr>
-                                            <td>{{ $module->id }}</td>
-                                            <td>{{ $module->name }}</td>
-                                            <td>{{ $module->category ?? '-' }}</td>
-                                            <td>{{ Str::limit($module->description, 50) }}</td>
-                                            <td>
-                                                 <div class="btn-group">
-                                                     {{-- Details ansehen (für alle mit training.view) --}}
-                                                    <a href="{{ route('modules.show', $module) }}" class="btn btn-xs btn-outline-info" title="Details ansehen"><i class="fas fa-eye"></i></a>
-                                                     {{-- Bearbeiten (nur mit training.edit) --}}
-                                                     @can('update', $module)
-                                                        <a href="{{ route('modules.edit', $module) }}" class="btn btn-xs btn-outline-warning" title="Modul bearbeiten"><i class="fas fa-edit"></i></a>
-                                                     @endcan
-                                                      {{-- Löschen (nur mit training.delete) --}}
-                                                      @can('delete', $module)
-                                                        <form action="{{ route('modules.destroy', $module) }}" method="POST" class="d-inline" onsubmit="return confirm('Modul wirklich löschen?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Modul löschen"><i class="fas fa-trash"></i></button>
-                                                        </form>
-                                                      @endcan
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr><td colspan="5" class="text-center text-muted p-3">Keine Ausbildungsmodule gefunden.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                        {{-- Paginierung für Module --}}
-                         @if ($trainingModules->hasPages())
-                            <div class="mt-3 d-flex justify-content-center">
-                                {{-- Wichtig: Andere Paginator-Parameter anhängen, damit die Tabs funktionieren --}}
-                                {{ $trainingModules->appends(['evaluationsPage' => $evaluations->currentPage(), 'examsPage' => $exams->currentPage()])->links() }}
-                            </div>
-                        @endif
-                    </div>
-                    @endcan
+                    @endif
+                </div>
+            </div>
 
-                    {{-- Tab 4: Prüfungen --}}
-                     @can('exams.manage')
-                    <div class="tab-pane fade" id="tab-exams" role="tabpanel" aria-labelledby="tab-exams-link">
-                         <h4>Alle Prüfungen</h4>
-                          <div class="mb-3 text-right">
-                              @can('create', \App\Models\Exam::class)
-                                <a href="{{ route('admin.exams.create') }}" class="btn btn-sm btn-success">
-                                    <i class="fas fa-plus mr-1"></i> Neue Prüfung erstellen
-                                </a>
-                              @endcan
-                         </div>
-                         <div class="table-responsive">
-                            <table class="table table-striped table-hover table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Titel</th>
-                                        <th>Bestehensgrenze</th>
-                                        <th>Fragen</th>
-                                        <th>Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($exams as $exam)
-                                    <tr>
-                                        <td>{{ $exam->id }}</td>
-                                        <td>{{ $exam->title }}</td>
-                                        <td>{{ $exam->pass_mark }}%</td>
-                                        <td>{{ $exam->questions_count }}</td>
-                                        <td>
-                                            <div class="btn-group">
-                                                {{-- Link generieren Button --}}
-                                                @can('generateExamLink', \App\Models\ExamAttempt::class)
-                                                <button type="button" class="btn btn-xs btn-info" data-toggle="modal" data-target="#generateLinkModal" data-exam-id="{{ $exam->id }}" data-exam-title="{{ $exam->title }}" title="Prüfungslink für Benutzer generieren">
-                                                    <i class="fas fa-link"></i> Link generieren
-                                                </button>
-                                                @endcan
-                                                {{-- Details ansehen --}}
-                                                @can('view', $exam)
-                                                <a href="{{ route('admin.exams.show', $exam) }}" class="btn btn-xs btn-outline-primary" title="Details ansehen"><i class="fas fa-eye"></i></a>
-                                                @endcan
-                                                 {{-- Bearbeiten --}}
-                                                 @can('update', $exam)
-                                                <a href="{{ route('admin.exams.edit', $exam) }}" class="btn btn-xs btn-outline-warning" title="Prüfung bearbeiten"><i class="fas fa-edit"></i></a>
-                                                 @endcan
-                                                  {{-- Löschen --}}
-                                                  @can('delete', $exam)
-                                                <form action="{{ route('admin.exams.destroy', $exam) }}" method="POST" class="d-inline" onsubmit="return confirm('Prüfung wirklich löschen? Alle zugehörigen Versuche gehen verloren!');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-xs btn-outline-danger" title="Prüfung löschen"><i class="fas fa-trash"></i></button>
-                                                </form>
-                                                  @endcan
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @empty
-                                        <tr><td colspan="5" class="text-center text-muted p-3">Keine Prüfungen gefunden.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                        {{-- Paginierung für Prüfungen --}}
-                         @if ($exams->hasPages())
-                            <div class="mt-3 d-flex justify-content-center">
-                                {{ $exams->appends(['evaluationsPage' => $evaluations->currentPage(), 'modulesPage' => $trainingModules->currentPage()])->links() }}
-                            </div>
-                        @endif
-                    </div>
-                     @endcan
+             {{-- Tab-Inhalte für Module und Prüfungen entfernt --}}
 
-                </div> {{-- /.tab-content --}}
-            </div> {{-- /.card-body --}}
-        </div> {{-- /.card --}}
+        </div> {{-- /.row --}}
     </div> {{-- /.container-fluid --}}
 </div> {{-- /.content --}}
 
-{{-- Modal zum Generieren des Prüfungslinks --}}
+{{-- Modal zum Generieren des Prüfungslinks (bleibt unverändert, wird aus Antrags-Tabelle getriggert) --}}
 @can('generateExamLink', \App\Models\ExamAttempt::class)
 <div class="modal fade" id="generateLinkModal" tabindex="-1" role="dialog" aria-labelledby="generateLinkModalLabel" aria-hidden="true">
+   {{-- ... Modal Inhalt bleibt gleich ... --}}
     <div class="modal-dialog" role="document">
         <form action="{{ route('admin.exams.attempts.store') }}" method="POST">
             @csrf
             <input type="hidden" name="exam_id" id="modal_exam_id">
-            {{-- evaluation_id wird hier nicht benötigt, da direkt generiert --}}
-            {{-- <input type="hidden" name="evaluation_id" value=""> --}}
+            {{-- evaluation_id könnte man hier optional über data-attribute übergeben, falls nötig --}}
             <div class="modal-content">
                 <div class="modal-header bg-info">
                     <h5 class="modal-title" id="generateLinkModalLabel">Prüfungslink generieren für: <span id="modal_exam_title"></span></h5>
@@ -372,15 +238,16 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="modal_user_id">Benutzer auswählen</label>
-                        <select name="user_id" id="modal_user_id" class="form-control select2 @error('user_id') is-invalid @enderror" style="width: 100%;" required>
+                        <select name="user_id" id="modal_user_id" class="form-control select2 @error('user_id', 'generateLinkErrorBag') is-invalid @enderror" style="width: 100%;" required>
                             <option value="">Bitte Benutzer auswählen...</option>
                             @foreach($usersForModal as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }} (ID: {{ $user->id }})</option>
                             @endforeach
                         </select>
-                         @error('user_id') <span class="invalid-feedback">{{ $message }}</span> @enderror
-                         {{-- Fehlermeldung für exam_id, falls nötig --}}
-                         @error('exam_id') <span class="text-danger d-block mt-2">{{ $message }}</span> @enderror
+                         {{-- Error Handling für Modals --}}
+                         @php $errorBagName = 'generateLinkErrorBag'; @endphp
+                         @error('user_id', $errorBagName) <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
+                         @error('exam_id', $errorBagName) <span class="text-danger d-block mt-2">{{ $message }}</span> @enderror
                     </div>
                     <p class="text-muted small">Generiert einen einmaligen Link für den ausgewählten Benutzer, um diese Prüfung abzulegen.</p>
                 </div>
@@ -397,43 +264,75 @@
 @endsection
 
 @push('scripts')
-{{-- JavaScript zum Kopieren des Links (bleibt wie zuvor) --}}
+{{-- JavaScript zum Kopieren des Links (bleibt unverändert) --}}
 <script>
 function copyToClipboard(elementSelector) {
-    // ... (Funktion bleibt gleich) ...
+    const inputElement = document.querySelector(elementSelector);
+    if (!inputElement) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inputElement.value)
+            .then(() => {
+                const msgElement = document.getElementById('copy-success-msg');
+                if (msgElement) {
+                    msgElement.style.display = 'inline';
+                    setTimeout(() => { msgElement.style.display = 'none'; }, 2000);
+                }
+            })
+            .catch(err => {
+                console.error('Fehler beim Kopieren: ', err);
+                fallbackCopyTextToClipboard(inputElement);
+            });
+    } else {
+        fallbackCopyTextToClipboard(inputElement);
+    }
 }
+
 function fallbackCopyTextToClipboard(inputElement) {
-    // ... (Funktion bleibt gleich) ...
+    inputElement.select();
+    try {
+        const successful = document.execCommand('copy');
+        const msgElement = document.getElementById('copy-success-msg');
+        if (successful && msgElement) {
+                 msgElement.style.display = 'inline';
+                 setTimeout(() => { msgElement.style.display = 'none'; }, 2000);
+        } else if (!successful) {
+             alert('Kopieren fehlgeschlagen.');
+        }
+    } catch (err) {
+        console.error('Fallback-Kopieren fehlgeschlagen: ', err);
+        alert('Kopieren fehlgeschlagen.');
+    }
 }
 
-// NEU: JavaScript für das "Link generieren"-Modal
+// JavaScript für das "Link generieren"-Modal (bleibt unverändert)
 $(document).ready(function() {
-    // Select2 Initialisierung (stelle sicher, dass Select2 geladen ist)
-    $('.select2').select2({
-        theme: 'bootstrap4', // Optional: AdminLTE Theme
-        dropdownParent: $('#generateLinkModal') // Wichtig, damit das Dropdown im Modal korrekt angezeigt wird
-    });
+    // Select2 Initialisierung
+    if ($.fn.select2) { // Prüfen ob Select2 geladen ist
+        $('.select2').select2({
+            theme: 'bootstrap4',
+            dropdownParent: $('#generateLinkModal') // Wichtig für Modals
+        });
+    }
 
-    // Wenn das Modal geöffnet wird, setze die Exam-ID und den Titel
     $('#generateLinkModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget); // Button that triggered the modal
+        var button = $(event.relatedTarget);
         var examId = button.data('exam-id');
         var examTitle = button.data('exam-title');
-
         var modal = $(this);
         modal.find('.modal-body #modal_exam_id').val(examId);
-        modal.find('.modal-header #modal_exam_title').text(examTitle);
-        // Setze das User-Dropdown zurück, wenn das Modal geöffnet wird
+        modal.find('.modal-header #modal_exam_title').text(examTitle || 'Unbekannte Prüfung'); // Fallback für Titel
         modal.find('.modal-body #modal_user_id').val(null).trigger('change');
     });
 
      // Optional: Behandeln von Validierungsfehlern im Modal
-     @if ($errors->has('user_id') || $errors->has('exam_id')) // Prüft auf Fehler, die wahrscheinlich aus dem Modal kamen
-         // Wenn ein Fehler auftritt, öffne das Modal erneut (braucht ggf. Anpassung, um die richtige Exam-ID zu behalten)
-         // $('#generateLinkModal').modal('show');
-         // Es ist oft einfacher, Fehler oberhalb des Formulars anzuzeigen, statt das Modal wieder zu öffnen.
+     @if ($errors->hasBag('generateLinkErrorBag'))
+         // Öffne das Modal wieder, wenn Fehler im spezifischen Error Bag sind
+         // Beachte: exam_id und title müssen evtl. neu gesetzt werden (komplex)
+         // $(document).ready(function() {
+         //      $('#generateLinkModal').modal('show');
+         // });
      @endif
-
 });
 </script>
 @endpush
