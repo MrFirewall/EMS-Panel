@@ -148,7 +148,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="6" class="text-center text-muted p-3">Keine Anträge gefunden.</td></tr> {{ Colspan erhöht }}
+                                        <tr><td colspan="6" class="text-center text-muted p-3">Keine Anträge gefunden.</td></tr> {{-- Colspan erhöht --}}
                                     @endforelse
                                 </tbody>
                             </table>
