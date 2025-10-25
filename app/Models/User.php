@@ -269,20 +269,5 @@ class User extends Authenticatable
     {
         return $this->hasMany(ExamAttempt::class);
     }
-
-    public function webPushSubscriptions() {
-        return $this->hasMany(\App\Models\PushSubscription::class);
-    }
-
-    /**
-     * Route notifications for the web push channel.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function routeNotificationForWebPush()
-    {
-        // Gib deine UM-BENANNTE Beziehung zurück
-        return $this->webPushSubscriptions();
-    }
 }
 
