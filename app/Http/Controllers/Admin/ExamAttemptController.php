@@ -130,7 +130,7 @@ class ExamAttemptController extends Controller
         return back()->with('success', 'Prüfungsversuch wurde zurückgesetzt.'); // Optional: Erfolgsmeldung
     }
 
-    public function sendLink(ExamAttempt $attempt)
+    public function sendLink(ExamAttempt $attempt) // <<<--- HIER IST DIE KORREKTUR
     {
         $this->authorize('sendLink', $attempt);
         $secureUrl = route('exams.take', $attempt);
@@ -142,7 +142,9 @@ class ExamAttemptController extends Controller
             Auth::user() // Der Admin
         );
 
-        return back()->with('secure_url', $secureUrl);
+        // ->with('success', ...) hinzugefügt
+        return back()->with('success', 'Prüfungslink erneut generiert!')
+                     ->with('secure_url', $secureUrl);
     }
 
     public function setEvaluated(Request $request, ExamAttempt $attempt)
