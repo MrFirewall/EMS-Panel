@@ -176,11 +176,11 @@ class UserController extends Controller
             'roles' => 'sometimes|array',
             'roles.*' => [Rule::in($managableRoleNames)],
             // Weitere optionale Felder
-             'email' => 'nullable|email|max:255',
-             'birthday' => 'nullable|date',
-             'discord_name' => 'nullable|string|max:255',
-             'forum_name' => 'nullable|string|max:255',
-             'hire_date' => 'nullable|date', // Wird jetzt ggf. überschrieben
+            'email' => 'nullable|email|max:255',
+            'birthday' => 'nullable|date',
+            'discord_name' => 'nullable|string|max:255',
+            'forum_name' => 'nullable|string|max:255',
+            'hire_date' => 'nullable|date', // Wird jetzt ggf. überschrieben
         ]);
 
         $selectedRoles = $request->roles ?? [];
@@ -237,7 +237,9 @@ class UserController extends Controller
     {
         // Laden der gleichen Relationen wie im ProfileController, um den View zu füllen.
         $user->load([
-            // 'examinations', // Wurde entfernt
+            // Wichtig: Laden Sie die 'assigner' Relation auf der Pivot-Tabelle,
+            // falls das User-Modell die Nested Relation 'trainingModules.assigner' unterstützt.
+            // Andernfalls nur 'trainingModules' laden.
             'trainingModules',
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
@@ -245,7 +247,7 @@ class UserController extends Controller
 
         // 1. Prüfungsversuche laden
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam')
+                                    ->with('exam.trainingModule')
                                     ->latest('completed_at') // Sortiert nach Abschlussdatum
                                     ->get();
 
@@ -268,37 +270,36 @@ class UserController extends Controller
             'evaluationCounts',
             'hourData',
             'weeklyHours'
-            // 'examinations' => collect() // Leere Collection übergeben oder komplett entfernen
         ));
     }
 
     private function calculateEvaluationCounts(User $user): array
     {
-         $typeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle']; // Nur relevante Typen
-         $counts = ['verfasst' => [], 'erhalten' => []];
+        $typeLabels = ['azubi', 'praktikant', 'mitarbeiter', 'leitstelle']; // Nur relevante Typen
+        $counts = ['verfasst' => [], 'erhalten' => []];
 
-         // Zählungen des Profilbesitzers ($user) - ERHALTEN
-         $receivedCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
-                                     ->where('user_id', $user->id)
-                                     ->whereIn('evaluation_type', $typeLabels)
-                                     ->groupBy('evaluation_type')
-                                     ->pluck('count', 'evaluation_type');
+        // Zählungen des Profilbesitzers ($user) - ERHALTEN
+        $receivedCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
+                                    ->where('user_id', $user->id)
+                                    ->whereIn('evaluation_type', $typeLabels)
+                                    ->groupBy('evaluation_type')
+                                    ->pluck('count', 'evaluation_type');
 
-         // Zählungen des angemeldeten Benutzers (Auth::user()) - VERFASST
-         // Wichtig: Zeigt *immer* die vom *aktuell eingeloggten Admin* verfassten an, nicht die vom Profilinhaber!
-         $authoredCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
-                                     ->where('evaluator_id', Auth::id())
-                                     ->whereIn('evaluation_type', $typeLabels)
-                                     ->groupBy('evaluation_type')
-                                     ->pluck('count', 'evaluation_type');
+        // Zählungen des angemeldeten Benutzers (Auth::user()) - VERFASST
+        // Wichtig: Zeigt *immer* die vom *aktuell eingeloggten Admin* verfassten an, nicht die vom Profilinhaber!
+        $authoredCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
+                                    ->where('evaluator_id', Auth::id())
+                                    ->whereIn('evaluation_type', $typeLabels)
+                                    ->groupBy('evaluation_type')
+                                    ->pluck('count', 'evaluation_type');
 
-         // Initialisiere mit 0 und fülle die Ergebnisse auf
-         foreach ($typeLabels as $type) {
-             $counts['erhalten'][$type] = $receivedCounts->get($type, 0);
-             $counts['verfasst'][$type] = $authoredCounts->get($type, 0);
-         }
+        // Initialisiere mit 0 und fülle die Ergebnisse auf
+        foreach ($typeLabels as $type) {
+            $counts['erhalten'][$type] = $receivedCounts->get($type, 0);
+            $counts['verfasst'][$type] = $authoredCounts->get($type, 0);
+        }
 
-         return $counts;
+        return $counts;
     }
 
     public function edit(User $user)
@@ -332,8 +333,8 @@ class UserController extends Controller
             'userDirectPermissions',
             'availablePersonalNumbers',
             'statuses',
-            'allModules',     // <-- NEU übergeben
-            'userModules'     // <-- NEU übergeben
+            'allModules',
+            'userModules'
         ));
     }
 
@@ -351,12 +352,14 @@ class UserController extends Controller
             'discord_name' => 'nullable|string|max:255',
             'forum_name' => 'nullable|string|max:255',
             'special_functions' => 'nullable|string',
-             'hire_date' => 'nullable|date', // Einstellungsdatum validieren
+            'hire_date' => 'nullable|date', // Einstellungsdatum validieren
 
             // NEU: Validierung für Module
             'modules' => 'sometimes|array',
             'modules.*' => 'exists:training_modules,id',
         ]);
+
+        $adminUser = Auth::user(); // Der aktuell eingeloggte Admin
 
         $managableRoleNames = $this->getManagableRoles()->pluck('name')->toArray();
         $originalRoleNames = $user->getRoleNames()->toArray();
@@ -367,8 +370,8 @@ class UserController extends Controller
         foreach ($newlyAddedRoles as $addedRole) {
             if (!in_array($addedRole, $managableRoleNames)) {
                 return redirect()->back()
-                                ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
-                                ->withInput();
+                                 ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
+                                 ->withInput();
             }
         }
         // Sicherstellen, dass die Super-Admin-Rolle nicht entfernt werden kann
@@ -417,37 +420,50 @@ class UserController extends Controller
 
         // Stammdaten aktualisieren
         $validatedData['last_edited_at'] = now();
-        $validatedData['last_edited_by'] = Auth::user()->name;
+        $validatedData['last_edited_by'] = $adminUser->name;
         $user->update($validatedData);
 
         // --- Module synchronisieren ---
         $submittedModuleIds = $request->input('modules', []);
         $modulesToSync = [];
-        $adminName = Auth::user()->name;
+        $adminName = $adminUser->name;
         $timestamp = now();
 
         foreach ($submittedModuleIds as $moduleId) {
-            // Prüfen, ob der User das Modul bereits hat, um Daten nicht zu überschreiben
-            $existingPivot = $userBeforeUpdate->trainingModules->find($moduleId)?->pivot;
+            // Prüfen, ob der User das Modul bereits hat
+            $existingPivot = $userBeforeUpdate->trainingModules->firstWhere('id', $moduleId)?->pivot;
 
             if ($existingPivot) {
-                // Wenn Modul schon vorhanden war, behalte bestehende Daten bei,
-                // außer es wird explizit als 'bestanden' markiert (was hier der Fall ist).
-                 $modulesToSync[$moduleId] = [
-                    'status' => 'bestanden', // Status auf 'bestanden' setzen/überschreiben
-                    'completed_at' => $existingPivot->completed_at ?? $timestamp->toDateString(), // Bestehendes Datum behalten, sonst neues
-                    'notes' => $existingPivot->notes // Bestehende Notizen behalten
-                        . "\nManuell geprüft/bestätigt von {$adminName} am " . $timestamp->format('d.m.Y H:i') // Vermerk hinzufügen
-                 ];
+                // Modul war bereits vorhanden. Bestehende Daten beibehalten, nur Zuweisenden aktualisieren, falls gewünscht.
+                // Wir stellen sicher, dass der Zuweisende (falls es eine Selbstanmeldung war) nicht überschrieben wird, 
+                // ABER da der Admin hier manuell bestätigt/ändert, wird die assigned_by_user_id des Admins gespeichert.
+                $modulesToSync[$moduleId] = [
+                    'assigned_by_user_id' => $existingPivot->assigned_by_user_id ?? $adminUser->id,
+                    'completed_at' => $existingPivot->completed_at, 
+                    'notes' => $existingPivot->notes, 
+                    'updated_at' => $timestamp,
+                ];
+
+                // Wenn der Admin das Modul NEU zuweist oder bestätigt:
+                if (!in_array($moduleId, $oldModuleIds)) {
+                     // Dieser Fall sollte theoretisch nicht eintreten, da es oben geprüft wird, aber als Fallback.
+                    $modulesToSync[$moduleId]['assigned_by_user_id'] = $adminUser->id;
+                    $modulesToSync[$moduleId]['completed_at'] = $timestamp->toDateString(); // Als bestanden markiert
+                    $modulesToSync[$moduleId]['notes'] = ($existingPivot->notes ? $existingPivot->notes . "\n" : '')
+                        . "Manuell zugewiesen/bestätigt von {$adminName} am " . $timestamp->format('d.m.Y H:i');
+                }
             } else {
                 // Standard-Pivot-Daten für NEU manuell zugewiesene Module
                 $modulesToSync[$moduleId] = [
-                    'status' => 'bestanden',
-                    'completed_at' => $timestamp->toDateString(),
+                    'assigned_by_user_id' => $adminUser->id,
+                    'completed_at' => $timestamp->toDateString(), // Als bestanden markiert
                     'notes' => "Manuell zugewiesen von {$adminName} am " . $timestamp->format('d.m.Y H:i')
                 ];
             }
         }
+
+        // Modul-Synchronisation durchführen.
+        // sync() entfernt Module, die nicht in $modulesToSync sind.
         $user->trainingModules()->sync($modulesToSync);
         // --- Ende Modul-Synchronisation ---
 
@@ -482,7 +498,7 @@ class UserController extends Controller
              'action' => 'UPDATED',
              'target_id' => $user->id,
              'description' => $description,
-         ]);
+           ]);
 
         // Service Record bei Beförderung/Degradierung
         if ($oldRank !== $newRank) {
