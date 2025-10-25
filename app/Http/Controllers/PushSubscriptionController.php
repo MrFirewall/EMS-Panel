@@ -19,4 +19,24 @@ class PushSubscriptionController extends Controller {
         );
         return response()->json(['success' => true], 201);
     }
+    
+    public function destroy(Request $request)
+        {
+            $request->validate([
+                'endpoint' => 'required|url', // Endpoint ist der eindeutige Schlüssel
+            ]);
+
+            // Finde und lösche das Abo anhand des Endpoints *nur für diesen User*
+            $deleted = auth()->user()
+                             ->pushSubscriptions() // Nutzt die Relation im User Model
+                             ->where('endpoint', $request->endpoint)
+                             ->delete();
+
+            if ($deleted) {
+                return response()->json(['success' => true], 200);
+            } else {
+                // Abo wurde nicht gefunden (vielleicht schon gelöscht?)
+                return response()->json(['success' => false, 'message' => 'Subscription not found.'], 404);
+            }
+        }
 }

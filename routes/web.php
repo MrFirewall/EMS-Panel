@@ -118,9 +118,9 @@ Route::middleware('auth.cfx')->group(function () {
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
     });
 
-    Route::post('/push-subscribe', [PushSubscriptionController::class, 'store'])->middleware('auth')->name('push.subscribe'); });
-
-
+    Route::post('/push-subscribe', [PushSubscriptionController::class, 'store'])->middleware('auth')->name('push.subscribe');
+    Route::post('/push-unsubscribe', [PushSubscriptionController::class, 'destroy'])->middleware('auth')->name('push.unsubscribe');
+ });
 /*
 |--------------------------------------------------------------------------
 | Admin-Bereich

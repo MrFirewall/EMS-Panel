@@ -155,8 +155,9 @@
 
     {{-- FOOTER --}}
     <footer class="main-footer">
-         {{-- NEU: Button für Push-Benachrichtigungen --}}
-        <button id="enable-push" class="btn btn-sm btn-info float-left mr-3">Desktop-Benachrichtigungen aktivieren</button>
+        {{-- Push Notification Buttons --}}
+        <button id="enable-push" class="btn btn-sm btn-info float-left mr-3" style="display: none;">Desktop-Benachrichtigungen aktivieren</button>
+        <button id="disable-push" class="btn btn-sm btn-danger float-left mr-3" style="display: none;">Desktop-Benachrichtigungen deaktivieren</button>
 
         <div class="float-right d-none d-sm-inline">Version 1.0</div>
         <strong>Copyright &copy; 2025 EMS Panel.</strong> All rights reserved.
@@ -306,7 +307,7 @@
             const isHttps = window.location.protocol === 'https:';
             window.Echo = new Echo({
                 broadcaster: 'pusher', // Oder 'reverb', prüfe deine .env BROADCAST_CONNECTION
-                key: '{{ env("REVERB_APP_KEY", env("PUSHER_APP_KEY")) }}',
+                key: '{{ env("REVERB_APP_KEY", env("PUSHER_APP_KEY")) }}', // Fallback auf Pusher Key
                 wsHost: window.location.hostname, // Annahme: Läuft auf demselben Host
                 // wssHost: window.location.hostname, // Nur wenn nötig
                 wsPort: {{ env("REVERB_PORT") ?? 6001 }}, // Standard Pusher/WS Port
@@ -464,32 +465,114 @@
                 } else {
                      alert('Aktivierung fehlgeschlagen. Ist der VAPID Key korrekt? Fehler: ' + error.message);
                 }
+                 updatePushButtons(false); // Zeige "Aktivieren"-Button im Fehlerfall
             });
         }
 
-        // (4) Sende-Funktion
+        // (4) Sende-Abo-Funktion
         function sendSubscriptionToServer(subscription) {
             console.log("[Push] sendSubscriptionToServer() aufgerufen mit:", subscription);
-            // Nutze jQuery AJAX, da es schon verfügbar ist und CSRF-Setup hat
             $.ajax({
                 url: '{{ route('push.subscribe') }}',
                 method: 'POST',
-                contentType: 'application/json', // Wichtig!
-                data: JSON.stringify(subscription), // JSON senden
+                contentType: 'application/json',
+                data: JSON.stringify(subscription),
                 success: function(response) {
                     console.log('[Push] Abo auf Server gespeichert.', response);
                     alert('Desktop-Benachrichtigungen sind jetzt aktiv!');
-                    const pushButton = document.getElementById('enable-push');
-                    if(pushButton) pushButton.style.display = 'none';
+                    updatePushButtons(true); // Zeige "Deaktivieren"-Button
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
                     console.error("[Push] Fehler beim Senden des Abos an den Server:", textStatus, errorThrown, jqXHR.responseText);
                     alert("Fehler: Das Abo konnte nicht auf dem Server gespeichert werden. Details siehe Konsole.");
+                     // Optional: Abo im Browser wieder entfernen, da Server fehlschlug?
+                     // navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription().then(sub => sub?.unsubscribe()));
+                     updatePushButtons(false); // Zeige "Aktivieren"-Button
                 }
             });
         }
 
-        // (5) Hauptlogik und Klick-Event für Push
+        // (5) NEUE Deabo-Funktion
+        function unsubscribeUser() {
+            console.log("[Push] unsubscribeUser() aufgerufen.");
+             if (!navigator.serviceWorker) { return; }
+
+            navigator.serviceWorker.ready.then(registration => {
+                registration.pushManager.getSubscription().then(subscription => {
+                    if (subscription) {
+                        subscription.unsubscribe().then(successful => {
+                            if (successful) {
+                                console.log("[Push] Erfolgreich beim Browser deabonniert.");
+                                sendUnsubscriptionToServer(subscription);
+                            } else {
+                                console.error("[Push] Deabonnieren beim Browser fehlgeschlagen.");
+                                alert("Fehler beim Deaktivieren der Benachrichtigungen im Browser.");
+                            }
+                        }).catch(error => {
+                             console.error("[Push] Fehler bei subscription.unsubscribe():", error);
+                             alert("Fehler beim Deaktivieren: " + error.message);
+                        });
+                    } else {
+                        console.log("[Push] Kein Abo zum Deabonnieren gefunden.");
+                         updatePushButtons(false); // UI trotzdem aktualisieren
+                    }
+                }).catch(error => {
+                     console.error("[Push] Fehler bei getSubscription():", error);
+                     alert("Fehler beim Abrufen des Abonnements.");
+                });
+            });
+        }
+
+        // (6) NEUE Sende-Deabo-Funktion
+        function sendUnsubscriptionToServer(subscription) {
+            console.log("[Push] sendUnsubscriptionToServer() aufgerufen.");
+            const endpoint = subscription.endpoint;
+            $.ajax({
+                url: '{{ route('push.unsubscribe') }}',
+                method: 'POST', // Oder DELETE, je nach Route
+                contentType: 'application/json',
+                data: JSON.stringify({ endpoint: endpoint }),
+                success: function(response) {
+                    console.log('[Push] Abo erfolgreich vom Server entfernt.', response);
+                    alert('Desktop-Benachrichtigungen wurden deaktiviert.');
+                    updatePushButtons(false); // Zeige "Aktivieren"-Button
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error("[Push] Fehler beim Entfernen des Abos vom Server:", textStatus, errorThrown, jqXHR.responseText);
+                    alert("Fehler: Das Abo konnte nicht auf dem Server entfernt werden.");
+                     // UI bleibt erstmal unverändert, User kann es erneut versuchen
+                }
+            });
+        }
+
+        // (7) NEUE Funktion zum Aktualisieren der Button-Sichtbarkeit
+        function updatePushButtons(isSubscribed) {
+            console.log("[Push] updatePushButtons aufgerufen, isSubscribed:", isSubscribed);
+            const enableBtn = document.getElementById('enable-push');
+            const disableBtn = document.getElementById('disable-push');
+            if (!enableBtn || !disableBtn) {
+                 console.warn("[Push] Buttons zum Aktualisieren nicht gefunden.");
+                 return;
+            }
+
+            // Standardmäßig beide verstecken
+            enableBtn.style.display = 'none';
+            disableBtn.style.display = 'none';
+
+            // Buttons nur anzeigen, wenn Berechtigung NICHT verweigert wurde
+            if (Notification.permission !== 'denied') {
+                if (isSubscribed) {
+                    disableBtn.style.display = 'inline-block';
+                } else {
+                    enableBtn.style.display = 'inline-block';
+                }
+            } else {
+                 console.log("[Push] Berechtigung verweigert, keine Buttons anzeigen.");
+            }
+        }
+
+
+        // (8) Hauptlogik und Klick-Event für Push (ANGEPASST)
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             console.log("[Push] Browser unterstützt Service Worker und Push Manager.");
 
@@ -498,51 +581,64 @@
                 .then(reg => console.log("[Push] Service Worker erfolgreich registriert.", reg))
                 .catch(err => console.error('[Push] SW-Registrierung fehlgeschlagen:', err));
 
-            const pushButton = document.getElementById('enable-push');
-            if (pushButton) {
-                console.log("[Push] Button gefunden.");
-                pushButton.addEventListener('click', () => {
-                    console.log("[Push] Button geklickt!");
+            const pushButtonEnable = document.getElementById('enable-push');
+            const pushButtonDisable = document.getElementById('disable-push');
+
+            if (pushButtonEnable && pushButtonDisable) {
+                console.log("[Push] Buttons gefunden.");
+
+                // Listener für Aktivieren-Button
+                pushButtonEnable.addEventListener('click', () => {
+                    console.log("[Push] Aktivieren-Button geklickt!");
                     Notification.requestPermission().then(permission => {
                         console.log("[Push] Berechtigungs-Ergebnis:", permission);
                         if (permission === 'granted') {
                             subscribeUser();
                         } else if (permission === 'denied') {
                              alert('Sie haben Benachrichtigungen blockiert. Bitte ändern Sie dies in Ihren Browser-Einstellungen.');
+                             updatePushButtons(false); // Versteckt beide Buttons
                         } else {
-                             // 'default' - User hat das Fenster geschlossen, nichts tun.
                              console.log('[Push] Berechtigungsanfrage ignoriert oder geschlossen.');
                         }
                     });
                 });
 
-                // Button verstecken, wenn schon abonniert ODER wenn Berechtigung verweigert wurde
+                // Listener für Deaktivieren-Button
+                pushButtonDisable.addEventListener('click', () => {
+                    console.log("[Push] Deaktivieren-Button geklickt!");
+                    unsubscribeUser();
+                });
+
+                // Button-Status initial setzen
                  navigator.serviceWorker.ready.then(reg => {
-                    console.log("[Push] Prüfe bestehendes Abo und Berechtigung...");
-                     // Prüfe zuerst die Berechtigung
+                    console.log("[Push] Prüfe initialen Abo-Status und Berechtigung...");
                      if (Notification.permission === 'denied') {
                          console.log("[Push] Berechtigung wurde verweigert.");
-                         pushButton.style.display = 'none'; // Button verstecken, da nutzlos
-                         return; // Keine Abo-Prüfung nötig
+                         updatePushButtons(false); // Zeigt keinen Button an
+                         return;
                      }
-                     // Wenn nicht verweigert, prüfe auf Abo
                      reg.pushManager.getSubscription().then(sub => {
-                         if (sub) {
-                             console.log("[Push] Benutzer ist bereits abonniert.", sub);
-                             pushButton.style.display = 'none';
-                         } else {
-                              console.log("[Push] Benutzer ist noch nicht abonniert.");
-                         }
-                     }).catch(err => console.error("[Push] Fehler beim Prüfen des Abos:", err));
-                }).catch(err => console.error("[Push] Fehler beim Warten auf Service Worker ready:", err));
+                         console.log("[Push] Initiales Abo:", sub ? "gefunden" : "nicht gefunden");
+                         updatePushButtons(!!sub); // Zeigt korrekten Button
+                     }).catch(err => {
+                         console.error("[Push] Fehler beim initialen Prüfen des Abos:", err);
+                         updatePushButtons(false); // Fallback: Zeige Aktivieren
+                     });
+                }).catch(err => {
+                     console.error("[Push] Fehler beim Warten auf Service Worker ready:", err);
+                     updatePushButtons(false); // Fallback: Zeige Aktivieren
+                });
 
             } else {
-                 console.warn("[Push] Button ('enable-push') nicht im DOM gefunden!");
+                 console.warn("[Push] Einer oder beide Push-Buttons nicht im DOM gefunden!");
             }
         } else {
             console.warn('[Push] Push Messaging oder Service Worker wird von diesem Browser nicht unterstützt.');
-            const pushButton = document.getElementById('enable-push');
-            if(pushButton) pushButton.style.display = 'none';
+            // Verstecke beide Buttons, wenn nicht unterstützt
+            const pushButtonEnable = document.getElementById('enable-push');
+            const pushButtonDisable = document.getElementById('disable-push');
+            if(pushButtonEnable) pushButtonEnable.style.display = 'none';
+            if(pushButtonDisable) pushButtonDisable.style.display = 'none';
         }
 
     }); // Ende von DOMContentLoaded für Push-Skripte
