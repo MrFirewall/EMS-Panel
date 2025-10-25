@@ -101,7 +101,7 @@
                                             <td>{{ $attempt->started_at ? $attempt->started_at->format('d.m.Y H:i') : 'N/A' }}</td>
                                             <td>{{ $attempt->completed_at ? $attempt->completed_at->format('d.m.Y H:i') : 'N/A' }}</td>
                                             <td>
-                                                <div class="btn-group"> {{ Gruppiert die Buttons }}
+                                                <div class="btn-group"> {{-- Gruppiert die Buttons --}}
                                                     {{-- 1. Ergebnis anzeigen / Final bewerten --}}
                                                     <a href="{{ route('admin.exams.attempts.show', $attempt) }}" class="btn btn-sm btn-outline-info" title="Ergebnis ansehen / Bewerten">
                                                         <i class="fas fa-eye"></i>
