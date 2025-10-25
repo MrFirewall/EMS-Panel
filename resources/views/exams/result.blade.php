@@ -13,7 +13,7 @@
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') ?? route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('dashboard') ?? route('dashboard') }}">Dashboard</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('admin.exams.attempts.index') }}">Prüfungsversuche</a></li>
                     <li class="breadcrumb-item active">Ergebnis / Bewertung</li>
                 </ol>
