@@ -135,17 +135,17 @@
                                         $correctOption = $question->options->where('is_correct', true)->first();
                                         $userAnswer = $userAnswersForQuestion->first();
                                         $isCorrect = $correctOption && $userAnswer && $correctOption->id == $userAnswer->option_id;
-                                        $answerFeedbackClass = $isCorrect ? 'bg-success-light border-left-success' : 'bg-danger-light border-left-danger';
+                                        $answerFeedbackClass = $isCorrect ? 'bg-success border-left-success' : 'bg-danger border-left-danger';
                                         $answerIcon = $isCorrect ? 'fa-check' : 'fa-times';
                                     } elseif ($question->type === 'multiple_choice') {
                                         $correctOptionIds = $question->options->where('is_correct', true)->pluck('id')->sort()->values();
                                         $userOptionIds = $userAnswersForQuestion->pluck('option_id')->sort()->values();
                                         $isCorrect = $correctOptionIds->all() == $userOptionIds->all();
-                                         $answerFeedbackClass = $isCorrect ? 'bg-success-light border-left-success' : 'bg-danger-light border-left-danger';
+                                         $answerFeedbackClass = $isCorrect ? 'bg-success border-left-success' : 'bg-danger border-left-danger';
                                          $answerIcon = $isCorrect ? 'fa-check' : 'fa-times';
                                     } elseif ($question->type === 'text_field') {
                                         // Bleibt grau, da manuell bewertet werden muss
-                                         $answerFeedbackClass = 'bg-light border-left-secondary';
+                                         $answerFeedbackClass = 'border-left-secondary';
                                          $answerIcon = 'fa-align-left';
                                     }
                                 @endphp
@@ -220,17 +220,4 @@
         </div> {{-- /.row --}}
     </div> {{-- /.container-fluid --}}
 </div> {{-- /.content --}}
-
-{{-- Zusätzliche CSS-Klassen für helle Hintergründe (optional in app.css oder <style> Block) --}}
-@push('styles')
-<style>
-    .bg-success-light { background-color: #e9f7ef !important; }
-    .bg-danger-light { background-color: #fdecea !important; }
-    .border-left-success { border-left: 3px solid #28a745 !important; }
-    .border-left-danger { border-left: 3px solid #dc3545 !important; }
-    .border-left-secondary { border-left: 3px solid #6c757d !important; }
-    .callout { padding: 1rem; margin-bottom: 1rem; border: 1px solid #e9ecef; border-left-width: .25rem; border-radius: .25rem; }
-</style>
-@endpush
-
 @endsection
