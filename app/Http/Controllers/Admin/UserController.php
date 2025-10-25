@@ -308,7 +308,12 @@ class UserController extends Controller
             'Suspendiert', 'Ausgetreten', 'Bewerbungsphase', 'Probezeit',
         ];
         $roles = $this->getManagableRoles();
-        $permissions = Permission::all();
+        $permissions = Permission::all()->sortBy('name')->groupBy(function ($item) {
+            // Updated grouping logic to handle permissions without '-'
+            $parts = explode('.', $item->name, 2); // Split by '.'
+            return $parts[0];
+        });
+
         $allPossibleNumbers = range(1, 150);
         // Schließe nur Nummern von AKTIVEN Usern aus (außer dem aktuellen User selbst)
         $takenNumbers = User::where('status', 'Aktiv')->where('id', '!=', $user->id)->pluck('personal_number')->toArray();
