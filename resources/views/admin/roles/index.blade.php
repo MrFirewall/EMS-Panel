@@ -2,7 +2,7 @@
 
 @section('title', 'Rollen- und Berechtigungsverwaltung')
 
-{{-- NEU: Eigene Styles für den Drag-and-Drop-Modus --}}
+{{-- Eigene Styles für den Drag-and-Drop-Modus --}}
 @push('styles')
 <style>
     /* Versteckt die normalen Links im Bearbeiten-Modus */
@@ -95,7 +95,7 @@
                     {{-- Diese <ul> wird per JS sortierbar gemacht --}}
                     <ul class="list-group list-group-flush rank-list" id="rank-sort-list">
                         @forelse($categorizedRoles['Ranks'] as $role)
-                            {{-- WICHTIG: data-rank-id enthält die ID aus der 'ranks'-Tabelle --}}
+                            {{-- WICHTIG: data-id enthält die ID aus der 'ranks'-Tabelle --}}
                             <li class="list-group-item" data-id="{{ $role->rank_id }}">
                                 
                                 {{-- Ansicht 1: Normaler Link (Standard) --}}
@@ -140,7 +140,7 @@
                                 @foreach($deptRoles as $role)
                                     <a href="{{ route('admin.roles.index', ['role' => $role->id]) }}" 
                                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
-                                              @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
+                                            @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
                                         {{ ucfirst($role->name) }}
                                         <span class="badge bg-secondary">{{ $role->users_count ?? 0 }} Nutzer</span>
                                     </a>
@@ -162,7 +162,7 @@
                         @forelse($categorizedRoles['Other'] as $role)
                             <a href="{{ route('admin.roles.index', ['role' => $role->id]) }}" 
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center 
-                                      @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
+                                    @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
                                 {{ ucfirst($role->name) }}
                                 <span class="badge bg-secondary">{{ $role->users_count ?? 0 }} Nutzer</span>
                             </a>
@@ -177,43 +177,43 @@
             {{-- NEU: Department Management Card             --}}
             {{-- ============================================= --}}
              <div class="card card-outline card-warning">
-                 <div class="card-header">
-                     <h3 class="card-title">Abteilungen Verwalten</h3>
-                     <div class="card-tools">
-                         @can('roles.create')
-                         <button type="button" class="btn btn-xs btn-success btn-flat" data-toggle="modal" data-target="#createDepartmentModal" title="Neue Abteilung erstellen">
-                             <i class="fas fa-plus"></i> Neu
-                         </button>
-                         @endcan
-                     </div>
-                 </div>
-                 <div class="card-body p-0">
-                     @forelse($allDepartments as $department)
-                         <div class="department-item">
-                             <span>{{ $department->name }}</span>
-                             <div class="department-actions">
-                                 @can('roles.edit')
-                                 <button type="button" class="btn btn-xs btn-primary btn-flat" data-toggle="modal" data-target="#editDepartmentModal_{{ $department->id }}" title="Umbenennen">
-                                     <i class="fas fa-edit"></i>
-                                 </button>
-                                 @endcan
-                                 @can('roles.delete')
-                                 <button type="button" class="btn btn-xs btn-danger btn-flat" data-toggle="modal" data-target="#deleteDepartmentModal_{{ $department->id }}" title="Löschen">
-                                     <i class="fas fa-trash"></i>
-                                 </button>
-                                 @endcan
-                             </div>
-                         </div>
-                     @empty
-                          <div class="p-3 text-center text-muted">Keine Abteilungen vorhanden.</div>
-                     @endforelse
-                 </div>
+                  <div class="card-header">
+                       <h3 class="card-title">Abteilungen Verwalten</h3>
+                       <div class="card-tools">
+                           @can('roles.create')
+                           <button type="button" class="btn btn-xs btn-success btn-flat" data-toggle="modal" data-target="#createDepartmentModal" title="Neue Abteilung erstellen">
+                               <i class="fas fa-plus"></i> Neu
+                           </button>
+                           @endcan
+                       </div>
+                  </div>
+                  <div class="card-body p-0">
+                       @forelse($allDepartments as $department)
+                           <div class="department-item">
+                               <span>{{ $department->name }}</span>
+                               <div class="department-actions">
+                                   @can('roles.edit')
+                                   <button type="button" class="btn btn-xs btn-primary btn-flat" data-toggle="modal" data-target="#editDepartmentModal_{{ $department->id }}" title="Umbenennen">
+                                       <i class="fas fa-edit"></i>
+                                   </button>
+                                   @endcan
+                                   @can('roles.delete')
+                                   <button type="button" class="btn btn-xs btn-danger btn-flat" data-toggle="modal" data-target="#deleteDepartmentModal_{{ $department->id }}" title="Löschen">
+                                       <i class="fas fa-trash"></i>
+                                   </button>
+                                   @endcan
+                               </div>
+                           </div>
+                       @empty
+                            <div class="p-3 text-center text-muted">Keine Abteilungen vorhanden.</div>
+                       @endforelse
+                  </div>
              </div>
 
         </div>
 
         {{-- ======================================================= --}}
-        {{-- Rechte Spalte: Berechtigungsdetails (KEINE ÄNDERUNG)     --}}
+        {{-- Rechte Spalte: Berechtigungsdetails                   --}}
         {{-- ======================================================= --}}
         <div class="col-lg-8">
             <div class="card">
@@ -223,7 +223,8 @@
                     <div class="card-header bg-info">
                         <h3 class="card-title">Berechtigungen für Rolle: {{ ucfirst($currentRole->name) }}</h3>
                     </div>
-                    <form action="{{ route('admin.roles.update', $currentRole) }}" method="POST">
+                    {{-- KORREKTUR: ID zum Formular hinzugefügt, damit JS es finden kann --}}
+                    <form id="editRoleForm" action="{{ route('admin.roles.update', $currentRole) }}" method="POST">
                         @csrf
                         @method('PUT')
                         
@@ -246,7 +247,7 @@
                                     @error('name') <div class="text-danger small">{{ $message }}</div> @enderror
                                 </div>
                                 {{-- ============================================= --}}
-                                {{-- NEU: Rollentyp Auswahl                       --}}
+                                {{-- NEU: Rollentyp Auswahl                      --}}
                                 {{-- ============================================= --}}
                                 <div class="form-group">
                                     <label>Rollentyp</label>
@@ -272,7 +273,7 @@
                                 </div>
                                 
                                 {{-- ============================================= --}}
-                                {{-- NEU: Department Auswahl (Konditional)        --}}
+                                {{-- NEU: Department Auswahl (Konditional)       --}}
                                 {{-- ============================================= --}}
                                 <div class="form-group" id="edit_department_select_group" style="{{ old('role_type', $currentRoleType) == 'department' ? '' : 'display: none;' }}">
                                      <label for="edit_department_id">Zugehörige Abteilung</label>
@@ -287,6 +288,7 @@
                                      </select>
                                      @error('department_id', 'updateRole')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
+                                
                                 {{-- Berechtigungen nach Modul auflisten --}}
                                 <h5 class="border-bottom pb-2 mb-3 mt-4">Zugewiesene Berechtigungen nach Modul:</h5>
                                 <div class="row">
@@ -360,7 +362,7 @@
 @endsection
 
 {{-- ======================================================= --}}
-{{-- KORRIGIERTER JAVASCRIPT BLOCK                          --}}
+{{-- KORRIGIERTER JAVASCRIPT BLOCK                             --}}
 {{-- ======================================================= --}}
 @push('scripts')
 {{-- Bibliotheken (Reihenfolge ist wichtig) --}}
@@ -381,30 +383,29 @@ $(function () {
     const listContainer = $('.rank-list');
 
     function toggleEditMode(isEditing) {
-        // ... (toggleEditMode Funktion bleibt unverändert) ...
          if (isEditing) {
-            listContainer.addClass('is-editing');
-            editControls.show();
-            editButton.addClass('active');
-            $('.rank-link').hide();
-            $('.rank-edit-item').css('display', 'flex'); 
-            if (!sortable && rankList) { // Prüfen ob rankList existiert
-                sortable = new Sortable(rankList, {
-                    handle: '.rank-handle', 
-                    animation: 150,
-                });
-            }
-        } else {
-            listContainer.removeClass('is-editing');
-            editControls.hide();
-            editButton.removeClass('active');
-            $('.rank-link').show();
-            $('.rank-edit-item').hide();
-            if (sortable) {
-                sortable.destroy();
-                sortable = null;
-            }
-        }
+             listContainer.addClass('is-editing');
+             editControls.show();
+             editButton.addClass('active');
+             $('.rank-link').hide();
+             $('.rank-edit-item').css('display', 'flex'); 
+             if (!sortable && rankList) { // Prüfen ob rankList existiert
+                 sortable = new Sortable(rankList, {
+                     handle: '.rank-handle', 
+                     animation: 150,
+                 });
+             }
+         } else {
+             listContainer.removeClass('is-editing');
+             editControls.hide();
+             editButton.removeClass('active');
+             $('.rank-link').show();
+             $('.rank-edit-item').hide();
+             if (sortable) {
+                 sortable.destroy();
+                 sortable = null;
+             }
+         }
     }
 
     if (editButton.length) { // Nur ausführen, wenn der Button existiert
@@ -419,19 +420,75 @@ $(function () {
         });
     }
 
+    // ==================================================================
+    // KORRIGIERTER SPEICHERN-BLOCK
+    // ==================================================================
     if (saveButton.length) {
         saveButton.on('click', function() {
             if (!sortable) return;
+            
+            // 1. Die neue Sortierreihenfolge auslesen (enthält die 'data-id'-Werte)
             const order = sortable.toArray(); 
+            
             saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Speichern...');
 
-            fetch('{{ route("admin.roles.ranks.reorder") }}', { /* ... (Fetch bleibt unverändert) ... */ })
-            .then(response => { /* ... */ })
-            .then(data => { /* ... */ })
-            .catch(error => { /* ... */ })
-            .finally(() => { saveButton.prop('disabled', false).html('Speichern'); });
+            // 2. CSRF-Token aus dem Meta-Tag auslesen (muss in layouts.app vorhanden sein)
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                console.error('CSRF-Token nicht gefunden! Stelle sicher, dass <meta name="csrf-token" content="{{ csrf_token() }}"> im Head deines Layouts vorhanden ist.');
+                toastr.error('Sicherheits-Token fehlt. Speichern abgebrochen.');
+                saveButton.prop('disabled', false).html('Speichern');
+                return;
+            }
+
+            // 3. Korrigierte Fetch-Anfrage als POST
+            fetch('{{ route("admin.roles.ranks.reorder") }}', {
+                method: 'POST', // KORREKTUR: Methode auf POST geändert
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    // KORREKTUR: CSRF-Token hinzugefügt
+                    'X-CSRF-TOKEN': csrfToken 
+                },
+                // KORREKTUR: Die 'order'-Daten als JSON-String im Body gesendet
+                body: JSON.stringify({ 
+                    order: order 
+                }) 
+            })
+            .then(response => {
+                // Bessere JSON- und Fehlerbehandlung
+                if (!response.ok) {
+                    // Wandelt Server-Fehler (wie 4xx, 5xx) in einen JS-Fehler um
+                    return response.json().then(err => { 
+                        throw new Error(err.message || `Serverfehler: ${response.status}`); 
+                    });
+                }
+                return response.json(); // Löst JSON-Parsing aus
+            })
+            .then(data => {
+                // Auf eine Erfolgsmeldung vom Controller prüfen
+                if(data.success) {
+                    toastr.success(data.message || 'Hierarchie erfolgreich gespeichert.');
+                    toggleEditMode(false); // Bearbeitungsmodus nach Erfolg beenden
+                } else {
+                    toastr.error(data.message || 'Ein unbekannter Fehler ist aufgetreten.');
+                }
+            })
+            .catch(error => {
+                // Fängt Netzwerkfehler und geworfene Fehler ab
+                console.error('Fehler beim Speichern der Rangfolge:', error);
+                toastr.error('Fehler: ' + error.message || 'Kommunikation mit dem Server fehlgeschlagen.');
+            })
+            .finally(() => {
+                // Button in jedem Fall wieder freigeben
+                saveButton.prop('disabled', false).html('Speichern');
+            });
         });
     }
+    // ==================================================================
+    // ENDE DES KORRIGIERTEN BLOCKS
+    // ==================================================================
+
 
     // --- Logik für Typ/Department Auswahl in Modals ---
 
@@ -456,6 +513,7 @@ $(function () {
     }
 
     // Edit Role Form (im Hauptteil der Seite)
+    // KORREKTUR: Verwendet jetzt die ID 'editRoleForm', die oben im Formular hinzugefügt wurde
     const editRoleTypeRadios = $('#editRoleForm input[type=radio][name="role_type"]');
     const editDepartmentSelectGroup = $('#edit_department_select_group');
 
