@@ -37,6 +37,21 @@
     #toggle-rank-edit.active {
         color: #007bff; /* Blau, um Aktivität zu signalisieren */
     }
+
+    /* Style für die Department Management Liste */
+    .department-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid #eee;
+    }
+    .department-item:last-child {
+        border-bottom: none;
+    }
+    .department-actions .btn {
+        margin-left: 5px;
+    }
 </style>
 @endpush
 
@@ -158,6 +173,43 @@
                 </div>
             </div>
 
+            {{-- ============================================= --}}
+            {{-- NEU: Department Management Card             --}}
+            {{-- ============================================= --}}
+             <div class="card card-outline card-warning">
+                 <div class="card-header">
+                     <h3 class="card-title">Abteilungen Verwalten</h3>
+                     <div class="card-tools">
+                         @can('roles.create')
+                         <button type="button" class="btn btn-xs btn-success btn-flat" data-toggle="modal" data-target="#createDepartmentModal" title="Neue Abteilung erstellen">
+                             <i class="fas fa-plus"></i> Neu
+                         </button>
+                         @endcan
+                     </div>
+                 </div>
+                 <div class="card-body p-0">
+                     @forelse($allDepartments as $department)
+                         <div class="department-item">
+                             <span>{{ $department->name }}</span>
+                             <div class="department-actions">
+                                 @can('roles.edit')
+                                 <button type="button" class="btn btn-xs btn-primary btn-flat" data-toggle="modal" data-target="#editDepartmentModal_{{ $department->id }}" title="Umbenennen">
+                                     <i class="fas fa-edit"></i>
+                                 </button>
+                                 @endcan
+                                 @can('roles.delete')
+                                 <button type="button" class="btn btn-xs btn-danger btn-flat" data-toggle="modal" data-target="#deleteDepartmentModal_{{ $department->id }}" title="Löschen">
+                                     <i class="fas fa-trash"></i>
+                                 </button>
+                                 @endcan
+                             </div>
+                         </div>
+                     @empty
+                          <div class="p-3 text-center text-muted">Keine Abteilungen vorhanden.</div>
+                     @endforelse
+                 </div>
+             </div>
+
         </div>
 
         {{-- ======================================================= --}}
@@ -193,7 +245,48 @@
                                     @endif
                                     @error('name') <div class="text-danger small">{{ $message }}</div> @enderror
                                 </div>
-
+                                {{-- ============================================= --}}
+                                {{-- NEU: Rollentyp Auswahl                       --}}
+                                {{-- ============================================= --}}
+                                <div class="form-group">
+                                    <label>Rollentyp</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="role_type" id="type_rank" value="rank" 
+                                               {{ old('role_type', $currentRoleType) == 'rank' ? 'checked' : '' }} 
+                                               @if($currentRole->name === 'chief') disabled @endif> {{-- Chief kann kein anderer Typ werden --}}
+                                        <label class="form-check-label" for="type_rank">Rang (wird in Hierarchie einsortiert)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="role_type" id="type_department" value="department" 
+                                               {{ old('role_type', $currentRoleType) == 'department' ? 'checked' : '' }}
+                                               @if($currentRole->name === 'chief') disabled @endif>
+                                        <label class="form-check-label" for="type_department">Abteilungsrolle</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="role_type" id="type_other" value="other" 
+                                               {{ old('role_type', $currentRoleType) == 'other' ? 'checked' : '' }}
+                                               @if($currentRole->name === 'chief') disabled @endif>
+                                        <label class="form-check-label" for="type_other">Andere Rolle</label>
+                                    </div>
+                                    @error('role_type', 'updateRole')<div class="text-danger small">{{ $message }}</div>@enderror
+                                </div>
+                                
+                                {{-- ============================================= --}}
+                                {{-- NEU: Department Auswahl (Konditional)        --}}
+                                {{-- ============================================= --}}
+                                <div class="form-group" id="edit_department_select_group" style="{{ old('role_type', $currentRoleType) == 'department' ? '' : 'display: none;' }}">
+                                     <label for="edit_department_id">Zugehörige Abteilung</label>
+                                     <select name="department_id" id="edit_department_id" class="form-control @error('department_id', 'updateRole') is-invalid @enderror">
+                                         <option value="">Bitte Abteilung wählen...</option>
+                                         @foreach($allDepartments as $department)
+                                             <option value="{{ $department->id }}" 
+                                                     {{ old('department_id', $currentDepartmentId) == $department->id ? 'selected' : '' }}>
+                                                 {{ $department->name }}
+                                             </option>
+                                         @endforeach
+                                     </select>
+                                     @error('department_id', 'updateRole')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
                                 {{-- Berechtigungen nach Modul auflisten --}}
                                 <h5 class="border-bottom pb-2 mb-3 mt-4">Zugewiesene Berechtigungen nach Modul:</h5>
                                 <div class="row">
@@ -257,7 +350,12 @@
         </div>
     </div>
     
-    @include('admin.roles.partials.create-modal')
+    @include('admin.roles.partials.create-department-modal')
+    {{-- Generate Edit/Delete Modals for each department --}}
+    @foreach($allDepartments as $department)
+        @include('admin.roles.partials.edit-department-modal', ['department' => $department])
+        @include('admin.roles.partials.delete-department-modal', ['department' => $department])
+    @endforeach
 
 @endsection
 
@@ -368,6 +466,66 @@ $(function () {
             saveButton.prop('disabled', false).html('Speichern');
         });
     });
+});
+</script>
+<script>
+$(function () {
+    // ---- Create Role Modal ----
+    const createRoleTypeRadios = $('input[type=radio][name="role_type"]');
+    const createDepartmentSelectGroup = $('#create_department_select_group');
+
+    createRoleTypeRadios.on('change', function() {
+        if (this.value === 'department') {
+            createDepartmentSelectGroup.slideDown();
+        } else {
+            createDepartmentSelectGroup.slideUp();
+        }
+    });
+    // Initial check on load (in case of validation errors)
+    if (createRoleTypeRadios.filter(':checked').val() === 'department') {
+         createDepartmentSelectGroup.show();
+    } else {
+         createDepartmentSelectGroup.hide();
+    }
+
+
+    // ---- Edit Role Form ----
+    const editRoleTypeRadios = $('#editRoleForm input[type=radio][name="role_type"]');
+    const editDepartmentSelectGroup = $('#edit_department_select_group');
+
+    editRoleTypeRadios.on('change', function() {
+        if (this.value === 'department') {
+            editDepartmentSelectGroup.slideDown();
+        } else {
+            editDepartmentSelectGroup.slideUp();
+        }
+    });
+    // Initial state is set via inline style based on controller data
+    
+
+    // ---- Handling Modal Opening on Validation Error ----
+    @if(session('open_modal'))
+        $('#{{ session('open_modal') }}').modal('show');
+    @endif
+
+    // ---- Auto-Open Edit Department Modal on Error ----
+    @foreach($allDepartments as $department)
+        @if($errors->hasBag('editDepartment_' . $department->id))
+            $('#editDepartmentModal_{{ $department->id }}').modal('show');
+        @endif
+         @if($errors->hasBag('deleteDepartment_' . $department->id)) // Ggf. für Delete-Fehler
+             $('#deleteDepartmentModal_{{ $department->id }}').modal('show');
+         @endif
+    @endforeach
+    // ---- Auto-Open Create Role Modal on Error ----
+     @if($errors->hasBag('createRole'))
+         $('#createRoleModal').modal('show');
+     @endif
+     // ---- Auto-Open Create Department Modal on Error ----
+      @if($errors->hasBag('createDepartment'))
+          $('#createDepartmentModal').modal('show');
+      @endif
+
 });
 </script>
 @endpush
