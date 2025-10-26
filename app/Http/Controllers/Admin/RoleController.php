@@ -206,13 +206,13 @@ class RoleController extends Controller
                 'description' => $logDescription,
             ]);
 
-            // Event
+            // Event - KORRIGIERT: Keine benannten Parameter
             PotentiallyNotifiableActionOccurred::dispatch(
-                action_name: 'Admin\RoleController@store',
-                subject: $role,
-                object: $department, // Kann null sein
-                actor: Auth::user(),
-                context_data: ['role_type' => $roleType]
+                'Admin\RoleController@store', // action_name
+                $role,                        // subject
+                $department,                  // object (Kann null sein)
+                Auth::user(),                 // actor
+                ['role_type' => $roleType]    // context_data
             );
 
             return redirect()->route('admin.roles.index', ['role' => $role->id])->with('success', 'Rolle erfolgreich erstellt.');
@@ -326,13 +326,13 @@ class RoleController extends Controller
                 'description' => $logDescription,
             ]);
 
-            // Event
+            // Event - KORRIGIERT: Keine benannten Parameter
             PotentiallyNotifiableActionOccurred::dispatch(
-                action_name: 'Admin\RoleController@update',
-                subject: $role,
-                object: $department ?? ($newType === 'department' ? Department::find($newDepartmentId) : null),
-                actor: Auth::user(),
-                context_data: [
+                'Admin\RoleController@update', // action_name
+                $role,                         // subject
+                $department ?? ($newType === 'department' ? Department::find($newDepartmentId) : null), // object
+                Auth::user(),                  // actor
+                [                              // context_data
                     'old_role_data' => $roleBeforeUpdate->toArray(),
                     'new_role_type' => $newType,
                     'new_department_id' => $newDepartmentId,
@@ -387,13 +387,13 @@ class RoleController extends Controller
                 'description' => "Rolle '{$roleName}' gelöscht.",
             ]);
 
-            // Event
+            // Event - KORRIGIERT: Keine benannten Parameter
             PotentiallyNotifiableActionOccurred::dispatch(
-                action_name: 'Admin\RoleController@destroy',
-                subject: $deletedRoleData,
-                object: null,
-                actor: Auth::user(),
-                context_data: []
+                'Admin\RoleController@destroy', // action_name
+                $deletedRoleData,             // subject
+                null,                         // object
+                Auth::user(),                 // actor
+                []                            // context_data
             );
 
             return redirect()->route('admin.roles.index')->with('success', "Rolle '{$roleName}' erfolgreich gelöscht.");
@@ -464,13 +464,11 @@ class RoleController extends Controller
              'edit_leitung_role_name' => 'nullable|string|exists:roles,name',
              'edit_min_rank_level_to_assign_leitung' => 'nullable|integer|min:0',
          ], [
-             // --- HIER DIE FEHLERMELDUNGEN ---
              'edit_department_name.required' => 'Der Abteilungsname darf nicht leer sein.',
              'edit_department_name.unique' => 'Eine Abteilung mit diesem Namen existiert bereits.',
              'edit_leitung_role_name.exists' => 'Die angegebene Leitungsrolle existiert nicht.',
              'edit_min_rank_level_to_assign_leitung.integer' => 'Das minimale Rang-Level muss eine Zahl sein.',
              'edit_min_rank_level_to_assign_leitung.min' => 'Das minimale Rang-Level darf nicht negativ sein.',
-             // --- ENDE FEHLERMELDUNGEN ---
          ]);
 
          if ($validator->fails()) {
@@ -502,13 +500,13 @@ class RoleController extends Controller
                 'description' => $logDescription,
             ]);
 
-            // Event
+            // Event - KORRIGIERT: Keine benannten Parameter
             PotentiallyNotifiableActionOccurred::dispatch(
-                 action_name: 'Admin\RoleController@updateDepartment',
-                 subject: $department,
-                 object: null,
-                 actor: Auth::user(),
-                 context_data: ['old_department_data' => $oldData]
+                 'Admin\RoleController@updateDepartment', // action_name
+                 $department,                           // subject
+                 null,                                   // object
+                 Auth::user(),                           // actor
+                 ['old_department_data' => $oldData]     // context_data
             );
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich aktualisiert.');
@@ -544,13 +542,13 @@ class RoleController extends Controller
                 'description' => "Abteilung '{$deptName}' gelöscht.",
             ]);
 
-            // Event
+            // Event - KORRIGIERT: Keine benannten Parameter
             PotentiallyNotifiableActionOccurred::dispatch(
-                  action_name: 'Admin\RoleController@destroyDepartment',
-                  subject: (object) $deletedDeptData, // Gelöschte Daten als Objekt
-                  object: null,
-                  actor: Auth::user(),
-                  context_data: []
+                  'Admin\RoleController@destroyDepartment', // action_name
+                  (object) $deletedDeptData,              // subject (Gelöschte Daten als Objekt)
+                  null,                                    // object
+                  Auth::user(),                            // actor
+                  []                                       // context_data
             );
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich gelöscht.');
