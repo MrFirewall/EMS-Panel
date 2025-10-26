@@ -96,7 +96,8 @@
                 <div class="card-body p-0">
                     {{-- Diese <ul> wird per JS sortierbar gemacht --}}
                     <ul class="list-group list-group-flush rank-list" id="rank-sort-list">
-                        @forelse($categorIZEDRoles['Ranks'] as $role)
+                        {{-- KORREKTUR: Tippfehler in der Variable behoben --}}
+                        @forelse($categorizedRoles['Ranks'] as $role)
                             {{-- WICHTIG: data-id enthält die ID aus der 'ranks'-Tabelle --}}
                             <li class="list-group-item" data-id="{{ $role->rank_id }}">
                                 
