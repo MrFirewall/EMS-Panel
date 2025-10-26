@@ -133,9 +133,9 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     Route::resource('users', UserController::class)->except(['destroy']);
     Route::resource('roles', RoleController::class)->except(['create', 'edit', 'show']);
     Route::post('roles/ranks/reorder', [RoleController::class, 'updateRankOrder'])->name('roles.ranks.reorder')->middleware('can:roles.edit');
-    Route::post('departments', [RoleController::class, 'storeDepartment'])->name('admin.departments.store')->middleware('can:roles.create');
-    Route::put('departments/{department}', [RoleController::class, 'updateDepartment'])->name('admin.departments.update')->middleware('can:roles.edit');
-    Route::delete('departments/{department}', [RoleController::class, 'destroyDepartment'])->name('admin.departments.destroy')->middleware('can:roles.delete');
+    Route::post('departments', [RoleController::class, 'storeDepartment'])->name('departments.store')->middleware('can:roles.create');
+    Route::put('departments/{department}', [RoleController::class, 'updateDepartment'])->name('departments.update')->middleware('can:roles.edit');
+    Route::delete('departments/{department}', [RoleController::class, 'destroyDepartment'])->name('departments.destroy')->middleware('can:roles.delete');
     Route::resource('permissions', PermissionController::class)->except(['show']);
 
     // Spezifische Admin-Aktionen
