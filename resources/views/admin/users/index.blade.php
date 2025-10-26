@@ -30,11 +30,9 @@
                         <th scope="col">Name</th>
                         <th scope="col">Personalnr.</th>
                         <th scope="col">Mitarbeiternr.</th>
-                        <th scope="col">Rang</th>
                         <th scope="col">Status</th>
                         <th scope="col">Gruppen</th>
                         <th scope="col">2. Fraktion</th>
-                        {{-- Die Spalte für Aktionen ist nicht durchsuchbar/sortierbar --}}
                         <th scope="col" class="text-right no-sort no-search">Aktionen</th>
                     </tr>
                 </thead>
@@ -49,7 +47,6 @@
                         </td>
                         <td>{{ $user->personal_number ?? '-' }}</td>        
                         <td>{{ $user->employee_id ?? '-' }}</td>
-                        <td>{{ $user->rank }}</td>
                         <td>
                             @if($user->status == 'Aktiv')
                                 <span class="badge bg-success">Aktiv</span>
@@ -114,7 +111,7 @@
         "language": {
             "url": "{{ asset('js/i18n/de-DE.json') }}"
         },
-        "order": [[1, 'desc']] , // Standardmäßig nach Personalnummer absteigend sortieren
+        "order": [[1, 'asc']] , // Standardmäßig nach Personalnummer absteigend sortieren
         "responsive": {
             details: {
                 display: DataTable.Responsive.display.modal({
