@@ -16,7 +16,7 @@ use App\Events\PotentiallyNotifiableActionOccurred;
 
 // --- ANGEPASSTE USE-STATEMENTS ---
 use App\Models\Role; // Benutzt dein eigenes Role-Modell
-use App\Models\Permission;
+use Spatie\Permission\Models\Permission;
 use App\Models\Department; // NEU: Department-Modell
 use App\Models\Rank;       // NEU: Rank-Modell
 // ------------------------------------
