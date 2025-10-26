@@ -81,7 +81,7 @@
                     <ul class="list-group list-group-flush rank-list" id="rank-sort-list">
                         @forelse($categorizedRoles['Ranks'] as $role)
                             {{-- WICHTIG: data-rank-id enthält die ID aus der 'ranks'-Tabelle --}}
-                            <li class="list-group-item" data-rank-id="{{ $role->rank_id }}">
+                            <li class="list-group-item" data-id="{{ $role->rank_id }}">
                                 
                                 {{-- Ansicht 1: Normaler Link (Standard) --}}
                                 <a href="{{ route('admin.roles.index', ['role' => $role->id]) }}"

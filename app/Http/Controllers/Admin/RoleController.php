@@ -141,7 +141,7 @@ class RoleController extends Controller
             });
 
             // WICHTIG: Cache für Berechtigungen leeren, falls Ränge Berechtigungen beeinflussen
-            app()->forget(config('permission.cache.key'));
+            cache()->forget(config('permission.cache.key'));
 
         } catch (\Exception $e) {
             return response()->json([
