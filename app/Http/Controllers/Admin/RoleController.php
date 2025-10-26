@@ -34,15 +34,14 @@ class RoleController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Alle Daten für die Kategorisierung laden
+        // 1. Alle Daten laden
         
-        // Alle Spatie-Rollen mit der Anzahl der Benutzer laden
-        $allRoles = Role::withCount('users')->get()->keyBy('name');
+        // Alle Spatie-Rollen laden, ABER wir schlüsseln sie nach ihrem KLEINGESCHRIEBENEN Namen
+        $allRoles = Role::withCount('users')->get()->keyBy(function ($role) {
+            return strtolower($role->name);
+        });
         
-        // Alle Ränge (aus der 'ranks' Tabelle), sortiert nach dem höchsten Level
         $ranks = Rank::orderBy('level', 'desc')->get();
-        
-        // Alle Abteilungen mit ihren zugehörigen Spatie-Rollen
         $departments = Department::with('roles')->get();
         
         // 2. Kategorien initialisieren
@@ -52,34 +51,36 @@ class RoleController extends Controller
             'Other' => []
         ];
         
-        // Sammlung, um bereits zugeordnete Rollen zu verfolgen
+        // Sammlung für verarbeitete Rollennamen (jetzt alle lowercase)
         $processedRoleNames = collect();
 
-        // 3. Ränge zuordnen
+        // 3. Ränge zuordnen (mit strtolower)
         foreach ($ranks as $rank) {
-            if ($allRoles->has($rank->name)) {
-                $roleModel = $allRoles->get($rank->name);
-                // Wir fügen die ID aus der 'ranks'-Tabelle hinzu, 
-                // damit wir sie per Drag&Drop sortieren können.
+            $rankNameLower = strtolower($rank->name);
+            if ($allRoles->has($rankNameLower)) {
+                $roleModel = $allRoles->get($rankNameLower);
                 $roleModel->rank_id = $rank->id; 
                 $categorizedRoles['Ranks'][] = $roleModel;
-                $processedRoleNames->push($rank->name);
+                $processedRoleNames->push($rankNameLower);
             }
         }
 
-        // 4. Abteilungen zuordnen
+        // 4. Abteilungen zuordnen (mit strtolower)
         foreach ($departments as $dept) {
             $categorizedRoles['Departments'][$dept->name] = [];
             foreach ($dept->roles as $role) {
-                // Nur hinzufügen, wenn die Rolle existiert UND nicht schon als Rang verarbeitet wurde
-                if ($allRoles->has($role->name) && !$processedRoleNames->contains($role->name)) {
-                    $categorizedRoles['Departments'][$dept->name][] = $allRoles->get($role->name);
-                    $processedRoleNames->push($role->name);
+                $roleNameLower = strtolower($role->name);
+                
+                // Prüfen, ob die Rolle in unserer Hauptliste existiert UND noch nicht als Rang verarbeitet wurde
+                if ($allRoles->has($roleNameLower) && !$processedRoleNames->contains($roleNameLower)) {
+                    $categorizedRoles['Departments'][$dept->name][] = $allRoles->get($roleNameLower);
+                    $processedRoleNames->push($roleNameLower);
                 }
             }
         }
         
         // 5. Alle übrigen Rollen zu 'Other' hinzufügen
+        // Diese Logik funktioniert jetzt, da $processedRoleNames die korrekten (kleingeschriebenen) Keys enthält
         $categorizedRoles['Other'] = $allRoles->except($processedRoleNames->toArray())->values();
 
         // 6. Logik für die rechte Spalte (Berechtigungen) - bleibt gleich
@@ -92,7 +93,8 @@ class RoleController extends Controller
         $currentRolePermissions = [];
 
         if ($request->has('role')) {
-            $currentRole = Role::findById($request->query('role'));
+            // Finde die Rolle über die ID, da der Name (Groß/Klein) unzuverlässig sein könnte
+            $currentRole = Role::findById($request->query('role')); 
             if ($currentRole) {
                 $currentRolePermissions = $currentRole->permissions->pluck('name')->toArray();
             }
@@ -100,7 +102,7 @@ class RoleController extends Controller
 
         // 7. Kategorisierte Rollen an die View übergeben
         return view('admin.roles.index', compact(
-            'categorizedRoles', // Ersetzt die alte $roles Variable
+            'categorizedRoles',
             'permissions', 
             'currentRole', 
             'currentRolePermissions'
