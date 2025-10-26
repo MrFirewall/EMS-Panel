@@ -117,7 +117,7 @@
                     @forelse($categorizedRoles['Departments'] as $deptName => $deptRoles)
                         @if(!empty($deptRoles))
                             {{-- Abteilungs-Titel --}}
-                            <div class="list-group-item list-group-item-secondary" style="background-color: #f4f4f4; font-weight: bold; border-top: 1px solid #ddd;">
+                            <div class="list-group-item list-group-item-primary" style="background-color: #f4f4f4; font-weight: bold; border-top: 1px solid #ddd;">
                                 {{ $deptName }}
                             </div>
                             {{-- Zugehörige Rollen --}}
