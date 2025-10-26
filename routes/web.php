@@ -132,7 +132,7 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     Route::resource('announcements', AnnouncementController::class);
     Route::resource('users', UserController::class)->except(['destroy']);
     Route::resource('roles', RoleController::class)->except(['create', 'edit', 'show']);
-    Route::post('roles/ranks/reorder', [RoleController::class, 'updateRankOrder'])->name('admin.roles.ranks.reorder')->middleware('can:roles.edit');
+    Route::post('roles/ranks/reorder', [RoleController::class, 'updateRankOrder'])->name('roles.ranks.reorder')->middleware('can:roles.edit');
     Route::resource('permissions', PermissionController::class)->except(['show']);
 
     // Spezifische Admin-Aktionen
