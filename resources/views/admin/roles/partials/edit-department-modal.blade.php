@@ -14,37 +14,56 @@
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
+                         {{-- Abteilungsname --}}
                          <div class="form-group">
                             <label for="edit_department_name_{{ $department->id }}">Neuer Abteilungsname</label>
-                            <input type="text" 
-                                   class="form-control {{ $modalErrors->has('edit_department_name') ? 'is-invalid' : '' }}" 
-                                   id="edit_department_name_{{ $department->id }}" name="edit_department_name" 
+                            <input type="text"
+                                   class="form-control {{ $modalErrors->has('edit_department_name') ? 'is-invalid' : '' }}"
+                                   id="edit_department_name_{{ $department->id }}" name="edit_department_name"
                                    value="{{ old('edit_department_name', $department->name) }}" required>
                              @if ($modalErrors->has('edit_department_name'))
                                 <span class="invalid-feedback"><strong>{{ $modalErrors->first('edit_department_name') }}</strong></span>
                              @endif
                         </div>
-                         {{-- OPTIONAL: Felder für Leitung etc. hinzufügen --}}
-                         {{--
-                         <div class="form-group">
-                             <label for="edit_leitung_role_name_{{ $department->id }}">Leitungs-Rolle (Slug)</label>
-                             <input type="text" class="form-control {{ $modalErrors->has('edit_leitung_role_name') ? 'is-invalid' : '' }}" 
-                                    id="edit_leitung_role_name_{{ $department->id }}" name="edit_leitung_role_name" 
-                                    value="{{ old('edit_leitung_role_name', $department->leitung_role_name) }}">
-                              @if ($modalErrors->has('edit_leitung_role_name'))
-                                 <span class="invalid-feedback"><strong>{{ $modalErrors->first('edit_leitung_role_name') }}</strong></span>
-                              @endif
-                         </div>
-                         <div class="form-group">
-                              <label for="edit_min_rank_level_to_assign_leitung_{{ $department->id }}">Min. Rang-Level für Leitungszuweisung</label>
-                              <input type="number" min="0" class="form-control {{ $modalErrors->has('edit_min_rank_level_to_assign_leitung') ? 'is-invalid' : '' }}" 
-                                     id="edit_min_rank_level_to_assign_leitung_{{ $department->id }}" name="edit_min_rank_level_to_assign_leitung" 
-                                     value="{{ old('edit_min_rank_level_to_assign_leitung', $department->min_rank_level_to_assign_leitung) }}">
-                               @if ($modalErrors->has('edit_min_rank_level_to_assign_leitung'))
-                                  <span class="invalid-feedback"><strong>{{ $modalErrors->first('edit_min_rank_level_to_assign_leitung') }}</strong></span>
-                               @endif
-                         </div>
-                         --}}
+
+                         {{-- NEU: Leitungsrolle auswählen --}}
+                        <div class="form-group">
+                            <label for="edit_leitung_role_name_{{ $department->id }}">Leitungsrolle (Optional)</label>
+                            <select class="form-control select2 {{ $modalErrors->has('edit_leitung_role_name') ? 'is-invalid' : '' }}"
+                                    id="edit_leitung_role_name_{{ $department->id }}" name="edit_leitung_role_name" style="width: 100%;">
+                                <option value="">Keine spezielle Leitungsrolle</option>
+                                @foreach($allRoleNames ?? [] as $roleName)
+                                    <option value="{{ $roleName }}"
+                                            {{ old('edit_leitung_role_name', $department->leitung_role_name) == $roleName ? 'selected' : '' }}>
+                                        {{ ucfirst($roleName) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                             <small class="text-muted">Wähle die Rolle, die als Leitungsrolle für diese Abteilung gilt.</small>
+                            @if ($modalErrors->has('edit_leitung_role_name'))
+                                <span class="invalid-feedback"><strong>{{ $modalErrors->first('edit_leitung_role_name') }}</strong></span>
+                            @endif
+                        </div>
+
+                         {{-- NEU: Minimales Rang-Level auswählen --}}
+                        <div class="form-group">
+                            <label for="edit_min_rank_level_{{ $department->id }}">Min. Rang-Level für Leitungszuweisung (Optional)</label>
+                             <select class="form-control select2 {{ $modalErrors->has('edit_min_rank_level_to_assign_leitung') ? 'is-invalid' : '' }}"
+                                    id="edit_min_rank_level_{{ $department->id }}" name="edit_min_rank_level_to_assign_leitung" style="width: 100%;">
+                                <option value="">Kein minimales Level</option>
+                                @foreach($allRanks ?? [] as $rankName => $rankLevel)
+                                    <option value="{{ $rankLevel }}"
+                                            {{ old('edit_min_rank_level_to_assign_leitung', $department->min_rank_level_to_assign_leitung) == $rankLevel ? 'selected' : '' }}>
+                                        {{ $rankLevel }} - {{ ucfirst($rankName) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Wähle das Mindest-Level, das ein Admin haben muss, um die Leitungsrolle dieser Abteilung zuzuweisen.</small>
+                            @if ($modalErrors->has('edit_min_rank_level_to_assign_leitung'))
+                                <span class="invalid-feedback"><strong>{{ $modalErrors->first('edit_min_rank_level_to_assign_leitung') }}</strong></span>
+                            @endif
+                        </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default btn-flat" data-dismiss="modal">Abbrechen</button>

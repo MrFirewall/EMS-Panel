@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Permission;
 use App\Events\PotentiallyNotifiableActionOccurred;
+use Illuminate\Validation\Rule; // Rule für exists/in Validierung hinzugefügt
 
 // --- ANGEPASSTE USE-STATEMENTS ---
 use App\Models\Role; // Dein eigenes Role-Modell
@@ -36,14 +37,20 @@ class RoleController extends Controller
 
     /**
      * Zeigt die Rollenliste (kategorisiert) und die Bearbeitungsansicht an.
-     * Übergibt alle Departments und den Typ der aktuellen Rolle
+     * Übergibt alle Departments, Rollennamen, Ränge und den Typ der aktuellen Rolle
      */
     public function index(Request $request)
     {
         // 1. Alle Daten laden
-        $allRoles = Role::withCount('users')->get()->keyBy(fn($role) => strtolower($role->name));
+        $allRolesCollection = Role::withCount('users')->get(); // Hole Collection für spätere Verwendung
+        $allRoles = $allRolesCollection->keyBy(fn($role) => strtolower($role->name));
         $ranks = Rank::orderBy('level', 'desc')->get();
         $allDepartments = Department::orderBy('name')->get();
+
+        // NEU: Hole alle Rollennamen und Ränge für Dropdowns
+        $allRoleNames = $allRolesCollection->pluck('name');
+        $allRanks = Rank::orderBy('level', 'desc')->pluck('level', 'name'); // Format: ['chief' => 11, 'deputy chief' => 10, ...]
+
 
         // 2. Kategorien initialisieren
         $categorizedRoles = ['Ranks' => [], 'Departments' => [], 'Other' => []];
@@ -106,6 +113,8 @@ class RoleController extends Controller
             'currentRole',
             'currentRolePermissions',
             'allDepartments',
+            'allRoleNames', // NEU für Modals
+            'allRanks',     // NEU für Modals
             'currentRoleType',
             'currentDepartmentId'
         ));
@@ -113,7 +122,6 @@ class RoleController extends Controller
 
     /**
      * Aktualisiert die Sortierung (level) der Ränge.
-     * Wird per AJAX von der Drag-and-Drop-Liste aufgerufen.
      */
     public function updateRankOrder(Request $request)
     {
@@ -130,19 +138,21 @@ class RoleController extends Controller
             });
             cache()->forget(config('permission.cache.key'));
 
-            // --- LOGGING FÜR RANK ORDER UPDATE ---
+            // Logging
             ActivityLog::create([
                 'user_id' => Auth::id(),
-                'log_type' => 'RANK_ORDER', // Eigener Log-Typ
+                'log_type' => 'RANK_ORDER',
                 'action' => 'UPDATED',
-                'target_id' => null, // Kein spezifisches Ziel
+                'target_id' => null,
                 'description' => 'Rang-Hierarchie wurde neu sortiert.',
             ]);
-            // --- ENDE LOGGING ---
+
+            // Optional: Event für Rank Order Update
+            /* PotentiallyNotifiableActionOccurred::dispatch(...) */
 
         } catch (\Exception $e) {
-            Log::error("Fehler beim Sortieren der Ränge: " . $e->getMessage()); // Logge den Fehler serverseitig
-            return response()->json(['status' => 'error', 'message' => 'Fehler beim Speichern der Hierarchie.'], 500); // Generische Fehlermeldung für den Client
+            Log::error("Fehler beim Sortieren der Ränge: " . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Fehler beim Speichern der Hierarchie.'], 500);
         }
         return response()->json(['status' => 'success', 'message' => 'Rang-Hierarchie erfolgreich aktualisiert.']);
     }
@@ -160,6 +170,7 @@ class RoleController extends Controller
             'name.unique' => 'Dieser Rollenname ist bereits vergeben.',
             'role_type.required' => 'Bitte wählen Sie einen Rollentyp.',
             'department_id.required_if' => 'Bitte wählen Sie eine Abteilung.',
+            'department_id.exists' => 'Die ausgewählte Abteilung ist ungültig.',
         ]);
 
         if ($validator->fails()) {
@@ -176,13 +187,10 @@ class RoleController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1. Rolle erstellen
             $role = Role::create(['name' => $roleName]);
-
-            // 2. Zusätzliche Aktionen
-            $department = null; // Für Logging/Event
+            $department = null;
             if ($roleType === 'rank') {
-                Rank::create(['name' => $roleName, 'level' => 0]); // Level 0, muss sortiert werden
+                Rank::create(['name' => $roleName, 'level' => 0]);
             } elseif ($roleType === 'department') {
                 $department = Department::find($departmentId);
                 if ($department) {
@@ -193,27 +201,16 @@ class RoleController extends Controller
             }
             DB::commit();
 
-            // Logging
+            // Logging & Event
             $logDescription = "Neue Rolle '{$role->name}' (Typ: {$roleType}) erstellt.";
             if ($roleType === 'department' && $department) {
                 $logDescription .= " Abteilung: {$department->name}.";
             }
             ActivityLog::create([
-                'user_id' => Auth::id(),
-                'log_type' => 'ROLE',
-                'action' => 'CREATED',
-                'target_id' => $role->id,
-                'description' => $logDescription,
+                'user_id' => Auth::id(), 'log_type' => 'ROLE', 'action' => 'CREATED',
+                'target_id' => $role->id, 'description' => $logDescription,
             ]);
-
-            // Event - KORRIGIERT: Keine benannten Parameter
-            PotentiallyNotifiableActionOccurred::dispatch(
-                'Admin\RoleController@store', // action_name
-                $role,                        // subject
-                $department,                  // object (Kann null sein)
-                Auth::user(),                 // actor
-                ['role_type' => $roleType]    // context_data
-            );
+            PotentiallyNotifiableActionOccurred::dispatch('Admin\RoleController@store', Auth::user(), $role, Auth::user());
 
             return redirect()->route('admin.roles.index', ['role' => $role->id])->with('success', 'Rolle erfolgreich erstellt.');
 
@@ -233,12 +230,22 @@ class RoleController extends Controller
             return back()->with('error', 'Diese Standardrolle kann nicht geändert oder verschoben werden.');
         }
 
+        // Hole alle Ranks für die Validierung des Levels
+        $allRankLevels = Rank::pluck('level')->toArray(); // Wird derzeit nicht direkt verwendet, aber gut zu haben
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
             'role_type' => 'required|in:rank,department,other',
             'department_id' => 'required_if:role_type,department|nullable|exists:departments,id',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|exists:permissions,name',
+        ], [
+             'name.required' => 'Der Rollenname darf nicht leer sein.', // Explizitere Meldung
+             'name.unique' => 'Dieser Rollenname ist bereits vergeben.',
+             'role_type.required' => 'Bitte wählen Sie einen Rollentyp.',
+             'department_id.required_if' => 'Bitte wählen Sie eine Abteilung, wenn der Typ "Abteilungsrolle" ist.', // Explizitere Meldung
+             'department_id.exists' => 'Die ausgewählte Abteilung ist ungültig.',
+             'permissions.*.exists' => 'Eine der ausgewählten Berechtigungen ist ungültig.',
         ]);
 
          if ($validator->fails()) {
@@ -264,22 +271,13 @@ class RoleController extends Controller
             $oldDepartmentId = $deptRole->department_id;
         }
 
-        // Kopie der Rolle vor der Änderung für das Event
-        $roleBeforeUpdate = clone $role;
-        $roleBeforeUpdate->permissions = $oldPermissions;
-        $roleBeforeUpdate->role_type = $oldType;
-        $roleBeforeUpdate->department_id = $oldDepartmentId;
-
-
         try {
             DB::beginTransaction();
 
-            // 1. Namen und Berechtigungen aktualisieren
             $role->update(['name' => $newName]);
             $role->syncPermissions($permissionsToSync);
 
-            // 2. Typ-Änderungen verarbeiten
-            $department = null; // Für Logging/Event
+            $department = null;
             if ($oldType !== $newType || ($newType === 'department' && $oldDepartmentId != $newDepartmentId)) {
                 if ($oldType === 'rank' && $rankEntry) { $rankEntry->delete(); }
                 elseif ($oldType === 'department') { DB::table('department_role')->where('role_id', $role->id)->delete(); }
@@ -292,7 +290,6 @@ class RoleController extends Controller
                     else { throw new \Exception("Ausgewählte Abteilung nicht gefunden."); }
                 }
             }
-            // Namen im Rank-Table aktualisieren, falls nötig
             if ($oldName !== $newName && ($oldType === 'rank' || $newType === 'rank')) {
                  Rank::whereRaw('LOWER(name) = ?', [strtolower($oldName)])
                      ->update(['name' => $newName]);
@@ -300,7 +297,7 @@ class RoleController extends Controller
 
             DB::commit();
 
-            // Logging
+            // Logging & Event
             $newPermissions = $role->permissions->pluck('name')->toArray();
             $addedPermissions = array_diff($newPermissions, $oldPermissions);
             $removedPermissions = array_diff($oldPermissions, $newPermissions);
@@ -319,27 +316,10 @@ class RoleController extends Controller
              if (!empty($removedPermissions)) $logDescription .= " Perms entfernt: " . implode(', ', $removedPermissions) . ".";
 
             ActivityLog::create([
-                'user_id' => Auth::id(),
-                'log_type' => 'ROLE',
-                'action' => 'UPDATED',
-                'target_id' => $role->id,
-                'description' => $logDescription,
+                'user_id' => Auth::id(), 'log_type' => 'ROLE', 'action' => 'UPDATED',
+                'target_id' => $role->id, 'description' => $logDescription,
             ]);
-
-            // Event - KORRIGIERT: Keine benannten Parameter
-            PotentiallyNotifiableActionOccurred::dispatch(
-                'Admin\RoleController@update', // action_name
-                $role,                         // subject
-                $department ?? ($newType === 'department' ? Department::find($newDepartmentId) : null), // object
-                Auth::user(),                  // actor
-                [                              // context_data
-                    'old_role_data' => $roleBeforeUpdate->toArray(),
-                    'new_role_type' => $newType,
-                    'new_department_id' => $newDepartmentId,
-                    'added_permissions' => $addedPermissions,
-                    'removed_permissions' => $removedPermissions,
-                ]
-            );
+            PotentiallyNotifiableActionOccurred::dispatch('Admin\RoleController@update', Auth::user(), $role, Auth::user());
 
             return redirect()->route('admin.roles.index', ['role' => $role->id])->with('success', 'Rolle erfolgreich aktualisiert.');
 
@@ -366,35 +346,22 @@ class RoleController extends Controller
 
         $roleName = $role->name;
         $roleId = $role->id;
-        $deletedRoleData = clone $role; // Komplettes Objekt klonen für Event
-        $deletedRoleData->load('permissions'); // Lade Berechtigungen für das Event
+        $deletedRoleData = clone $role;
+        $deletedRoleData->load('permissions');
 
         try {
             DB::beginTransaction();
-
             $rankEntry = Rank::whereRaw('LOWER(name) = ?', [strtolower($roleName)])->first();
             if ($rankEntry) { $rankEntry->delete(); }
-            $role->delete(); // Löscht Rolle und Pivot-Einträge via Cascade (wenn Migration korrekt)
-
+            $role->delete();
             DB::commit();
 
-            // Logging
+            // Logging & Event
             ActivityLog::create([
-                'user_id' => Auth::id(),
-                'log_type' => 'ROLE',
-                'action' => 'DELETED',
-                'target_id' => $roleId,
-                'description' => "Rolle '{$roleName}' gelöscht.",
+                'user_id' => Auth::id(), 'log_type' => 'ROLE', 'action' => 'DELETED',
+                'target_id' => $roleId, 'description' => "Rolle '{$roleName}' gelöscht.",
             ]);
-
-            // Event - KORRIGIERT: Keine benannten Parameter
-            PotentiallyNotifiableActionOccurred::dispatch(
-                'Admin\RoleController@destroy', // action_name
-                $deletedRoleData,             // subject
-                null,                         // object
-                Auth::user(),                 // actor
-                []                            // context_data
-            );
+            PotentiallyNotifiableActionOccurred::dispatch('Admin\RoleController@destroy', Auth::user(), $deletedRoleData, Auth::user());
 
             return redirect()->route('admin.roles.index')->with('success', "Rolle '{$roleName}' erfolgreich gelöscht.");
 
@@ -414,13 +381,20 @@ class RoleController extends Controller
      */
     public function storeDepartment(Request $request)
     {
+        // Hole Rollen und Ranks für die Validierung
+        $allRoleNames = Role::pluck('name')->toArray();
+        $allRankLevels = Rank::pluck('level')->toArray(); // Nur die Level-Werte
+
         $validator = Validator::make($request->all(), [
             'department_name' => 'required|string|max:255|unique:departments,name',
-             'leitung_role_name' => 'nullable|string|exists:roles,name',
-             'min_rank_level_to_assign_leitung' => 'nullable|integer|min:0',
+             'leitung_role_name' => ['nullable','string', Rule::in($allRoleNames)], // Prüft gegen existierende Rollen
+             'min_rank_level_to_assign_leitung' => ['nullable','integer', Rule::in($allRankLevels)], // Prüft gegen existierende Level
         ], [
             'department_name.required' => 'Der Abteilungsname ist erforderlich.',
             'department_name.unique' => 'Eine Abteilung mit diesem Namen existiert bereits.',
+            'leitung_role_name.in' => 'Die ausgewählte Leitungsrolle ist ungültig.',
+            'min_rank_level_to_assign_leitung.in' => 'Das ausgewählte minimale Rang-Level ist ungültig.',
+            'min_rank_level_to_assign_leitung.integer' => 'Das minimale Rang-Level muss eine Zahl sein.',
         ]);
 
         if ($validator->fails()) {
@@ -432,19 +406,16 @@ class RoleController extends Controller
         try {
             $department = Department::create([
                 'name' => $request->department_name,
-                 'leitung_role_name' => $request->leitung_role_name ?? '',
-                 'min_rank_level_to_assign_leitung' => $request->min_rank_level_to_assign_leitung ?? 0,
+                 'leitung_role_name' => $request->leitung_role_name ?? '', // Speichere leeren String wenn null
+                 'min_rank_level_to_assign_leitung' => $request->min_rank_level_to_assign_leitung ?? 0, // Speichere 0 wenn null
             ]);
 
-            // Logging
+            // Logging & Event
             ActivityLog::create([
-                'user_id' => Auth::id(),
-                'log_type' => 'DEPARTMENT',
-                'action' => 'CREATED',
-                'target_id' => $department->id,
-                'description' => "Neue Abteilung '{$department->name}' erstellt.",
+                'user_id' => Auth::id(), 'log_type' => 'DEPARTMENT', 'action' => 'CREATED',
+                'target_id' => $department->id, 'description' => "Neue Abteilung '{$department->name}' erstellt.",
             ]);
-            // Hier kein Event, wie vorher besprochen
+            PotentiallyNotifiableActionOccurred::dispatch('Admin\RoleController@storeDepartment', Auth::user(), $department, Auth::user());
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich erstellt.');
 
@@ -459,16 +430,21 @@ class RoleController extends Controller
      */
     public function updateDepartment(Request $request, Department $department)
     {
+         // Hole Rollen und Ranks für die Validierung
+        $allRoleNames = Role::pluck('name')->toArray();
+        $allRankLevels = Rank::pluck('level')->toArray();
+
          $validator = Validator::make($request->all(), [
              'edit_department_name' => 'required|string|max:255|unique:departments,name,' . $department->id,
-             'edit_leitung_role_name' => 'nullable|string|exists:roles,name',
-             'edit_min_rank_level_to_assign_leitung' => 'nullable|integer|min:0',
+             'edit_leitung_role_name' => ['nullable','string', Rule::in($allRoleNames)],
+             'edit_min_rank_level_to_assign_leitung' => ['nullable','integer', Rule::in($allRankLevels)],
          ], [
              'edit_department_name.required' => 'Der Abteilungsname darf nicht leer sein.',
              'edit_department_name.unique' => 'Eine Abteilung mit diesem Namen existiert bereits.',
-             'edit_leitung_role_name.exists' => 'Die angegebene Leitungsrolle existiert nicht.',
+             'edit_leitung_role_name.in' => 'Die ausgewählte Leitungsrolle ist ungültig.',
+             'edit_min_rank_level_to_assign_leitung.in' => 'Das ausgewählte minimale Rang-Level ist ungültig.',
              'edit_min_rank_level_to_assign_leitung.integer' => 'Das minimale Rang-Level muss eine Zahl sein.',
-             'edit_min_rank_level_to_assign_leitung.min' => 'Das minimale Rang-Level darf nicht negativ sein.',
+             // 'edit_min_rank_level_to_assign_leitung.min' war redundant durch Rule::in, kann aber optional bleiben
          ]);
 
          if ($validator->fails()) {
@@ -479,35 +455,29 @@ class RoleController extends Controller
 
         try {
             $oldName = $department->name;
-            $oldData = $department->toArray(); // Für Event
+            $oldLeitungRole = $department->leitung_role_name;
+            $oldMinRankLevel = $department->min_rank_level_to_assign_leitung;
+            $oldData = $department->toArray();
 
             $department->update([
                 'name' => $request->edit_department_name,
-                'leitung_role_name' => $request->edit_leitung_role_name ?? $department->leitung_role_name,
-                'min_rank_level_to_assign_leitung' => $request->edit_min_rank_level_to_assign_leitung ?? $department->min_rank_level_to_assign_leitung,
+                'leitung_role_name' => $request->edit_leitung_role_name ?? '', // Setze auf leer wenn nicht vorhanden
+                'min_rank_level_to_assign_leitung' => $request->edit_min_rank_level_to_assign_leitung ?? 0, // Setze auf 0 wenn nicht vorhanden
             ]);
 
             // Logging
             $logDescription = "Abteilung '{$oldName}' aktualisiert.";
             if ($oldName !== $department->name) $logDescription .= " Neuer Name: '{$department->name}'.";
-            // Ggf. Log für andere Felder
+            if ($oldLeitungRole !== $department->leitung_role_name) $logDescription .= " Leitungsrolle geändert: '{$oldLeitungRole}' -> '{$department->leitung_role_name}'.";
+            if ($oldMinRankLevel != $department->min_rank_level_to_assign_leitung) $logDescription .= " Min. Rang-Level geändert: {$oldMinRankLevel} -> {$department->min_rank_level_to_assign_leitung}.";
 
             ActivityLog::create([
-                'user_id' => Auth::id(),
-                'log_type' => 'DEPARTMENT',
-                'action' => 'UPDATED',
-                'target_id' => $department->id,
-                'description' => $logDescription,
+                'user_id' => Auth::id(), 'log_type' => 'DEPARTMENT', 'action' => 'UPDATED',
+                'target_id' => $department->id, 'description' => $logDescription,
             ]);
 
-            // Event - KORRIGIERT: Keine benannten Parameter
-            PotentiallyNotifiableActionOccurred::dispatch(
-                 'Admin\RoleController@updateDepartment', // action_name
-                 $department,                           // subject
-                 null,                                   // object
-                 Auth::user(),                           // actor
-                 ['old_department_data' => $oldData]     // context_data
-            );
+            // Event
+            PotentiallyNotifiableActionOccurred::dispatch('Admin\RoleController@updateDepartment', Auth::user(), $department, Auth::user());
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich aktualisiert.');
 
@@ -529,27 +499,16 @@ class RoleController extends Controller
         try {
             $deptName = $department->name;
             $deptId = $department->id;
-            $deletedDeptData = $department->toArray(); // Für Event
+            $deletedDeptData = clone $department;
 
             $department->delete();
 
-            // Logging
+            // Logging & Event
             ActivityLog::create([
-                'user_id' => Auth::id(),
-                'log_type' => 'DEPARTMENT',
-                'action' => 'DELETED',
-                'target_id' => $deptId,
-                'description' => "Abteilung '{$deptName}' gelöscht.",
+                'user_id' => Auth::id(), 'log_type' => 'DEPARTMENT', 'action' => 'DELETED',
+                'target_id' => $deptId, 'description' => "Abteilung '{$deptName}' gelöscht.",
             ]);
-
-            // Event - KORRIGIERT: Keine benannten Parameter
-            PotentiallyNotifiableActionOccurred::dispatch(
-                  'Admin\RoleController@destroyDepartment', // action_name
-                  (object) $deletedDeptData,              // subject (Gelöschte Daten als Objekt)
-                  null,                                    // object
-                  Auth::user(),                            // actor
-                  []                                       // context_data
-            );
+            PotentiallyNotifiableActionOccurred::dispatch('Admin\RoleController@destroyDepartment', Auth::user(), $deletedDeptData, Auth::user());
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich gelöscht.');
 
