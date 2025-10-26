@@ -10,7 +10,7 @@ use Lab404\Impersonate\Models\Impersonate;
 use Illuminate\Database\Eloquent\Casts\Attribute; // Wichtig für den Accessor
 use Illuminate\Support\Carbon; // Wichtig für Datumsberechnungen
 use NotificationChannels\WebPush\HasPushSubscriptions;
-
+use App\Models\Rank;
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, Impersonate, HasPushSubscriptions;
@@ -229,53 +229,19 @@ class User extends Authenticatable
     public function reports() { return $this->hasMany(Report::class); }
     public function vacations() { return $this->hasMany(Vacation::class); }
     public function attendedReports() { return $this->belongsToMany(Report::class, 'report_user'); }
- 
-    /**
-     * Determines if this user can impersonate others.
-     */
-    public function canImpersonate(): bool
-    {
-        return $this->hasAnyRole('chief', 'Super-Admin');
+    public function canImpersonate(): bool{ return $this->hasAnyRole('chief', 'Super-Admin'); }
+    public function canBeImpersonated(): bool{ return !$this->hasAnyRole('chief', 'Super-Admin'); }
+    public function prescriptions(){ return $this->hasMany(Prescription::class); }
+    public function trainingModules(){ 
+        return $this->belongsToMany(TrainingModule::class, 'training_module_user')
+        ->using(\App\Models\Pivots\TrainingModuleUser::class)
+        ->withPivot('assigned_by_user_id', 'completed_at', 'notes')
+        ->withTimestamps();
     }
 
-    /**
-     * Determines if this user can be impersonated.
-     */
-    public function canBeImpersonated(): bool
-    {
-        return !$this->hasAnyRole('chief', 'Super-Admin');
-    }
-    public function prescriptions()
-    {
-        return $this->hasMany(Prescription::class);
-    }
-
-    public function trainingModules()
-        {
-            return $this->belongsToMany(TrainingModule::class, 'training_module_user')
-                        ->using(\App\Models\Pivots\TrainingModuleUser::class) // <-- HINZUFÜGEN
-                        ->withPivot('assigned_by_user_id', 'completed_at', 'notes')
-                        ->withTimestamps();
-        }
-
-    /**
-     * Hilfsfunktion: Gibt nur die Module zurück, die der User bestanden hat.
-     */
-    public function qualifications()
-    {
-        return $this->trainingModules()->wherePivot('status', 'bestanden');
-    }
-
-    /**
-     * NEU: Die Prüfungsversuche dieses Benutzers.
-     */
-    public function examAttempts()
-    {
-        return $this->hasMany(ExamAttempt::class);
-    }    
-
-    public function pushSubscriptions() {
-        return $this->hasMany(\App\Models\PushSubscription::class);
-    }
+    public function qualifications(){ return $this->trainingModules()->wherePivot('status', 'bestanden'); }
+    public function examAttempts(){ return $this->hasMany(ExamAttempt::class); }
+    public function pushSubscriptions() { return $this->hasMany(\App\Models\PushSubscription::class); }
+    public function rank(){ return $this->belongsTo(Rank::class); }
 }
 

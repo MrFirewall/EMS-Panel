@@ -7,69 +7,24 @@ use App\Models\User;
 use App\Models\ServiceRecord;
 use App\Models\Evaluation;
 use App\Models\ExamAttempt;
-use App\Models\TrainingModule; // Import hinzugefügt
+use App\Models\TrainingModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
 use App\Models\ActivityLog;
-use App\Events\PotentiallyNotifiableActionOccurred; // Event hinzufügen
+use App\Events\PotentiallyNotifiableActionOccurred;
+
+// --- ANGEPASSTE USE-STATEMENTS ---
+use App\Models\Role; // Benutzt dein eigenes Role-Modell
+use App\Models\Permission;
+use App\Models\Department; // NEU: Department-Modell
+use App\Models\Rank;       // NEU: Rank-Modell
+// ------------------------------------
 
 use App\Models\Pivots\TrainingModuleUser;
 
 class UserController extends Controller
 {
-    /**
-     * Definiert die Hierarchie der Ränge als private Eigenschaft.
-     * @var array
-     */
-    private $rankHierarchy = [
-        'chief'         => 11,
-        'deputy chief'  => 10,
-        'doctor'        => 9,
-        'captain'       => 8,
-        'lieutenant'    => 7,
-        'supervisor'    => 6,
-        's-emt'         => 5,
-        'paramedic'     => 4,
-        'a-emt'         => 3,
-        'emt'           => 2,
-        'trainee'       => 1,
-    ];
-
-    /**
-     * Definiert Abteilungen und deren Rollen-Hierarchie.
-     * @var array
-     */
-    private $departmentalRoles = [
-        'Rechtsabteilung' => [
-            'leitung_role' => 'rechtsabteilung - leitung',
-            'min_rank_to_assign_leitung' => 10, // Assistant EMS Director
-            'roles' => [
-                'Rechtsabteilung - leitung',
-                'Rechtsabteilung - mitglied',
-            ],
-        ],
-        'Ausbildungsabteilung' => [
-            'leitung_role' => 'ausbildungsabteilung - leitung',
-            'min_rank_to_assign_leitung' => 10, // Assistant EMS Director
-            'roles' => [
-                'Ausbildungsabteilung - leitung',
-                'Ausbildungsabteilung - ausbilder',
-                'Ausbildungsabteilung - ausbilder auf probe',
-            ],
-        ],
-        'Personalabteilung' => [
-            'leitung_role' => 'personalabteilung - leitung',
-            'min_rank_to_assign_leitung' => 10, // Assistant EMS Director
-            'roles' => [
-                'Personalabteilung - leitung',
-                'Personalabteilung - mitglied',
-            ],
-        ],
-    ];
-
     /**
      * Definiert die unsichtbare Super-Admin Rolle.
      * @var string
@@ -79,53 +34,67 @@ class UserController extends Controller
 
     public function __construct()
     {
-        $this->middleware('can:users.view')->only('index', 'show'); // 'show' für die Admin-Ansicht hinzufügen
+        $this->middleware('can:users.view')->only('index', 'show');
         $this->middleware('can:users.create')->only(['create', 'store']);
         $this->middleware('can:users.edit')->only(['edit', 'update']);
         $this->middleware('can:users.manage.record')->only('addRecord');
-        $this->middleware('can:users.manage.modules')->only(['update']); // Nur beim Speichern prüfen
+        $this->middleware('can:users.manage.modules')->only(['update']);
     }
 
     /**
      * Gibt eine gefilterte Liste der Rollen zurück, die der aktuelle Admin verwalten darf.
+     * (Angepasst an die Datenbank)
      */
     private function getManagableRoles()
     {
         $admin = Auth::user();
 
-        // Ausnahme: Director und Super-Admin dürfen immer alle Rollen verwalten (außer Super-Admin selbst).
+        // 1. Lade Konfigurationen aus der DB
+        $ranks = Rank::pluck('level', 'name');
+        $departments = Department::with('roles')->get(); // Lädt Abteilungen & deren Rollen
+
+        // Ausnahme: 'chief' (oder Super-Admin) dürfen immer alle Rollen verwalten (außer Super-Admin).
+        // Wir nutzen 'chief' als hardcodierte Top-Rolle, da die DB-Abfrage (Rank::max('level')) langsamer wäre.
         if ($admin->hasAnyRole('chief', $this->superAdminRole)) {
             return Role::where('name', '!=', $this->superAdminRole)->get();
         }
 
-        $adminRankLevel = $admin->getHighestRankLevel();
+        // $admin->rank ist ein STRING (z.B. 'captain'), basierend auf deiner store/update Logik
+        $adminRankLevel = $ranks->get($admin->rank, 0);
         $adminRoleNames = $admin->getRoleNames();
 
         $allRoles = Role::where('name', '!=', $this->superAdminRole)->get(); // Super-Admin ausschließen
         $managableRoles = collect();
 
         foreach ($allRoles as $role) {
-            // 1. Rang-Rollen prüfen
-            if (isset($this->rankHierarchy[$role->name])) {
-                if ($this->rankHierarchy[$role->name] < $adminRankLevel) {
+            // 1. Rang-Rollen prüfen (Ist die Rolle ein Rang in der 'ranks' Tabelle?)
+            if ($ranks->has($role->name)) {
+                // Darf der Admin diesen Rang zuweisen? (Nur Ränge unter seinem eigenen)
+                if ($ranks[$role->name] < $adminRankLevel) {
                     $managableRoles->push($role);
                 }
-                continue;
+                continue; // Rolle wurde als Rang behandelt, weiter zur nächsten Rolle
             }
 
             // 2. Abteilungs-Rollen prüfen
-            foreach ($this->departmentalRoles as $department) {
-                if (in_array($role->name, $department['roles'])) {
-                    if ($role->name === $department['leitung_role']) {
-                        if ($adminRankLevel >= $department['min_rank_to_assign_leitung']) {
+            foreach ($departments as $department) {
+                // Gehört die Rolle zu dieser Abteilung? (Prüft die Pivot-Tabelle)
+                if ($department->roles->contains('name', $role->name)) {
+                    
+                    // Ist es die Leitungsrolle dieser Abteilung?
+                    if ($role->name === $department->leitung_role_name) {
+                        // Darf der Admin diese Leitungsrolle zuweisen? (Prüft min_rank_level)
+                        if ($adminRankLevel >= $department->min_rank_level_to_assign_leitung) {
                             $managableRoles->push($role);
                         }
                     } else {
-                        if ($adminRoleNames->contains($department['leitung_role'])) {
+                        // Es ist eine "normale" Abteilungsrolle (z.B. Mitglied)
+                        // Darf der Admin diese zuweisen (hat er selbst die Leitungsrolle)?
+                        if ($adminRoleNames->contains($department->leitung_role_name)) {
                             $managableRoles->push($role);
                         }
                     }
-                    break;
+                    break; // Rolle wurde einer Abteilung zugeordnet, nächste Rolle prüfen
                 }
             }
         }
@@ -187,16 +156,23 @@ class UserController extends Controller
         ]);
 
         $selectedRoles = $request->roles ?? [];
-        $highestRankName = 'praktikant';
+        
+        // --- ANGEPASSTE RANG-LOGIK (DB-ABFRAGE) ---
+        $highestRankName = 'praktikant'; // Dein Standardwert
         $highestLevel = 0;
+        
+        // Hole die Level der Ränge, die auch ausgewählt wurden, aus der DB
+        $rankLevels = Rank::whereIn('name', $selectedRoles)->pluck('level', 'name');
 
         foreach ($selectedRoles as $roleName) {
-            if (isset($this->rankHierarchy[$roleName]) && $this->rankHierarchy[$roleName] > $highestLevel) {
-                $highestLevel = $this->rankHierarchy[$roleName];
+            if ($rankLevels->has($roleName) && $rankLevels[$roleName] > $highestLevel) {
+                $highestLevel = $rankLevels[$roleName];
                 $highestRankName = $roleName;
             }
         }
         $validatedData['rank'] = $highestRankName;
+        // --- ENDE ANGEPASSTE RANG-LOGIK ---
+
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
 
         do {
@@ -259,9 +235,9 @@ class UserController extends Controller
 
         // 1. Prüfungsversuche laden (dein bestehender Code)
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam.trainingModule')
-                                    ->latest('completed_at') 
-                                    ->get();
+                                     ->with('exam.trainingModule')
+                                     ->latest('completed_at') 
+                                     ->get();
 
         // 2. Weitere Variablen laden, die der View erwartet
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
@@ -382,8 +358,8 @@ class UserController extends Controller
         foreach ($newlyAddedRoles as $addedRole) {
             if (!in_array($addedRole, $managableRoleNames)) {
                 return redirect()->back()
-                                 ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
-                                 ->withInput();
+                                ->withErrors(['roles' => 'Sie haben nicht die Berechtigung, die Rolle "' . $addedRole . '" zuzuweisen.'])
+                                ->withInput();
             }
         }
         // Sicherstellen, dass die Super-Admin-Rolle nicht entfernt werden kann
@@ -409,16 +385,21 @@ class UserController extends Controller
             }
         }
 
-        // Höchsten Rang neu berechnen
+        // --- ANGEPASSTE RANG-LOGIK (DB-ABFRAGE) ---
         $newRank = 'praktikant'; // Standard
         $highestLevel = 0;
+        
+        // Hole die Level der Ränge, die auch ausgewählt wurden, aus der DB
+        $rankLevels = Rank::whereIn('name', $submittedRoleNames)->pluck('level', 'name');
+
         foreach ($submittedRoleNames as $roleName) {
-            if (isset($this->rankHierarchy[$roleName]) && $this->rankHierarchy[$roleName] > $highestLevel) {
-                $highestLevel = $this->rankHierarchy[$roleName];
+            if ($rankLevels->has($roleName) && $rankLevels[$roleName] > $highestLevel) {
+                $highestLevel = $rankLevels[$roleName];
                 $newRank = $roleName;
             }
         }
         $validatedData['rank'] = $newRank;
+        // --- ENDE ANGEPASSTE RANG-LOGIK ---
 
         // Clone User object BEFORE update
         $userBeforeUpdate = clone $user;
@@ -446,24 +427,13 @@ class UserController extends Controller
             $existingPivot = $userBeforeUpdate->trainingModules->firstWhere('id', $moduleId)?->pivot;
 
             if ($existingPivot) {
-                // Modul war bereits vorhanden. Bestehende Daten beibehalten, nur Zuweisenden aktualisieren, falls gewünscht.
-                // Wir stellen sicher, dass der Zuweisende (falls es eine Selbstanmeldung war) nicht überschrieben wird, 
-                // ABER da der Admin hier manuell bestätigt/ändert, wird die assigned_by_user_id des Admins gespeichert.
+                // Modul war bereits vorhanden. Bestehende Daten beibehalten.
                 $modulesToSync[$moduleId] = [
                     'assigned_by_user_id' => $existingPivot->assigned_by_user_id ?? $adminUser->id,
                     'completed_at' => $existingPivot->completed_at, 
                     'notes' => $existingPivot->notes, 
                     'updated_at' => $timestamp,
                 ];
-
-                // Wenn der Admin das Modul NEU zuweist oder bestätigt:
-                if (!in_array($moduleId, $oldModuleIds)) {
-                     // Dieser Fall sollte theoretisch nicht eintreten, da es oben geprüft wird, aber als Fallback.
-                    $modulesToSync[$moduleId]['assigned_by_user_id'] = $adminUser->id;
-                    $modulesToSync[$moduleId]['completed_at'] = $timestamp->toDateString(); // Als bestanden markiert
-                    $modulesToSync[$moduleId]['notes'] = ($existingPivot->notes ? $existingPivot->notes . "\n" : '')
-                        . "Manuell zugewiesen/bestätigt von {$adminName} am " . $timestamp->format('d.m.Y H:i');
-                }
             } else {
                 // Standard-Pivot-Daten für NEU manuell zugewiesene Module
                 $modulesToSync[$moduleId] = [
@@ -473,9 +443,6 @@ class UserController extends Controller
                 ];
             }
         }
-
-        // Modul-Synchronisation durchführen.
-        // sync() entfernt Module, die nicht in $modulesToSync sind.
         $user->trainingModules()->sync($modulesToSync);
         // --- Ende Modul-Synchronisation ---
 
@@ -514,8 +481,15 @@ class UserController extends Controller
 
         // Service Record bei Beförderung/Degradierung
         if ($oldRank !== $newRank) {
-            $currentRankLevel = $this->rankHierarchy[$newRank] ?? 0;
-            $oldRankLevel = $this->rankHierarchy[$oldRank] ?? 0;
+            
+            // --- ANGEPASSTE RANG-LEVEL LOGIK (DB-ABFRAGE) ---
+            $changedRankLevels = Rank::whereIn('name', [$oldRank, $newRank])
+                                      ->pluck('level', 'name');
+            
+            $currentRankLevel = $changedRankLevels->get($newRank, 0);
+            $oldRankLevel = $changedRankLevels->get($oldRank, 0);
+            // --- ENDE ANGEPASSTE LOGIK ---
+
             $recordType = $currentRankLevel > $oldRankLevel ? 'Beförderung' : ($currentRankLevel < $oldRankLevel ? 'Degradierung' : 'Rangänderung');
             ServiceRecord::create([
                 'user_id' => $user->id,
