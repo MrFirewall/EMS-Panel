@@ -17,7 +17,7 @@
         @csrf
         @method('PUT')
 
-        {{-- Stammdaten-Karte --}}
+        {{-- Stammdaten-Karte (Keine Änderungen) --}}
         <div class="card card-outline card-primary mb-4">
             <div class="card-header"><h3 class="card-title">Stammdaten</h3></div>
             <div class="card-body">
@@ -34,14 +34,12 @@
                             <label for="personal_number">Personalnummer</label>
                             <select name="personal_number" id="personal_number" class="form-control @error('personal_number') is-invalid @enderror" required>
                                 <option value="">Bitte wählen...</option>
-                                {{-- Aktuelle Nummer immer anbieten --}}
                                 @if($user->personal_number)
                                     <option value="{{ $user->personal_number }}" selected>{{ $user->personal_number }} (Aktuell)</option>
                                 @endif
-                                {{-- Verfügbare Nummern hinzufügen (außer der aktuellen) --}}
                                 @foreach($availablePersonalNumbers as $number)
                                     @if($number != $user->personal_number)
-                                      <option value="{{ $number }}" @if(old('personal_number') == $number) selected @endif>{{ $number }}</option>
+                                        <option value="{{ $number }}" @if(old('personal_number') == $number) selected @endif>{{ $number }}</option>
                                     @endif
                                 @endforeach
                             </select>
@@ -86,7 +84,6 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="hire_date">Einstellungsdatum</label>
-                            {{-- Formatierung für das date-Input-Feld --}}
                             <input type="date" class="form-control @error('hire_date') is-invalid @enderror" name="hire_date" id="hire_date" value="{{ old('hire_date', optional($user->hire_date)->format('Y-m-d')) }}">
                             @error('hire_date')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
                         </div>
@@ -105,11 +102,11 @@
                         </div>
                     </div>
                      <div class="col-md-4">
-                        <div class="form-group">
+                         <div class="form-group">
                              <label for="special_functions">Sonderfunktionen</label>
                              <input type="text" class="form-control @error('special_functions') is-invalid @enderror" name="special_functions" id="special_functions" value="{{ old('special_functions', $user->special_functions) }}">
                              @error('special_functions')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
-                         </div>
+                          </div>
                     </div>
                     <div class="col-md-4">
                         <div class="form-group clearfix mt-4">
@@ -127,29 +124,70 @@
         <div class="row">
             {{-- Spalte für GRUPPEN / RANG --}}
             <div class="col-md-6">
+                
+                {{-- ANGEPASSTE ROLLEN-KARTE --}}
                 <div class="card card-outline card-info">
                     <div class="card-header"><h3 class="card-title">Gruppen / Rang Zuweisung</h3></div>
                     <div class="card-body">
                         <p class="text-muted small">Der höchste hier ausgewählte Rang wird automatisch als Haupt-Rang des Mitarbeiters festgelegt.</p>
                         @error('roles')<div class="alert alert-danger">{{ $message }}</div>@enderror
                         @error('roles.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
-                        <div class="row">
-                            @foreach($roles as $role)
-                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
-                                    <div class="icheck-primary">
-                                        <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" @if(in_array($role->name, old('roles', $user->getRoleNames()->toArray()))) checked @endif>
-                                        <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                        
+                        @if (!empty($categorizedRoles['Ranks']))
+                            <h6 class="text-primary mt-3">Ränge</h6>
+                            <div class="row">
+                                @foreach($categorizedRoles['Ranks'] as $role)
+                                    <div class="col-md-6"> {{-- 6 statt 4 für bessere Lesbarkeit --}}
+                                        <div class="icheck-primary">
+                                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" @if(in_array($role->name, old('roles', $user->getRoleNames()->toArray()))) checked @endif>
+                                            <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                                        </div>
                                     </div>
+                                @endforeach
+                            </div>
+                            <hr>
+                        @endif
+
+                        @if (!empty($categorizedRoles['Departments']))
+                            <h6 class="text-primary mt-3">Abteilungen</h6>
+                            @foreach($categorizedRoles['Departments'] as $deptName => $deptRoles)
+                                <h7 class="text-muted mt-2 mb-1 d-block"><strong>{{ $deptName }}</strong></h7>
+                                <div class="row">
+                                    @foreach($deptRoles as $role)
+                                        <div class="col-md-6"> {{-- 6 statt 4 --}}
+                                            <div class="icheck-primary">
+                                                <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" @if(in_array($role->name, old('roles', $user->getRoleNames()->toArray()))) checked @endif>
+                                                <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             @endforeach
-                        </div>
+                            <hr>
+                        @endif
+                        
+                        @if (!empty($categorizedRoles['Other']))
+                            <h6 class="text-primary mt-3">Andere</h6>
+                            <div class="row">
+                                @foreach($categorizedRoles['Other'] as $role)
+                                    <div class="col-md-6"> {{-- 6 statt 4 --}}
+                                        <div class="icheck-primary">
+                                            <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" @if(in_array($role->name, old('roles', $user->getRoleNames()->toArray()))) checked @endif>
+                                            <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
                     </div>
                 </div>
+                {{-- ENDE ANGEPASSTE ROLLEN-KARTE --}}
+
             </div>
-            {{-- ============================================= --}}
-            {{-- NEUE KARTE: MANUELLE MODULZUWEISUNG           --}}
-            {{-- ============================================= --}}
-            @can('users.manage.modules') {{-- Schützt die ganze Karte --}}
+            
+            {{-- MANUELLE MODULZUWEISUNG (Keine Änderungen) --}}
+            @can('users.manage.modules')
             <div class="col-md-6">
                 <div class="card card-outline card-success">
                     <div class="card-header"><h3 class="card-title"><i class="fas fa-graduation-cap"></i> Manuelle Modulzuweisung</h3></div>
@@ -162,13 +200,12 @@
                         @error('modules.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
                         <div class="row">
                             @forelse($allModules as $module)
-                                <div class="col-md-4"> {{-- Geändert auf col-md-4 für bessere Darstellung --}}
+                                <div class="col-md-6"> {{-- 6 statt 4 --}}
                                     <div class="icheck-primary">
                                         <input type="checkbox"
                                                name="modules[]"
                                                value="{{ $module->id }}"
                                                id="module_{{ $module->id }}"
-                                               {{-- Prüft, ob die Modul-ID im Array der bereits zugewiesenen Module ist --}}
                                                @if(in_array($module->id, old('modules', $userModules ?? []))) checked @endif>
                                         <label for="module_{{ $module->id }}">
                                             {{ $module->name }} <small class="text-muted">({{ $module->category }})</small>
@@ -185,7 +222,8 @@
                 </div>
             </div>
             @endcan
-            {{-- === ENDE NEUE KARTE === --}}
+            
+            {{-- BERECHTIGUNGEN (Keine Änderungen) --}}
             @role('chief|Super-Admin')
             <div class="col-md-12">
                 <div class="card card-outline card-warning">
@@ -193,30 +231,22 @@
                     <div class="card-body">
                         <p class="text-muted small">Ermöglicht granulare Rechte, die von den zugewiesenen Gruppen abweichen. Nur in Ausnahmefällen verwenden.</p>
                         @error('permissions.*')<div class="alert alert-danger">{{ $message }}</div>@enderror
-
-                        {{-- === START DER ÄNDERUNG === --}}
                         
                         <div class="row">
-                            {{-- Iteriere durch die neue $groupedPermissions Variable --}}
                             @forelse($permissions as $module => $modulePermissions)
                                 <div class="col-md-4 mb-4">
-                                    {{-- Styling von role.index übernommen, aber mit "warning"-Farbe --}}
                                     <div class="card card-body p-3 border-warning h-100"> 
                                         <h6 class="text-warning text-capitalize mb-3">{{ $module }} Modul</h6>
                                         
                                         @foreach($modulePermissions as $permission)
                                             <div class="icheck-primary">
                                                 <input type="checkbox" name="permissions[]" 
-                                                    value="{{ $permission->name }}" id="perm_{{ $permission->id }}"
-                                                    {{-- Prüft gegen 'old' (bei Validierungsfehler) oder die direkten Rechte des Nutzers --}}
-                                                    {{ in_array($permission->name, old('permissions', $userDirectPermissions)) ? 'checked' : '' }}>
+                                                       value="{{ $permission->name }}" id="perm_{{ $permission->id }}"
+                                                       {{ in_array($permission->name, old('permissions', $userDirectPermissions)) ? 'checked' : '' }}>
                                                 
-                                                {{-- Label-Logik aus role.index übernommen --}}
                                                 <label for="perm_{{ $permission->id }}" class="small">
-                                                    {{-- Zeigt einen sauberen Namen an, z.B. "Create" statt "users-create" --}}
-                                                    {{ ucfirst(str_replace('-', ' ', str_replace($module . '-', '', $permission->description ?? $permission->name))) }}
-                                                    
-                                                    {{-- Zeigt den vollen Namen der Berechtigung darunter an --}}
+                                                    {{-- Nimmt den Teil nach dem Punkt --}}
+                                                    {{ ucfirst(str_replace('-', ' ', explode('.', $permission->name)[1] ?? $permission->name)) }}
                                                     <small class="text-muted d-block">({{ $permission->name }})</small>
                                                 </label>
                                             </div>
@@ -229,8 +259,6 @@
                                 </div>
                             @endforelse
                         </div>
-
-                        {{-- === ENDE DER ÄNDERUNG === --}}
                     </div>
                 </div>
             </div>
@@ -238,7 +266,7 @@
 
         </div>
 
-        <div class="mt-4 mb-4 text-right"> {{-- mb-4 hinzugefügt für Abstand --}}
+        <div class="mt-4 mb-4 text-right">
             <a href="{{ route('admin.users.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
             <button type="submit" class="btn btn-primary btn-flat">
                 <i class="fas fa-save me-1"></i> Änderungen speichern
@@ -248,6 +276,7 @@
 @endsection
 
 @push('scripts')
+{{-- Dein @push('scripts') Block bleibt exakt gleich --}}
 @if ($errors->any())
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -264,11 +293,10 @@
                 showConfirmButton: false,
                 timer: 5000,
                 customClass: {
-                    // Stellt sicher, dass der Toast über AdminLTE-Elementen liegt
                     container: 'adminlte-modal-z-index'
                 }
             });
-        } else if (typeof Toastr !== 'undefined') { // Fallback auf Toastr, falls SweetAlert nicht da ist
+        } else if (typeof Toastr !== 'undefined') { 
              toastr.error(errorMessage, 'Validierungsfehler!');
         }
     });

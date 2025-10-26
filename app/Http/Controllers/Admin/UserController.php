@@ -130,12 +130,53 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = $this->getManagableRoles();
+        $managableRoles = $this->getManagableRoles(); // Die flache Liste aller Rollen
+        
+        // --- NEUE KATEGORISIERUNG ---
+        $allRanks = Rank::pluck('name'); // Alle Rang-Namen aus der DB
+        $allDepartments = Department::with('roles')->get(); // Alle Abteilungen & ihre Rollen
+        
+        $categorizedRoles = [
+            'Ranks' => [],
+            'Departments' => [],
+            'Other' => []
+        ];
+
+        foreach ($managableRoles as $role) {
+            // 1. Ist es ein Rang?
+            if ($allRanks->contains($role->name)) {
+                $categorizedRoles['Ranks'][] = $role;
+                continue;
+            }
+            
+            // 2. Ist es eine Abteilungsrolle?
+            $found = false;
+            foreach ($allDepartments as $dept) {
+                if ($dept->roles->contains('id', $role->id)) {
+                    // Erstelle die Abteilungskategorie, falls sie noch nicht existiert
+                    if (!isset($categorizedRoles['Departments'][$dept->name])) {
+                        $categorizedRoles['Departments'][$dept->name] = [];
+                    }
+                    $categorizedRoles['Departments'][$dept->name][] = $role;
+                    $found = true;
+                    break; // Rolle gefunden, nächste Rolle prüfen
+                }
+            }
+
+            // 3. Wenn nirgends zugeordnet -> "Andere"
+            if (!$found) {
+                $categorizedRoles['Other'][] = $role;
+            }
+        }
+        // --- ENDE KATEGORISIERUNG ---
+
         $statuses = [
             'Aktiv', 'Probezeit', 'Beobachtung', 'Beurlaubt', 'Krankgeschrieben',
             'Suspendiert', 'Ausgetreten', 'Bewerbungsphase',
         ];
-        return view('admin.users.create', compact('roles', 'statuses'));
+        
+        // WICHTIG: Wir übergeben $categorizedRoles statt $roles
+        return view('admin.users.create', compact('categorizedRoles', 'statuses'));
     }
 
     public function store(Request $request)
@@ -296,27 +337,60 @@ class UserController extends Controller
             'Aktiv', 'Beurlaubt', 'Beobachtung', 'Krankgeschrieben',
             'Suspendiert', 'Ausgetreten', 'Bewerbungsphase', 'Probezeit',
         ];
-        $roles = $this->getManagableRoles();
+        
+        // --- NEUE KATEGORISIERUNG ---
+        $managableRoles = $this->getManagableRoles(); // Die flache Liste
+        $allRanks = Rank::pluck('name');
+        $allDepartments = Department::with('roles')->get();
+        
+        $categorizedRoles = [
+            'Ranks' => [],
+            'Departments' => [],
+            'Other' => []
+        ];
+
+        foreach ($managableRoles as $role) {
+            // 1. Ist es ein Rang?
+            if ($allRanks->contains($role->name)) {
+                $categorizedRoles['Ranks'][] = $role;
+                continue;
+            }
+            // 2. Ist es eine Abteilungsrolle?
+            $found = false;
+            foreach ($allDepartments as $dept) {
+                if ($dept->roles->contains('id', $role->id)) {
+                    if (!isset($categorizedRoles['Departments'][$dept->name])) {
+                        $categorizedRoles['Departments'][$dept->name] = [];
+                    }
+                    $categorizedRoles['Departments'][$dept->name][] = $role;
+                    $found = true;
+                    break; 
+                }
+            }
+            // 3. "Andere"
+            if (!$found) {
+                $categorizedRoles['Other'][] = $role;
+            }
+        }
+        // --- ENDE KATEGORISIERUNG ---
+
         $permissions = Permission::all()->sortBy('name')->groupBy(function ($item) {
-            // Updated grouping logic to handle permissions without '-'
-            $parts = explode('.', $item->name, 2); // Split by '.'
+            $parts = explode('.', $item->name, 2);
             return $parts[0];
         });
         $userDirectPermissions = $user->getPermissionNames()->toArray();
 
         $allPossibleNumbers = range(1, 150);
-        // Schließe nur Nummern von AKTIVEN Usern aus (außer dem aktuellen User selbst)
         $takenNumbers = User::where('status', 'Aktiv')->where('id', '!=', $user->id)->pluck('personal_number')->toArray();
         $availablePersonalNumbers = array_diff($allPossibleNumbers, $takenNumbers);
 
-        // Alle verfügbaren Trainingsmodule laden
         $allModules = TrainingModule::orderBy('category')->orderBy('name')->get();
-        // Die IDs der Module laden, die der User bereits hat
         $userModules = $user->trainingModules()->pluck('training_module_id')->toArray();
 
         return view('admin.users.edit', compact(
             'user',
-            'roles',
+            // 'roles', // Alte Variable
+            'categorizedRoles', // NEUE Variable
             'permissions',
             'userDirectPermissions',
             'availablePersonalNumbers',

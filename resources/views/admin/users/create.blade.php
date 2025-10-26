@@ -16,7 +16,7 @@
     <form method="POST" action="{{ route('admin.users.store') }}">
         @csrf
 
-        {{-- Stammdaten-Karte --}}
+        {{-- Stammdaten-Karte (Keine Änderungen hier) --}}
         <div class="card card-outline card-primary mb-4">
             <div class="card-header"><h3 class="card-title">Stammdaten des Mitarbeiters</h3></div>
             <div class="card-body">
@@ -37,9 +37,7 @@
                         <div class="form-group">
                             <label for="status">Status</label>
                             <select name="status" id="status" class="form-control" required>
-                                {{-- Standard-Auswahl, falls nichts anderes zutrifft --}}
                                 <option value="" disabled>Bitte auswählen</option>
-                                
                                 @foreach($statuses as $status)
                                     <option value="{{ $status }}" {{ old('status', 'Bewerbungsphase') == $status ? 'selected' : '' }}>
                                         {{ $status }}
@@ -97,24 +95,64 @@
             </div>
         </div>
 
+        {{-- ANGEPASSTE ROLLEN-KARTE --}}
         <div class="card card-outline card-info">
             <div class="card-header">
                 <h3 class="card-title">Gruppen / Rang Zuweisung</h3>
             </div>
             <div class="card-body">
                 <p class="text-muted small">Wähle die Gruppen aus, die der Benutzer haben soll. Der höchste Rang wird automatisch als Haupt-Rang festgelegt.</p>
-                <div class="row">
-                    @foreach($roles as $role)
-                        <div class="col-md-4">
-                            <div class="icheck-primary">
-                                <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}>
-                                <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                
+                @if (!empty($categorizedRoles['Ranks']))
+                    <h6 class="text-primary mt-3">Ränge</h6>
+                    <div class="row">
+                        @foreach($categorizedRoles['Ranks'] as $role)
+                            <div class="col-md-4">
+                                <div class="icheck-primary">
+                                    <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}>
+                                    <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                                </div>
                             </div>
+                        @endforeach
+                    </div>
+                    <hr>
+                @endif
+
+                @if (!empty($categorizedRoles['Departments']))
+                    <h6 class="text-primary mt-3">Abteilungen</h6>
+                    @foreach($categorizedRoles['Departments'] as $deptName => $deptRoles)
+                        <h7 class="text-muted mt-2 mb-1 d-block"><strong>{{ $deptName }}</strong></h7>
+                        <div class="row">
+                            @foreach($deptRoles as $role)
+                                <div class="col-md-4">
+                                    <div class="icheck-primary">
+                                        <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}>
+                                        <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @endforeach
-                </div>
+                    <hr>
+                @endif
+                
+                @if (!empty($categorizedRoles['Other']))
+                    <h6 class="text-primary mt-3">Andere</h6>
+                    <div class="row">
+                        @foreach($categorizedRoles['Other'] as $role)
+                            <div class="col-md-4">
+                                <div class="icheck-primary">
+                                    <input type="checkbox" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}" {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}>
+                                    <label for="role_{{ $role->id }}">{{ $role->name }}</label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
             </div>
         </div>
+        {{-- ENDE ANGEPASSTE ROLLEN-KARTE --}}
 
         <div class="mt-4 text-right">
             <a href="{{ route('admin.users.index') }}" class="btn btn-default btn-flat">Abbrechen</a>
