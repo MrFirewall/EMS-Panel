@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Department;
-use Spatie\Permission\Models\Role; // Spatie Role
+use App\Models\Role; // Spatie Role
 use Illuminate\Support\Facades\DB;
 
 

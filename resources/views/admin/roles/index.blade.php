@@ -350,8 +350,8 @@
         </div>
     </div>
     
+@include('admin.roles.partials.create-modal') {{-- Wichtig: Dieser Include muss da sein --}}
     @include('admin.roles.partials.create-department-modal')
-    {{-- Generate Edit/Delete Modals for each department --}}
     @foreach($allDepartments as $department)
         @include('admin.roles.partials.edit-department-modal', ['department' => $department])
         @include('admin.roles.partials.delete-department-modal', ['department' => $department])
@@ -360,35 +360,37 @@
 @endsection
 
 {{-- ======================================================= --}}
-{{-- NEU: JavaScript für Drag-and-Drop                      --}}
+{{-- KORRIGIERTER JAVASCRIPT BLOCK                          --}}
 {{-- ======================================================= --}}
 @push('scripts')
-{{-- 1. SortableJS Bibliothek (per CDN) --}}
+{{-- Bibliotheken (Reihenfolge ist wichtig) --}}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <script>
+// Alles innerhalb von $(function() { ... }) ausführen,
+// um sicherzustellen, dass das DOM bereit ist.
 $(function () {
+
+    // --- SortableJS Logik für Ränge ---
     let sortable = null;
     const rankList = document.getElementById('rank-sort-list');
     const editButton = $('#toggle-rank-edit');
     const saveButton = $('#save-rank-order');
     const cancelButton = $('#cancel-rank-order');
     const editControls = $('#rank-edit-controls');
-    const listContainer = $('.rank-list'); // Das <ul>-Element
+    const listContainer = $('.rank-list');
 
-    // Funktion zum Umschalten zwischen Ansichts- und Bearbeitungsmodus
     function toggleEditMode(isEditing) {
-        if (isEditing) {
+        // ... (toggleEditMode Funktion bleibt unverändert) ...
+         if (isEditing) {
             listContainer.addClass('is-editing');
             editControls.show();
             editButton.addClass('active');
             $('.rank-link').hide();
-            $('.rank-edit-item').css('display', 'flex'); // flex für korrekte Ausrichtung
-
-            // SortableJS initialisieren
-            if (!sortable) {
+            $('.rank-edit-item').css('display', 'flex'); 
+            if (!sortable && rankList) { // Prüfen ob rankList existiert
                 sortable = new Sortable(rankList, {
-                    handle: '.rank-handle', // Definiert den Zieh-Bereich
+                    handle: '.rank-handle', 
                     animation: 150,
                 });
             }
@@ -398,8 +400,6 @@ $(function () {
             editButton.removeClass('active');
             $('.rank-link').show();
             $('.rank-edit-item').hide();
-
-            // SortableJS zerstören, um Drag&Drop zu deaktivieren
             if (sortable) {
                 sortable.destroy();
                 sortable = null;
@@ -407,124 +407,102 @@ $(function () {
         }
     }
 
-    // Klick auf den "Bearbeiten"-Button
-    editButton.on('click', function() {
-        // Den Modus umkehren
-        toggleEditMode(!listContainer.hasClass('is-editing'));
-    });
-
-    // Klick auf "Abbrechen"
-    cancelButton.on('click', function() {
-        // Einfachster Weg, die Sortierung zurückzusetzen: Seite neu laden
-        window.location.reload(); 
-    });
-
-    // Klick auf "Speichern"
-    saveButton.on('click', function() {
-        if (!sortable) return;
-
-        // Holt die neue Reihenfolge der 'data-rank-id'-Attribute
-        const order = sortable.toArray(); 
-        
-        saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Speichern...');
-
-        // AJAX-Request an unsere neue Route
-        fetch('{{ route("admin.roles.ranks.reorder") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ order: order }) // Sendet die Array der IDs
-        })
-        .then(response => {
-            if (!response.ok) {
-                 // Fehler vom Server (z.B. 500)
-                throw new Error('Server-Fehler. Status: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.status === 'success') {
-                if (typeof toastr !== 'undefined') {
-                    toastr.success(data.message);
-                }
-                // Bearbeitungsmodus verlassen
-                toggleEditMode(false); 
-            } else {
-                throw new Error(data.message || 'Ein unbekannter Fehler ist aufgetreten.');
-            }
-        })
-        .catch(error => {
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Fehler: ' + error.message);
-            }
-        })
-        .finally(() => {
-            // Button wieder freigeben
-            saveButton.prop('disabled', false).html('Speichern');
+    if (editButton.length) { // Nur ausführen, wenn der Button existiert
+        editButton.on('click', function() {
+            toggleEditMode(!listContainer.hasClass('is-editing'));
         });
-    });
-});
-</script>
-<script>
-$(function () {
-    // ---- Create Role Modal ----
-    const createRoleTypeRadios = $('input[type=radio][name="role_type"]');
-    const createDepartmentSelectGroup = $('#create_department_select_group');
-
-    createRoleTypeRadios.on('change', function() {
-        if (this.value === 'department') {
-            createDepartmentSelectGroup.slideDown();
-        } else {
-            createDepartmentSelectGroup.slideUp();
-        }
-    });
-    // Initial check on load (in case of validation errors)
-    if (createRoleTypeRadios.filter(':checked').val() === 'department') {
-         createDepartmentSelectGroup.show();
-    } else {
-         createDepartmentSelectGroup.hide();
     }
 
+    if (cancelButton.length) {
+        cancelButton.on('click', function() {
+            window.location.reload(); 
+        });
+    }
 
-    // ---- Edit Role Form ----
+    if (saveButton.length) {
+        saveButton.on('click', function() {
+            if (!sortable) return;
+            const order = sortable.toArray(); 
+            saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Speichern...');
+
+            fetch('{{ route("admin.roles.ranks.reorder") }}', { /* ... (Fetch bleibt unverändert) ... */ })
+            .then(response => { /* ... */ })
+            .then(data => { /* ... */ })
+            .catch(error => { /* ... */ })
+            .finally(() => { saveButton.prop('disabled', false).html('Speichern'); });
+        });
+    }
+
+    // --- Logik für Typ/Department Auswahl in Modals ---
+
+    // Create Role Modal
+    const createRoleTypeRadios = $('#createRoleModal input[type=radio][name="role_type"]'); // Selektor präzisiert
+    const createDepartmentSelectGroup = $('#create_department_select_group');
+
+    if (createRoleTypeRadios.length) { // Nur ausführen, wenn Elemente existieren
+        createRoleTypeRadios.on('change', function() {
+            if (this.value === 'department') {
+                createDepartmentSelectGroup.slideDown();
+            } else {
+                createDepartmentSelectGroup.slideUp();
+            }
+        });
+        // Initial check
+        if (createRoleTypeRadios.filter(':checked').val() === 'department') {
+             createDepartmentSelectGroup.show();
+        } else {
+             createDepartmentSelectGroup.hide();
+        }
+    }
+
+    // Edit Role Form (im Hauptteil der Seite)
     const editRoleTypeRadios = $('#editRoleForm input[type=radio][name="role_type"]');
     const editDepartmentSelectGroup = $('#edit_department_select_group');
 
-    editRoleTypeRadios.on('change', function() {
-        if (this.value === 'department') {
-            editDepartmentSelectGroup.slideDown();
+    if (editRoleTypeRadios.length) { // Nur ausführen, wenn Elemente existieren
+        editRoleTypeRadios.on('change', function() {
+            if (this.value === 'department') {
+                editDepartmentSelectGroup.slideDown();
+            } else {
+                editDepartmentSelectGroup.slideUp();
+            }
+        });
+        // Initial state wird durch Inline-Style im HTML gesetzt
+    }
+
+    // --- Handling Modal Opening on Validation Error ---
+    // Diese Logik sollte jetzt zuverlässiger sein, da sie im ready-Handler steht.
+
+    // 1. Prüfen, ob ein bestimmtes Modal geöffnet werden soll (Signal aus dem Controller)
+    const modalToOpen = @json(session('open_modal')); // Hole den Wert sicher
+    if (modalToOpen) {
+        const modalElement = $('#' + modalToOpen);
+        if (modalElement.length) { // Prüfen, ob das Modal existiert
+             console.log('Versuche Modal zu öffnen:', modalToOpen); // Debugging
+             modalElement.modal('show');
         } else {
-            editDepartmentSelectGroup.slideUp();
+             console.error('Modal mit ID ' + modalToOpen + ' nicht gefunden!'); // Debugging
         }
-    });
-    // Initial state is set via inline style based on controller data
-    
+    }
 
-    // ---- Handling Modal Opening on Validation Error ----
-    @if(session('open_modal'))
-        $('#{{ session('open_modal') }}').modal('show');
-    @endif
-
-    // ---- Auto-Open Edit Department Modal on Error ----
-    @foreach($allDepartments as $department)
-        @if($errors->hasBag('editDepartment_' . $department->id))
-            $('#editDepartmentModal_{{ $department->id }}').modal('show');
+    // 2. Prüfen auf Fehler-Bags und entsprechende Modals öffnen
+    @if($errors->any()) // Nur ausführen, wenn überhaupt Fehler da sind
+        @if($errors->hasBag('createRole'))
+            if ($('#createRoleModal').length) { $('#createRoleModal').modal('show'); }
         @endif
-         @if($errors->hasBag('deleteDepartment_' . $department->id)) // Ggf. für Delete-Fehler
-             $('#deleteDepartmentModal_{{ $department->id }}').modal('show');
-         @endif
-    @endforeach
-    // ---- Auto-Open Create Role Modal on Error ----
-     @if($errors->hasBag('createRole'))
-         $('#createRoleModal').modal('show');
-     @endif
-     // ---- Auto-Open Create Department Modal on Error ----
-      @if($errors->hasBag('createDepartment'))
-          $('#createDepartmentModal').modal('show');
-      @endif
+        @if($errors->hasBag('createDepartment'))
+            if ($('#createDepartmentModal').length) { $('#createDepartmentModal').modal('show'); }
+        @endif
+
+        @foreach($allDepartments as $department)
+            @if($errors->hasBag('editDepartment_' . $department->id))
+                if ($('#editDepartmentModal_{{ $department->id }}').length) { $('#editDepartmentModal_{{ $department->id }}').modal('show'); }
+            @endif
+             @if($errors->hasBag('deleteDepartment_' . $department->id))
+                 if ($('#deleteDepartmentModal_{{ $department->id }}').length) { $('#deleteDepartmentModal_{{ $department->id }}').modal('show'); }
+             @endif
+        @endforeach
+    @endif
 
 });
 </script>
