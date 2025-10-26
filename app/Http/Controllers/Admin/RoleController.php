@@ -80,7 +80,7 @@ class RoleController extends Controller
         }
         
         // 5. Alle übrigen Rollen zu 'Other' hinzufügen
-        $categorizedRoles['Other'] = $allRoles->except($processedRoleNames)->values();
+        $categorizedRoles['Other'] = $allRoles->except($processedRoleNames->toArray())->values();
 
         // 6. Logik für die rechte Spalte (Berechtigungen) - bleibt gleich
         $permissions = Permission::all()->sortBy('name')->groupBy(function ($item) {
