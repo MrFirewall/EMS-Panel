@@ -76,14 +76,8 @@ class PermissionsSeeder extends Seeder
 
         // --- ROLLEN / GRUPPEN ---
         $role_super_admin = Role::firstOrCreate(['name' => 'Super-Admin', 'guard_name' => 'web']);
-        $role_ems_director = Role::firstOrCreate(['name' => 'ems-director', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'assistant-ems-director', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'instructor', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'emergency-doctor', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'paramedic', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'emt', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'emt-trainee', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'praktikant', 'guard_name' => 'web']);
+        $role_ems_director = Role::firstOrCreate(['name' => 'chief', 'guard_name' => 'web']);
+
         
         // Rechte zuweisen (givePermissionTo ist intelligent und fügt nur hinzu, was fehlt)
         $all_permissions = Permission::all();
