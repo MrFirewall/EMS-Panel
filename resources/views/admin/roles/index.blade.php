@@ -4,6 +4,8 @@
 
 {{-- Eigene Styles für den Drag-and-Drop-Modus --}}
 @push('styles')
+{{-- NEU: Toastr CSS hinzugefügt --}}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <style>
     /* Versteckt die normalen Links im Bearbeiten-Modus */
     .rank-list.is-editing .rank-link {
@@ -94,7 +96,7 @@
                 <div class="card-body p-0">
                     {{-- Diese <ul> wird per JS sortierbar gemacht --}}
                     <ul class="list-group list-group-flush rank-list" id="rank-sort-list">
-                        @forelse($categorizedRoles['Ranks'] as $role)
+                        @forelse($categorIZEDRoles['Ranks'] as $role)
                             {{-- WICHTIG: data-id enthält die ID aus der 'ranks'-Tabelle --}}
                             <li class="list-group-item" data-id="{{ $role->rank_id }}">
                                 
@@ -366,12 +368,36 @@
 {{-- ======================================================= --}}
 @push('scripts')
 {{-- Bibliotheken (Reihenfolge ist wichtig) --}}
+{{-- NEU: Toastr JS hinzugefügt (jQuery wird vorausgesetzt) --}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <script>
 // Alles innerhalb von $(function() { ... }) ausführen,
 // um sicherzustellen, dass das DOM bereit ist.
 $(function () {
+
+    // --- NEU: Toastr Konfiguration ---
+    if (typeof toastr !== 'undefined') {
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": false,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        }
+    }
+    // --- ENDE Toastr Konfiguration ---
 
     // --- SortableJS Logik für Ränge ---
     let sortable = null;
@@ -436,7 +462,12 @@ $(function () {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             if (!csrfToken) {
                 console.error('CSRF-Token nicht gefunden! Stelle sicher, dass <meta name="csrf-token" content="{{ csrf_token() }}"> im Head deines Layouts vorhanden ist.');
-                toastr.error('Sicherheits-Token fehlt. Speichern abgebrochen.');
+                // Fallback, falls toastr doch nicht geladen werden konnte, um einen weiteren Fehler zu vermeiden
+                if(typeof toastr !== 'undefined') {
+                    toastr.error('Sicherheits-Token fehlt. Speichern abgebrochen.');
+                } else {
+                    alert('Sicherheits-Token fehlt. Speichern abgebrochen.');
+                }
                 saveButton.prop('disabled', false).html('Speichern');
                 return;
             }
@@ -565,3 +596,4 @@ $(function () {
 });
 </script>
 @endpush
+
