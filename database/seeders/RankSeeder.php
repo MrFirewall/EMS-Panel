@@ -3,7 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Rank; // Importieren
+use App\Models\Rank;
+// Schema-Import wird hier nicht benötigt
 
 class RankSeeder extends Seeder
 {
@@ -24,14 +25,14 @@ class RankSeeder extends Seeder
             'trainee'       => 1,
         ];
 
-        // Tabelle leeren, falls gewünscht
-        Rank::truncate();
-
+        // Entferne die Zeile Rank::truncate(); komplett.
+        
+        // --- ÄNDERUNG: Nutze updateOrCreate statt create ---
         foreach ($rankHierarchy as $name => $level) {
-            Rank::create([
-                'name' => $name,
-                'level' => $level,
-            ]);
+            Rank::updateOrCreate(
+                ['name' => $name],    // Suche nach einem Rang mit diesem Namen
+                ['level' => $level]  // Erstelle/aktualisiere ihn mit diesem Level
+            );
         }
     }
 }
