@@ -132,6 +132,7 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     Route::resource('announcements', AnnouncementController::class);
     Route::resource('users', UserController::class)->except(['destroy']);
     Route::resource('roles', RoleController::class)->except(['create', 'edit', 'show']);
+    Route::post('roles/ranks/reorder', [RoleController::class, 'updateRankOrder'])->name('admin.roles.ranks.reorder')->middleware('can:roles.edit');
     Route::resource('permissions', PermissionController::class)->except(['show']);
 
     // Spezifische Admin-Aktionen
@@ -197,11 +198,6 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
         // NEU: Löschen-Route
         Route::delete('/{attempt:uuid}', [AdminExamAttemptController::class, 'destroy'])->name('destroy');
     });
-
-    // ALTE ROUTEN (Jetzt im AdminExamAttemptController)
-    // Route::post('exams/generate-link', [ExamController::class, 'generateLink'])->name('exams.generateLink'); // ERSETZT
-    // Route::get('/exams/result/{uuid}', [ExamController::class, 'result'])->name('exams.result'); // ERSETZT
-    // Route::post('/exams/finalize/{uuid}', [ExamController::class, 'finalizeEvaluation'])->name('exams.finalize'); // ERSETZT
 
     // Benachrichtigungsregeln Verwaltung
     Route::middleware(['can:notification.rules.manage'])

@@ -2,6 +2,44 @@
 
 @section('title', 'Rollen- und Berechtigungsverwaltung')
 
+{{-- NEU: Eigene Styles für den Drag-and-Drop-Modus --}}
+@push('styles')
+<style>
+    /* Versteckt die normalen Links im Bearbeiten-Modus */
+    .rank-list.is-editing .rank-link {
+        display: none;
+    }
+    /* Zeigt die Bearbeitungs-Items (mit Handle) nur im Bearbeiten-Modus an */
+    .rank-edit-item {
+        display: none; /* Standardmäßig versteckt */
+        align-items: center;
+        width: 100%;
+        padding: 0.75rem 1.25rem; /* Gleiches Padding wie list-group-item */
+    }
+    .rank-list.is-editing .rank-edit-item {
+        display: flex; 
+    }
+    /* Das list-group-item selbst wird zum Container */
+    .rank-list.is-editing .list-group-item {
+        cursor: grab;
+        padding: 0; /* Padding wird vom Kind-Element übernommen */
+    }
+    /* Styling für den Drag-Handle */
+    .rank-handle {
+        cursor: grab;
+        margin-right: 15px;
+        color: #999;
+    }
+    .rank-edit-item span:first-of-type {
+        flex-grow: 1; /* Sorgt dafür, dass der Name den Platz einnimmt */
+    }
+    /* Styling für den "Bearbeiten" Button, wenn aktiv */
+    #toggle-rank-edit.active {
+        color: #007bff; /* Blau, um Aktivität zu signalisieren */
+    }
+</style>
+@endpush
+
 @section('content')
     <div class="content-header">
         <div class="container-fluid">
@@ -10,7 +48,6 @@
                     <h1 class="m-0"><i class="fas fa-user-shield me-2"></i> Rollen- und Berechtigungsverwaltung</h1>
                 </div>
                 <div class="col-sm-6 text-right">
-                    {{-- ANGEPASST: Nutzt jetzt die neue Berechtigung 'roles.create' --}}
                     @can('roles.create')
                         <button type="button" class="btn btn-sm btn-success btn-flat" data-toggle="modal" data-target="#createRoleModal">
                             <i class="fas fa-plus me-1"></i> Neue Rolle erstellen
@@ -23,15 +60,91 @@
 
     <div class="row">
         
-        {{-- Linke Spalte: Rollenliste (bleibt unverändert) --}}
+        {{-- ======================================================= --}}
+        {{-- Linke Spalte: Rollenliste (STARK ANGEPASST)             --}}
+        {{-- ======================================================= --}}
         <div class="col-lg-4">
+
             <div class="card card-outline card-primary">
                 <div class="card-header">
-                    <h3 class="card-title">Alle Rollen ({{ $roles->count() ?? 0 }})</h3>
+                    <h3 class="card-title">Ränge (Hierarchie)</h3>
+                    <div class="card-tools">
+                        @can('roles.edit')
+                        <button type="button" class="btn btn-xs btn-tool" id="toggle-rank-edit" title="Hierarchie bearbeiten">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        @endcan
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {{-- Diese <ul> wird per JS sortierbar gemacht --}}
+                    <ul class="list-group list-group-flush rank-list" id="rank-sort-list">
+                        @forelse($categorizedRoles['Ranks'] as $role)
+                            {{-- WICHTIG: data-rank-id enthält die ID aus der 'ranks'-Tabelle --}}
+                            <li class="list-group-item" data-rank-id="{{ $role->rank_id }}">
+                                
+                                {{-- Ansicht 1: Normaler Link (Standard) --}}
+                                <a href="{{ route('admin.roles.index', ['role' => $role->id]) }}"
+                                   class="rank-link d-flex justify-content-between align-items-center @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
+                                    <span>{{ ucfirst($role->name) }}</span>
+                                    <span class="badge bg-secondary">{{ $role->users_count ?? 0 }} Nutzer</span>
+                                </a>
+                                
+                                {{-- Ansicht 2: Bearbeitungs-Item (Versteckt) --}}
+                                <div class="rank-edit-item">
+                                    <i class="fas fa-grip-vertical rank-handle"></i>
+                                    <span>{{ ucfirst($role->name) }}</span>
+                                    <span class="badge bg-secondary">{{ $role->users_count ?? 0 }} Nutzer</span>
+                                </div>
+                            </li>
+                        @empty
+                            <div class="list-group-item text-center text-muted">Keine Ränge in der 'ranks'-Tabelle definiert.</div>
+                        @endforelse
+                    </ul>
+                    {{-- Steuer-Buttons für den Bearbeiten-Modus --}}
+                    <div class="p-2" id="rank-edit-controls" style="display: none;">
+                        <button id="save-rank-order" class="btn btn-success btn-sm btn-flat">Speichern</button>
+                        <button id="cancel-rank-order" class="btn btn-default btn-sm btn-flat">Abbrechen</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-outline card-info">
+                <div class="card-header">
+                    <h3 class="card-title">Abteilungen</h3>
+                </div>
+                <div class="card-body p-0">
+                    @forelse($categorizedRoles['Departments'] as $deptName => $deptRoles)
+                        @if(!empty($deptRoles))
+                            {{-- Abteilungs-Titel --}}
+                            <div class="list-group-item list-group-item-secondary" style="background-color: #f4f4f4; font-weight: bold; border-top: 1px solid #ddd;">
+                                {{ $deptName }}
+                            </div>
+                            {{-- Zugehörige Rollen --}}
+                            <div class="list-group list-group-flush">
+                                @foreach($deptRoles as $role)
+                                    <a href="{{ route('admin.roles.index', ['role' => $role->id]) }}" 
+                                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+                                              @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
+                                        {{ ucfirst($role->name) }}
+                                        <span class="badge bg-secondary">{{ $role->users_count ?? 0 }} Nutzer</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                    @empty
+                         <div class="list-group-item text-center text-muted">Keine Abteilungen gefunden.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="card card-outline card-secondary">
+                <div class="card-header">
+                    <h3 class="card-title">Andere Rollen</h3>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
-                        @forelse($roles as $role)
+                        @forelse($categorizedRoles['Other'] as $role)
                             <a href="{{ route('admin.roles.index', ['role' => $role->id]) }}" 
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center 
                                       @if(isset($currentRole) && $currentRole->id === $role->id) active @endif">
@@ -39,14 +152,17 @@
                                 <span class="badge bg-secondary">{{ $role->users_count ?? 0 }} Nutzer</span>
                             </a>
                         @empty
-                            <div class="list-group-item text-center text-muted">Keine Rollen gefunden.</div>
+                            <div class="list-group-item text-center text-muted">Keine weiteren Rollen gefunden.</div>
                         @endforelse
                     </div>
                 </div>
             </div>
+
         </div>
 
-        {{-- Rechte Spalte: Berechtigungsdetails / Bearbeitung --}}
+        {{-- ======================================================= --}}
+        {{-- Rechte Spalte: Berechtigungsdetails (KEINE ÄNDERUNG)     --}}
+        {{-- ======================================================= --}}
         <div class="col-lg-8">
             <div class="card">
                 
@@ -59,7 +175,6 @@
                         @csrf
                         @method('PUT')
                         
-                        {{-- NEU: Das <fieldset> sperrt das gesamte Formular, wenn der User keine Edit-Rechte hat --}}
                         <fieldset @cannot('roles.edit') disabled @endcannot>
                             <div class="card-body">
                                 
@@ -93,7 +208,8 @@
                                                                value="{{ $permission->name }}" id="perm-{{ $permission->id }}"
                                                                {{ in_array($permission->name, $currentRolePermissions) ? 'checked' : '' }}>
                                                         <label for="perm-{{ $permission->id }}" class="small">
-                                                            {{ ucfirst(str_replace('-', ' ', str_replace($module . '-', '', $permission->description))) }}
+                                                            {{-- Nimmt den Teil nach dem Punkt --}}
+                                                            {{ ucfirst(str_replace('-', ' ', explode('.', $permission->name)[1] ?? $permission->name)) }}
                                                             <small class="text-muted d-block">({{ $permission->name }})</small>
                                                         </label>
                                                     </div>
@@ -107,18 +223,16 @@
                                     @endforelse
                                 </div>
                             </div>
-                        </fieldset> {{-- Ende des disabled-Fieldsets --}}
+                        </fieldset>
 
                         {{-- Footer mit Speichern und Löschen --}}
                         <div class="card-footer text-right">
-                            {{-- ANGEPASST: Speichern-Button nur mit 'roles.edit' Berechtigung --}}
                             @can('roles.edit')
                                 <button type="submit" class="btn btn-primary btn-flat">
                                     <i class="fas fa-save me-1"></i> Änderungen speichern
                                 </button>
                             @endcan
                             
-                            {{-- ANGEPASST: Löschen-Button nur mit 'roles.delete' Berechtigung --}}
                             @can('roles.delete')
                                 @if($currentRole->name !== 'chief')
                                     <button type="button" class="btn btn-danger btn-flat ml-2" data-toggle="modal" data-target="#deleteRoleModal">
@@ -132,7 +246,7 @@
                     @include('admin.roles.partials.delete-modal')
 
                 @else
-                    {{-- Platzhalter, wenn keine Rolle ausgewählt ist (bleibt unverändert) --}}
+                    {{-- Platzhalter, wenn keine Rolle ausgewählt ist --}}
                     <div class="card-body text-center py-5">
                         <p class="lead text-muted">Bitte wähle links eine Rolle aus, um deren Berechtigungen zu bearbeiten.</p>
                         <i class="fas fa-arrow-left fa-4x text-primary"></i>
@@ -146,3 +260,114 @@
     @include('admin.roles.partials.create-modal')
 
 @endsection
+
+{{-- ======================================================= --}}
+{{-- NEU: JavaScript für Drag-and-Drop                      --}}
+{{-- ======================================================= --}}
+@push('scripts')
+{{-- 1. SortableJS Bibliothek (per CDN) --}}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<script>
+$(function () {
+    let sortable = null;
+    const rankList = document.getElementById('rank-sort-list');
+    const editButton = $('#toggle-rank-edit');
+    const saveButton = $('#save-rank-order');
+    const cancelButton = $('#cancel-rank-order');
+    const editControls = $('#rank-edit-controls');
+    const listContainer = $('.rank-list'); // Das <ul>-Element
+
+    // Funktion zum Umschalten zwischen Ansichts- und Bearbeitungsmodus
+    function toggleEditMode(isEditing) {
+        if (isEditing) {
+            listContainer.addClass('is-editing');
+            editControls.show();
+            editButton.addClass('active');
+            $('.rank-link').hide();
+            $('.rank-edit-item').css('display', 'flex'); // flex für korrekte Ausrichtung
+
+            // SortableJS initialisieren
+            if (!sortable) {
+                sortable = new Sortable(rankList, {
+                    handle: '.rank-handle', // Definiert den Zieh-Bereich
+                    animation: 150,
+                });
+            }
+        } else {
+            listContainer.removeClass('is-editing');
+            editControls.hide();
+            editButton.removeClass('active');
+            $('.rank-link').show();
+            $('.rank-edit-item').hide();
+
+            // SortableJS zerstören, um Drag&Drop zu deaktivieren
+            if (sortable) {
+                sortable.destroy();
+                sortable = null;
+            }
+        }
+    }
+
+    // Klick auf den "Bearbeiten"-Button
+    editButton.on('click', function() {
+        // Den Modus umkehren
+        toggleEditMode(!listContainer.hasClass('is-editing'));
+    });
+
+    // Klick auf "Abbrechen"
+    cancelButton.on('click', function() {
+        // Einfachster Weg, die Sortierung zurückzusetzen: Seite neu laden
+        window.location.reload(); 
+    });
+
+    // Klick auf "Speichern"
+    saveButton.on('click', function() {
+        if (!sortable) return;
+
+        // Holt die neue Reihenfolge der 'data-rank-id'-Attribute
+        const order = sortable.toArray(); 
+        
+        saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Speichern...');
+
+        // AJAX-Request an unsere neue Route
+        fetch('{{ route("admin.roles.ranks.reorder") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ order: order }) // Sendet die Array der IDs
+        })
+        .then(response => {
+            if (!response.ok) {
+                 // Fehler vom Server (z.B. 500)
+                throw new Error('Server-Fehler. Status: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(data.message);
+                }
+                // Bearbeitungsmodus verlassen
+                toggleEditMode(false); 
+            } else {
+                throw new Error(data.message || 'Ein unbekannter Fehler ist aufgetreten.');
+            }
+        })
+        .catch(error => {
+            if (typeof toastr !== 'undefined') {
+                toastr.error('Fehler: ' + error.message);
+            }
+        })
+        .finally(() => {
+            // Button wieder freigeben
+            saveButton.prop('disabled', false).html('Speichern');
+        });
+    });
+});
+</script>
+@endpush
