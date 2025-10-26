@@ -36,11 +36,12 @@ class RoleController extends Controller
     {
         // 1. Alle Daten laden
         
-        // Alle Spatie-Rollen laden, ABER wir schlüsseln sie nach ihrem KLEINGESCHRIEBENEN Namen
+        // Alle Spatie-Rollen laden, geschlüsselt nach KLEINGESCHRIEBENEM Namen
         $allRoles = Role::withCount('users')->get()->keyBy(function ($role) {
             return strtolower($role->name);
         });
         
+        // Ränge (geordnet!) und Abteilungen laden
         $ranks = Rank::orderBy('level', 'desc')->get();
         $departments = Department::with('roles')->get();
         
@@ -48,40 +49,46 @@ class RoleController extends Controller
         $categorizedRoles = [
             'Ranks' => [],
             'Departments' => [],
-            'Other' => []
+            // 'Other' wird am Ende automatisch gefüllt
         ];
-        
-        // Sammlung für verarbeitete Rollennamen (jetzt alle lowercase)
-        $processedRoleNames = collect();
 
-        // 3. Ränge zuordnen (mit strtolower)
+        // 3. Ränge zuordnen (in der korrekten Reihenfolge)
+        // Wir durchlaufen die geordnete Rank-Tabelle
         foreach ($ranks as $rank) {
             $rankNameLower = strtolower($rank->name);
+            
+            // Prüfen, ob die Rolle in unserer Hauptliste existiert
             if ($allRoles->has($rankNameLower)) {
-                $roleModel = $allRoles->get($rankNameLower);
+                // HIER DIE ÄNDERUNG:
+                // pull() holt das Element UND entfernt es aus $allRoles
+                $roleModel = $allRoles->pull($rankNameLower); 
+                
                 $roleModel->rank_id = $rank->id; 
                 $categorizedRoles['Ranks'][] = $roleModel;
-                $processedRoleNames->push($rankNameLower);
             }
         }
 
-        // 4. Abteilungen zuordnen (mit strtolower)
+        // 4. Abteilungen zuordnen
         foreach ($departments as $dept) {
             $categorizedRoles['Departments'][$dept->name] = [];
+            
             foreach ($dept->roles as $role) {
                 $roleNameLower = strtolower($role->name);
                 
-                // Prüfen, ob die Rolle in unserer Hauptliste existiert UND noch nicht als Rang verarbeitet wurde
-                if ($allRoles->has($roleNameLower) && !$processedRoleNames->contains($roleNameLower)) {
-                    $categorizedRoles['Departments'][$dept->name][] = $allRoles->get($roleNameLower);
-                    $processedRoleNames->push($roleNameLower);
+                // Prüfen, ob die Rolle NOCH in $allRoles ist
+                // (Wenn sie ein Rang war, ist sie bereits weg)
+                if ($allRoles->has($roleNameLower)) {
+                    // HIER DIE ÄNDERUNG:
+                    // Rolle holen UND aus $allRoles entfernen
+                    $roleModel = $allRoles->pull($roleNameLower);
+                    $categorizedRoles['Departments'][$dept->name][] = $roleModel;
                 }
             }
         }
         
         // 5. Alle übrigen Rollen zu 'Other' hinzufügen
-        // Diese Logik funktioniert jetzt, da $processedRoleNames die korrekten (kleingeschriebenen) Keys enthält
-        $categorizedRoles['Other'] = $allRoles->except($processedRoleNames->toArray())->values();
+        // $allRoles enthält jetzt NUR NOCH die Rollen, die weder Rang noch Abteilung sind.
+        $categorizedRoles['Other'] = $allRoles->values();
 
         // 6. Logik für die rechte Spalte (Berechtigungen) - bleibt gleich
         $permissions = Permission::all()->sortBy('name')->groupBy(function ($item) {
@@ -93,7 +100,6 @@ class RoleController extends Controller
         $currentRolePermissions = [];
 
         if ($request->has('role')) {
-            // Finde die Rolle über die ID, da der Name (Groß/Klein) unzuverlässig sein könnte
             $currentRole = Role::findById($request->query('role')); 
             if ($currentRole) {
                 $currentRolePermissions = $currentRole->permissions->pluck('name')->toArray();
