@@ -106,7 +106,7 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         // KORREKTUR: Wir prüfen auf die Standard-Super-Admin Rolle (oder du passt es an deine unantastbare Rolle an)
-        if ($role->name === 'super-admin' || $role->name === 'ems-director') { // Füge hier alle "geschützten" Rollen hinzu
+        if ($role->name === 'super-admin' || $role->name === 'chief') { // Füge hier alle "geschützten" Rollen hinzu
             return back()->with('error', 'Diese Standardrolle kann nicht geändert werden.');
         }
 
@@ -185,9 +185,9 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        if ($role->name === 'super-admin' || $role->name === 'ems-director' || $role->users()->count() > 0) {
+        if ($role->name === 'super-admin' || $role->name === 'chief' || $role->users()->count() > 0) {
             $error = 'Diese Rolle kann nicht gelöscht werden (Standardrolle oder Benutzer zugewiesen).';
-            if ($role->name === 'super-admin' || $role->name === 'ems-director') {
+            if ($role->name === 'super-admin' || $role->name === 'chief') {
                 $error = 'Standardrollen können nicht gelöscht werden.';
             } elseif ($role->users()->count() > 0) {
                 $error = 'Rolle kann nicht gelöscht werden, da noch Benutzer zugewiesen sind.';

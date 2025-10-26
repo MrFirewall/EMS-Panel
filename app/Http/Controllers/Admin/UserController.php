@@ -25,14 +25,17 @@ class UserController extends Controller
      * @var array
      */
     private $rankHierarchy = [
-        'ems-director'           => 8,
-        'assistant-ems-director' => 7,
-        'instructor'             => 6,
-        'emergency-doctor'       => 5,
-        'paramedic'              => 4,
-        'emt'                    => 3,
-        'emt-trainee'            => 2,
-        'praktikant'             => 1,
+        'chief'         => 11,
+        'deputy chief'  => 10,
+        'doctor'        => 9,
+        'captain'       => 8,
+        'lieutenant'    => 7,
+        'supervisor'    => 6,
+        's-emt'         => 5,
+        'paramedic'     => 4,
+        'a-emt'         => 3,
+        'emt'           => 2,
+        'trainee'       => 1,
     ];
 
     /**
@@ -42,7 +45,7 @@ class UserController extends Controller
     private $departmentalRoles = [
         'Rechtsabteilung' => [
             'leitung_role' => 'rechtsabteilung - leitung',
-            'min_rank_to_assign_leitung' => 7, // Assistant EMS Director
+            'min_rank_to_assign_leitung' => 10, // Assistant EMS Director
             'roles' => [
                 'Rechtsabteilung - leitung',
                 'Rechtsabteilung - mitglied',
@@ -50,7 +53,7 @@ class UserController extends Controller
         ],
         'Ausbildungsabteilung' => [
             'leitung_role' => 'ausbildungsabteilung - leitung',
-            'min_rank_to_assign_leitung' => 7, // Assistant EMS Director
+            'min_rank_to_assign_leitung' => 10, // Assistant EMS Director
             'roles' => [
                 'Ausbildungsabteilung - leitung',
                 'Ausbildungsabteilung - ausbilder',
@@ -59,7 +62,7 @@ class UserController extends Controller
         ],
         'Personalabteilung' => [
             'leitung_role' => 'personalabteilung - leitung',
-            'min_rank_to_assign_leitung' => 7, // Assistant EMS Director
+            'min_rank_to_assign_leitung' => 10, // Assistant EMS Director
             'roles' => [
                 'Personalabteilung - leitung',
                 'Personalabteilung - mitglied',
@@ -80,7 +83,6 @@ class UserController extends Controller
         $this->middleware('can:users.create')->only(['create', 'store']);
         $this->middleware('can:users.edit')->only(['edit', 'update']);
         $this->middleware('can:users.manage.record')->only('addRecord');
-        // NEU: Zusätzliche Berechtigung für Modul-Management
         $this->middleware('can:users.manage.modules')->only(['update']); // Nur beim Speichern prüfen
     }
 
@@ -92,7 +94,7 @@ class UserController extends Controller
         $admin = Auth::user();
 
         // Ausnahme: Director und Super-Admin dürfen immer alle Rollen verwalten (außer Super-Admin selbst).
-        if ($admin->hasAnyRole('ems-director', $this->superAdminRole)) {
+        if ($admin->hasAnyRole('chief', $this->superAdminRole)) {
             return Role::where('name', '!=', $this->superAdminRole)->get();
         }
 
@@ -177,12 +179,11 @@ class UserController extends Controller
             'status' => 'required|string',
             'roles' => 'sometimes|array',
             'roles.*' => [Rule::in($managableRoleNames)],
-            // Weitere optionale Felder
             'email' => 'nullable|email|max:255',
             'birthday' => 'nullable|date',
             'discord_name' => 'nullable|string|max:255',
             'forum_name' => 'nullable|string|max:255',
-            'hire_date' => 'nullable|date', // Wird jetzt ggf. überschrieben
+            'hire_date' => 'nullable|date',
         ]);
 
         $selectedRoles = $request->roles ?? [];

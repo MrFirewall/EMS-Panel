@@ -42,15 +42,18 @@ class User extends Authenticatable
      * Definiert die Hierarchie der Ränge.
      * @var array
      */
-    private array $rankHierarchy = [
-        'ems-director' => 8,
-        'assistant-ems-director' => 7,
-        'instructor' => 6,
-        'emergency-doctor' => 5,
-        'paramedic' => 4,
-        'emt' => 3,
-        'emt-trainee' => 2,
-        'praktikant' => 1,
+    private $rankHierarchy = [
+        'chief'         => 11,
+        'deputy chief'  => 10,
+        'doctor'        => 9,
+        'captain'       => 8,
+        'lieutenant'    => 7,
+        'supervisor'    => 6,
+        's-emt'         => 5,
+        'paramedic'     => 4,
+        'a-emt'         => 3,
+        'emt'           => 2,
+        'trainee'       => 1,
     ];
     protected $casts = [
         'hire_date' => 'datetime',
@@ -232,7 +235,7 @@ class User extends Authenticatable
      */
     public function canImpersonate(): bool
     {
-        return $this->hasAnyRole('ems-director', 'Super-Admin');
+        return $this->hasAnyRole('chief', 'Super-Admin');
     }
 
     /**
@@ -240,7 +243,7 @@ class User extends Authenticatable
      */
     public function canBeImpersonated(): bool
     {
-        return !$this->hasAnyRole('ems-director', 'Super-Admin');
+        return !$this->hasAnyRole('chief', 'Super-Admin');
     }
     public function prescriptions()
     {

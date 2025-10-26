@@ -13,14 +13,17 @@ use Illuminate\Support\Facades\Auth;
 class DashboardController extends Controller
 {
     private array $rankHierarchy = [
-        'ems-director' => 'Direktor',
-        'assistant-ems-director' => 'Co. Direktor',
-        'instructor' => 'Instruktor',
-        'emergency-doctor' => 'Notarzt',
-        'paramedic' => 'Rettungssanitäter',
-        'emt' => 'Notfallsanitäter',
-        'emt-trainee' => 'Azubi (EMT)',
-        'praktikant' => 'Praktikant',
+        'chief'         => 'Chief',
+        'deputy chief'  => 'Deputy Chief',
+        'doctor'        => 'Doctor',
+        'captain'       => 'Captain',
+        'lieutenant'    => 'Lieutenant',
+        'supervisor'    => 'Supervisor',
+        's-emt'         => 'S-EMT (Senior EMT)',
+        'paramedic'     => 'Paramedic',
+        'a-emt'         => 'A-EMT (Advanced EMT)',
+        'emt'           => 'EMT (Emergency Medical Technician)',
+        'trainee'       => 'Trainee',
     ];
 
     public function index()

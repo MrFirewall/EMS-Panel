@@ -186,7 +186,7 @@
             </div>
             @endcan
             {{-- === ENDE NEUE KARTE === --}}
-            @role('ems-director|Super-Admin')
+            @role('chief|Super-Admin')
             <div class="col-md-12">
                 <div class="card card-outline card-warning">
                     <div class="card-header"><h3 class="card-title">Einzelne Berechtigungen (erweitert)</h3></div>

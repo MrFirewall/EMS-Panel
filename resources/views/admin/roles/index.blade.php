@@ -72,8 +72,8 @@
                                            name="name" 
                                            value="{{ old('name', $currentRole->name) }}" 
                                            required 
-                                           @if($currentRole->name === 'ems-director') disabled @endif>
-                                    @if($currentRole->name === 'ems-director')
+                                           @if($currentRole->name === 'chief') disabled @endif>
+                                    @if($currentRole->name === 'chief')
                                         <small class="text-danger">Der Name der Super-Admin-Rolle kann nicht geändert werden.</small>
                                     @endif
                                     @error('name') <div class="text-danger small">{{ $message }}</div> @enderror
@@ -120,7 +120,7 @@
                             
                             {{-- ANGEPASST: Löschen-Button nur mit 'roles.delete' Berechtigung --}}
                             @can('roles.delete')
-                                @if($currentRole->name !== 'ems-director')
+                                @if($currentRole->name !== 'chief')
                                     <button type="button" class="btn btn-danger btn-flat ml-2" data-toggle="modal" data-target="#deleteRoleModal">
                                         <i class="fas fa-trash-alt me-1"></i> Rolle löschen
                                     </button>

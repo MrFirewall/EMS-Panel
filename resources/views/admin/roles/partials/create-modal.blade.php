@@ -19,7 +19,7 @@
                     </div>
                     <div class="modal-body">
                         <p class="text-muted small">
-                            Rollen werden im System als Slugs gespeichert (z.B. "ems-director"). Bitte nur Kleinbuchstaben und Bindestriche verwenden.
+                            Rollen werden im System als Slugs gespeichert (z.B. "chief"). Bitte nur Kleinbuchstaben und Bindestriche verwenden.
                         </p>
                         {{-- BS5 mb-3 ersetzt durch BS4 form-group --}}
                         <div class="form-group">

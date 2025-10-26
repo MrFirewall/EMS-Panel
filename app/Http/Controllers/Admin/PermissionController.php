@@ -50,7 +50,7 @@ class PermissionController extends Controller
         // Automatisches Zuweisen an Rollen (Beispiel)
         try {
             $superAdminRole = Role::findByName('super-admin', 'web'); // Guard 'web' angeben
-            $directorRole = Role::findByName('ems-director', 'web');   // Guard 'web' angeben
+            $directorRole = Role::findByName('chief', 'web');   // Guard 'web' angeben
             $superAdminRole->givePermissionTo($permission);
             $directorRole->givePermissionTo($permission);
         } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
@@ -96,7 +96,7 @@ class PermissionController extends Controller
         // Sicherstellen, dass die Rollen die (ggf. umbenannte) Berechtigung haben
         try {
             $superAdminRole = Role::findByName('super-admin', 'web');
-            $directorRole = Role::findByName('ems-director', 'web');
+            $directorRole = Role::findByName('chief', 'web');
             // syncPermissions stellt sicher, dass nur die aktuellen Berechtigungen zugewiesen sind
             // Alternative: givePermissionTo, wenn nur hinzugefügt werden soll
              $superAdminRole->syncPermissions(Permission::whereIn('name', $superAdminRole->getPermissionNames())->orWhere('id', $permission->id)->get());
