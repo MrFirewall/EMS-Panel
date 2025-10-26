@@ -25,11 +25,10 @@ class RoleController extends Controller
         // Middleware für Rollen bleibt
         $this->middleware('can:roles.view')->only('index');
         $this->middleware('can:roles.create')->only('store');
-        $this->middleware('can:roles.edit')->only(['update', 'updateRankOrder']); // updateRankOrder hinzugefügt
+        $this->middleware('can:roles.edit')->only(['update', 'updateRankOrder']);
         $this->middleware('can:roles.delete')->only('destroy');
-        
+
         // Middleware für Department-Aktionen (überprüft Rollen-Berechtigungen)
-        // Die Routen-Definition hat dies bereits, aber zur Sicherheit hier auch
         $this->middleware('can:roles.create')->only('storeDepartment');
         $this->middleware('can:roles.edit')->only('updateDepartment');
         $this->middleware('can:roles.delete')->only('destroyDepartment');
@@ -37,50 +36,45 @@ class RoleController extends Controller
 
     /**
      * Zeigt die Rollenliste (kategorisiert) und die Bearbeitungsansicht an.
-     * (Angepasst: Übergibt alle Departments und den Typ der aktuellen Rolle)
+     * Übergibt alle Departments und den Typ der aktuellen Rolle
      */
     public function index(Request $request)
     {
         // 1. Alle Daten laden
         $allRoles = Role::withCount('users')->get()->keyBy(fn($role) => strtolower($role->name));
         $ranks = Rank::orderBy('level', 'desc')->get();
-        // Lade ALLE Departments für die Dropdowns etc.
-        $allDepartments = Department::orderBy('name')->get(); 
-        
+        $allDepartments = Department::orderBy('name')->get();
+
         // 2. Kategorien initialisieren
         $categorizedRoles = ['Ranks' => [], 'Departments' => [], 'Other' => []];
-        
+
         // 3. Ränge zuordnen
         foreach ($ranks as $rank) {
             $rankNameLower = strtolower($rank->name);
             if ($allRoles->has($rankNameLower)) {
-                $roleModel = $allRoles->pull($rankNameLower); 
-                $roleModel->rank_id = $rank->id; 
+                $roleModel = $allRoles->pull($rankNameLower);
+                $roleModel->rank_id = $rank->id;
                 $categorizedRoles['Ranks'][] = $roleModel;
             }
         }
 
         // 4. Abteilungen zuordnen
-        // Verwende $allDepartments, die wir oben geladen haben
-        foreach ($allDepartments as $dept) { 
-            // Lade die Rollen-Beziehung explizit, falls nicht eager-loaded
-            $dept->loadMissing('roles'); 
+        foreach ($allDepartments as $dept) {
+            $dept->loadMissing('roles');
             $categorizedRoles['Departments'][$dept->name] = [];
             foreach ($dept->roles as $role) {
                 $roleNameLower = strtolower($role->name);
                 if ($allRoles->has($roleNameLower)) {
                     $roleModel = $allRoles->pull($roleNameLower);
-                    // Füge Department-ID hinzu, um zu wissen, wozu es gehört
-                    $roleModel->department_id = $dept->id; 
+                    $roleModel->department_id = $dept->id;
                     $categorizedRoles['Departments'][$dept->name][] = $roleModel;
                 }
             }
-             // Entferne leere Abteilungs-Arrays
             if (empty($categorizedRoles['Departments'][$dept->name])) {
                 unset($categorizedRoles['Departments'][$dept->name]);
             }
         }
-        
+
         // 5. Andere Rollen
         $categorizedRoles['Other'] = $allRoles->values();
 
@@ -88,15 +82,13 @@ class RoleController extends Controller
         $permissions = Permission::all()->sortBy('name')->groupBy(fn($item) => explode('.', $item->name, 2)[0]);
         $currentRole = null;
         $currentRolePermissions = [];
-        $currentRoleType = 'other'; // Standard
-        $currentDepartmentId = null; // Standard
+        $currentRoleType = 'other';
+        $currentDepartmentId = null;
 
         if ($request->has('role')) {
-            $currentRole = Role::findById($request->query('role')); 
+            $currentRole = Role::findById($request->query('role'));
             if ($currentRole) {
                 $currentRolePermissions = $currentRole->permissions->pluck('name')->toArray();
-                
-                // Typ der aktuellen Rolle bestimmen
                 $currentRoleNameLower = strtolower($currentRole->name);
                 if (Rank::whereRaw('LOWER(name) = ?', [$currentRoleNameLower])->exists()) {
                     $currentRoleType = 'rank';
@@ -110,67 +102,60 @@ class RoleController extends Controller
         // 7. Daten an die View übergeben
         return view('admin.roles.index', compact(
             'categorizedRoles',
-            'permissions', 
-            'currentRole', 
+            'permissions',
+            'currentRole',
             'currentRolePermissions',
-            'allDepartments', // Für Dropdowns
-            'currentRoleType', // Für Bearbeitungsformular
-            'currentDepartmentId' // Für Bearbeitungsformular
+            'allDepartments',
+            'currentRoleType',
+            'currentDepartmentId'
         ));
     }
-    
+
     /**
-     * NEUE METHODE: Aktualisiert die Sortierung (level) der Ränge.
+     * Aktualisiert die Sortierung (level) der Ränge.
      * Wird per AJAX von der Drag-and-Drop-Liste aufgerufen.
      */
     public function updateRankOrder(Request $request)
     {
         $request->validate(['order' => 'required|array']);
-
         $rankIds = $request->input('order');
-        
-        // Das höchste Level ist die Anzahl der Ränge
-        // (z.B. 11 Ränge -> Level 11, 10, 9...)
-        $maxLevel = count($rankIds); 
+        $maxLevel = count($rankIds);
 
         try {
             DB::transaction(function () use ($rankIds, $maxLevel) {
                 foreach ($rankIds as $index => $rankId) {
-                    // Das erste Item (index 0) bekommt das höchste Level
-                    $level = $maxLevel - $index; 
-                    
-                    // Wir aktualisieren den 'level' in der 'ranks'-Tabelle
+                    $level = $maxLevel - $index;
                     Rank::where('id', $rankId)->update(['level' => $level]);
                 }
             });
-
-            // WICHTIG: Cache für Berechtigungen leeren, falls Ränge Berechtigungen beeinflussen
             cache()->forget(config('permission.cache.key'));
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error', 
-                'message' => 'Fehler beim Speichern der Hierarchie: ' . $e->getMessage()
-            ], 500);
-        }
+            // --- LOGGING FÜR RANK ORDER UPDATE ---
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'log_type' => 'RANK_ORDER', // Eigener Log-Typ
+                'action' => 'UPDATED',
+                'target_id' => null, // Kein spezifisches Ziel
+                'description' => 'Rang-Hierarchie wurde neu sortiert.',
+            ]);
+            // --- ENDE LOGGING ---
 
-        return response()->json([
-            'status' => 'success', 
-            'message' => 'Rang-Hierarchie erfolgreich aktualisiert.'
-        ]);
+        } catch (\Exception $e) {
+            Log::error("Fehler beim Sortieren der Ränge: " . $e->getMessage()); // Logge den Fehler serverseitig
+            return response()->json(['status' => 'error', 'message' => 'Fehler beim Speichern der Hierarchie.'], 500); // Generische Fehlermeldung für den Client
+        }
+        return response()->json(['status' => 'success', 'message' => 'Rang-Hierarchie erfolgreich aktualisiert.']);
     }
 
     /**
      * Speichert eine neu erstellte Rolle (Typ: Rank, Department oder Other).
-     * (STARK ANGEPASST)
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:roles,name',
             'role_type' => 'required|in:rank,department,other',
-            // Department_id ist nur erforderlich, wenn role_type 'department' ist
-            'department_id' => 'required_if:role_type,department|nullable|exists:departments,id', 
+            'department_id' => 'required_if:role_type,department|nullable|exists:departments,id',
         ], [
             'name.unique' => 'Dieser Rollenname ist bereits vergeben.',
             'role_type.required' => 'Bitte wählen Sie einen Rollentyp.',
@@ -178,10 +163,9 @@ class RoleController extends Controller
         ]);
 
         if ($validator->fails()) {
-            // Wichtig: Redirect zurück mit Fehlern UND Input, damit das Modal offen bleibt
-            return back()->withErrors($validator, 'createRole') // Fehler-Bag benennen
+            return back()->withErrors($validator, 'createRole')
                          ->withInput()
-                         ->with('open_modal', 'createRoleModal'); // Signal zum Öffnen des Modals
+                         ->with('open_modal', 'createRoleModal');
         }
 
         $roleName = strtolower(trim($request->name));
@@ -192,43 +176,43 @@ class RoleController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1. Immer die Spatie-Rolle erstellen
+            // 1. Rolle erstellen
             $role = Role::create(['name' => $roleName]);
 
-            // 2. Abhängig vom Typ zusätzliche Aktionen
+            // 2. Zusätzliche Aktionen
+            $department = null; // Für Logging/Event
             if ($roleType === 'rank') {
-                // Neuen Rang erstellen (Level initial auf 0 setzen, muss sortiert werden)
-                Rank::create([
-                    'name' => $roleName, 
-                    'level' => 0 // Oder Rank::max('level') + 1 / Rank::min('level') - 1
-                ]);
-                // Hier könnte man updateRankOrder aufrufen oder den User informieren
+                Rank::create(['name' => $roleName, 'level' => 0]); // Level 0, muss sortiert werden
             } elseif ($roleType === 'department') {
-                // Rolle der ausgewählten Abteilung zuweisen
                 $department = Department::find($departmentId);
                 if ($department) {
                     $department->roles()->attach($role->id);
                 } else {
-                    // Sollte durch Validation verhindert werden, aber sicher ist sicher
-                    throw new \Exception("Ausgewählte Abteilung nicht gefunden."); 
+                    throw new \Exception("Ausgewählte Abteilung nicht gefunden.");
                 }
             }
-            // Für 'other' ist nichts weiter zu tun
-
             DB::commit();
 
             // Logging
             $logDescription = "Neue Rolle '{$role->name}' (Typ: {$roleType}) erstellt.";
-            if ($roleType === 'department' && isset($department)) {
+            if ($roleType === 'department' && $department) {
                 $logDescription .= " Abteilung: {$department->name}.";
             }
             ActivityLog::create([
-                'user_id' => Auth::id(), 'log_type' => 'ROLE', 'action' => 'CREATED',
-                'target_id' => $role->id, 'description' => $logDescription,
+                'user_id' => Auth::id(),
+                'log_type' => 'ROLE',
+                'action' => 'CREATED',
+                'target_id' => $role->id,
+                'description' => $logDescription,
             ]);
 
+            // Event
             PotentiallyNotifiableActionOccurred::dispatch(
-                'Admin\RoleController@store', Auth::user(), $role, Auth::user()
+                action_name: 'Admin\RoleController@store',
+                subject: $role,
+                object: $department, // Kann null sein
+                actor: Auth::user(),
+                context_data: ['role_type' => $roleType]
             );
 
             return redirect()->route('admin.roles.index', ['role' => $role->id])->with('success', 'Rolle erfolgreich erstellt.');
@@ -238,9 +222,10 @@ class RoleController extends Controller
             Log::error("Fehler beim Erstellen der Rolle {$roleName}: " . $e->getMessage());
             return back()->with('error', 'Fehler beim Erstellen der Rolle: ' . $e->getMessage())->withInput();
         }
-    }/**
+    }
+
+    /**
      * Aktualisiert Rolle, Berechtigungen UND Typ/Department-Zugehörigkeit.
-     * (STARK ANGEPASST)
      */
     public function update(Request $request, Role $role)
     {
@@ -257,9 +242,8 @@ class RoleController extends Controller
         ]);
 
          if ($validator->fails()) {
-            // Redirect zur Index-Seite mit Fehlern und der ausgewählten Rolle
             return redirect()->route('admin.roles.index', ['role' => $role->id])
-                             ->withErrors($validator, 'updateRole') // Fehler-Bag benennen
+                             ->withErrors($validator, 'updateRole')
                              ->withInput();
         }
 
@@ -274,12 +258,18 @@ class RoleController extends Controller
         $oldType = 'other';
         $oldDepartmentId = null;
         $rankEntry = Rank::whereRaw('LOWER(name) = ?', [strtolower($oldName)])->first();
-        if ($rankEntry) {
-            $oldType = 'rank';
-        } elseif ($deptRole = DB::table('department_role')->where('role_id', $role->id)->first()) {
+        if ($rankEntry) { $oldType = 'rank'; }
+        elseif ($deptRole = DB::table('department_role')->where('role_id', $role->id)->first()) {
             $oldType = 'department';
             $oldDepartmentId = $deptRole->department_id;
         }
+
+        // Kopie der Rolle vor der Änderung für das Event
+        $roleBeforeUpdate = clone $role;
+        $roleBeforeUpdate->permissions = $oldPermissions;
+        $roleBeforeUpdate->role_type = $oldType;
+        $roleBeforeUpdate->department_id = $oldDepartmentId;
+
 
         try {
             DB::beginTransaction();
@@ -289,53 +279,67 @@ class RoleController extends Controller
             $role->syncPermissions($permissionsToSync);
 
             // 2. Typ-Änderungen verarbeiten
+            $department = null; // Für Logging/Event
             if ($oldType !== $newType || ($newType === 'department' && $oldDepartmentId != $newDepartmentId)) {
-                
-                // --- Bereinigung basierend auf altem Typ ---
-                if ($oldType === 'rank' && $rankEntry) {
-                    $rankEntry->delete(); // Rank-Eintrag löschen
-                    // Re-Ordering Logik hier aufrufen, wenn nötig
-                } elseif ($oldType === 'department') {
-                    // Alte Department-Verknüpfung lösen
-                    DB::table('department_role')->where('role_id', $role->id)->delete(); 
-                }
+                if ($oldType === 'rank' && $rankEntry) { $rankEntry->delete(); }
+                elseif ($oldType === 'department') { DB::table('department_role')->where('role_id', $role->id)->delete(); }
 
-                // --- Hinzufügen basierend auf neuem Typ ---
                 if ($newType === 'rank') {
-                    // Neuen Rank-Eintrag erstellen (Level 0)
-                     Rank::firstOrCreate(
-                        ['name' => $newName], // Sicherstellen, dass er nicht doppelt erstellt wird
-                        ['level' => 0]
-                     );
+                     Rank::firstOrCreate(['name' => $newName], ['level' => 0]);
                 } elseif ($newType === 'department') {
-                    // Neue Department-Verknüpfung erstellen
                     $department = Department::find($newDepartmentId);
-                    if ($department) {
-                        $department->roles()->attach($role->id);
-                    } else {
-                         throw new \Exception("Ausgewählte Abteilung nicht gefunden."); 
-                    }
+                    if ($department) { $department->roles()->attach($role->id); }
+                    else { throw new \Exception("Ausgewählte Abteilung nicht gefunden."); }
                 }
             }
-            // Wenn Name geändert wurde und es ein Rang war/ist, auch im Rank-Table aktualisieren
+            // Namen im Rank-Table aktualisieren, falls nötig
             if ($oldName !== $newName && ($oldType === 'rank' || $newType === 'rank')) {
                  Rank::whereRaw('LOWER(name) = ?', [strtolower($oldName)])
                      ->update(['name' => $newName]);
              }
 
-
             DB::commit();
 
             // Logging
+            $newPermissions = $role->permissions->pluck('name')->toArray();
+            $addedPermissions = array_diff($newPermissions, $oldPermissions);
+            $removedPermissions = array_diff($oldPermissions, $newPermissions);
+
             $logDescription = "Rolle '{$oldName}' aktualisiert.";
-            // ... (detaillierte Log-Beschreibung für Namen, Perms, Typ-Änderung) ...
              if ($oldName !== $newName) $logDescription .= " Neuer Name: '{$newName}'.";
              if ($oldType !== $newType) $logDescription .= " Typ geändert: {$oldType} -> {$newType}.";
-             if ($newType === 'department') $logDescription .= " Abteilung: " . (Department::find($newDepartmentId)->name ?? 'Unbekannt') . ".";
-            // ... (Perms hinzufügen/entfernen Logik) ...
+             if ($newType === 'department') {
+                 $currentDepartmentName = $department->name ?? Department::find($newDepartmentId)->name ?? 'Unbekannt';
+                 $logDescription .= " Abteilung: {$currentDepartmentName}.";
+             } elseif ($oldType === 'department' && $newType !== 'department') {
+                 $oldDepartmentName = Department::find($oldDepartmentId)->name ?? 'Unbekannt (ID: ' . $oldDepartmentId . ')';
+                 $logDescription .= " Aus Abteilung '{$oldDepartmentName}' entfernt.";
+             }
+             if (!empty($addedPermissions)) $logDescription .= " Perms hinzugefügt: " . implode(', ', $addedPermissions) . ".";
+             if (!empty($removedPermissions)) $logDescription .= " Perms entfernt: " . implode(', ', $removedPermissions) . ".";
 
-            ActivityLog::create([ /* ... Log-Daten ... */ 'description' => $logDescription ]);
-            PotentiallyNotifiableActionOccurred::dispatch(/* ... Event Daten ... */);
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'log_type' => 'ROLE',
+                'action' => 'UPDATED',
+                'target_id' => $role->id,
+                'description' => $logDescription,
+            ]);
+
+            // Event
+            PotentiallyNotifiableActionOccurred::dispatch(
+                action_name: 'Admin\RoleController@update',
+                subject: $role,
+                object: $department ?? ($newType === 'department' ? Department::find($newDepartmentId) : null),
+                actor: Auth::user(),
+                context_data: [
+                    'old_role_data' => $roleBeforeUpdate->toArray(),
+                    'new_role_type' => $newType,
+                    'new_department_id' => $newDepartmentId,
+                    'added_permissions' => $addedPermissions,
+                    'removed_permissions' => $removedPermissions,
+                ]
+            );
 
             return redirect()->route('admin.roles.index', ['role' => $role->id])->with('success', 'Rolle erfolgreich aktualisiert.');
 
@@ -348,7 +352,6 @@ class RoleController extends Controller
 
     /**
      * Entfernt die Rolle UND ggf. den zugehörigen Rank-Eintrag.
-     * (ANGEPASST)
      */
     public function destroy(Role $role)
     {
@@ -363,28 +366,35 @@ class RoleController extends Controller
 
         $roleName = $role->name;
         $roleId = $role->id;
-        $deletedRoleData = $role->toArray(); 
+        $deletedRoleData = clone $role; // Komplettes Objekt klonen für Event
+        $deletedRoleData->load('permissions'); // Lade Berechtigungen für das Event
 
         try {
             DB::beginTransaction();
 
-            // Prüfen, ob es ein Rang ist und diesen ggf. löschen
             $rankEntry = Rank::whereRaw('LOWER(name) = ?', [strtolower($roleName)])->first();
-            if ($rankEntry) {
-                $rankEntry->delete();
-                // Hier könnte man updateRankOrder aufrufen oder User informieren
-            }
-            
-            // Zugehörigkeit zu Departments löschen (wird durch Cascade Constraint erledigt, wenn richtig gesetzt, ansonsten manuell):
-            // DB::table('department_role')->where('role_id', $roleId)->delete(); 
-
-            // Die Rolle selbst löschen
-            $role->delete(); 
+            if ($rankEntry) { $rankEntry->delete(); }
+            $role->delete(); // Löscht Rolle und Pivot-Einträge via Cascade (wenn Migration korrekt)
 
             DB::commit();
 
-            ActivityLog::create([ /* ... Log-Daten ... */ 'description' => "Rolle '{$roleName}' gelöscht."]);
-            PotentiallyNotifiableActionOccurred::dispatch(/* ... Event Daten ... */);
+            // Logging
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'log_type' => 'ROLE',
+                'action' => 'DELETED',
+                'target_id' => $roleId,
+                'description' => "Rolle '{$roleName}' gelöscht.",
+            ]);
+
+            // Event
+            PotentiallyNotifiableActionOccurred::dispatch(
+                action_name: 'Admin\RoleController@destroy',
+                subject: $deletedRoleData,
+                object: null,
+                actor: Auth::user(),
+                context_data: []
+            );
 
             return redirect()->route('admin.roles.index')->with('success', "Rolle '{$roleName}' erfolgreich gelöscht.");
 
@@ -394,9 +404,9 @@ class RoleController extends Controller
              return back()->with('error', 'Fehler beim Löschen der Rolle.');
         }
     }
-    
+
     // ===========================================
-    // NEUE DEPARTMENT CRUD METHODEN
+    // DEPARTMENT CRUD METHODEN
     // ===========================================
 
     /**
@@ -406,8 +416,6 @@ class RoleController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'department_name' => 'required|string|max:255|unique:departments,name',
-            // Füge hier ggf. Validierung für 'leitung_role_name' und 'min_rank_level_to_assign_leitung' hinzu,
-            // falls du diese Felder auch im Modal abfragen willst.
              'leitung_role_name' => 'nullable|string|exists:roles,name',
              'min_rank_level_to_assign_leitung' => 'nullable|integer|min:0',
         ], [
@@ -424,16 +432,19 @@ class RoleController extends Controller
         try {
             $department = Department::create([
                 'name' => $request->department_name,
-                 // Standardwerte oder aus Request holen
-                 'leitung_role_name' => $request->leitung_role_name ?? '', 
-                 'min_rank_level_to_assign_leitung' => $request->min_rank_level_to_assign_leitung ?? 0, 
+                 'leitung_role_name' => $request->leitung_role_name ?? '',
+                 'min_rank_level_to_assign_leitung' => $request->min_rank_level_to_assign_leitung ?? 0,
             ]);
 
+            // Logging
             ActivityLog::create([
-                'user_id' => Auth::id(), 'log_type' => 'DEPARTMENT', 'action' => 'CREATED',
-                'target_id' => $department->id, 'description' => "Neue Abteilung '{$department->name}' erstellt.",
+                'user_id' => Auth::id(),
+                'log_type' => 'DEPARTMENT',
+                'action' => 'CREATED',
+                'target_id' => $department->id,
+                'description' => "Neue Abteilung '{$department->name}' erstellt.",
             ]);
-            // Kein Event hier nötig, oder?
+            // Hier kein Event, wie vorher besprochen
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich erstellt.');
 
@@ -452,28 +463,53 @@ class RoleController extends Controller
              'edit_department_name' => 'required|string|max:255|unique:departments,name,' . $department->id,
              'edit_leitung_role_name' => 'nullable|string|exists:roles,name',
              'edit_min_rank_level_to_assign_leitung' => 'nullable|integer|min:0',
-         ], [ /* ... Fehlermeldungen ... */ ]);
+         ], [
+             // --- HIER DIE FEHLERMELDUNGEN ---
+             'edit_department_name.required' => 'Der Abteilungsname darf nicht leer sein.',
+             'edit_department_name.unique' => 'Eine Abteilung mit diesem Namen existiert bereits.',
+             'edit_leitung_role_name.exists' => 'Die angegebene Leitungsrolle existiert nicht.',
+             'edit_min_rank_level_to_assign_leitung.integer' => 'Das minimale Rang-Level muss eine Zahl sein.',
+             'edit_min_rank_level_to_assign_leitung.min' => 'Das minimale Rang-Level darf nicht negativ sein.',
+             // --- ENDE FEHLERMELDUNGEN ---
+         ]);
 
-         // Fehlerbehandlung mit speziellem Fehler-Bag und Modal-Signal
          if ($validator->fails()) {
-              return back()->withErrors($validator, 'editDepartment_' . $department->id) // Eindeutiger Bag-Name
+              return back()->withErrors($validator, 'editDepartment_' . $department->id)
                            ->withInput()
-                           ->with('open_modal', 'editDepartmentModal_' . $department->id); // Eindeutiges Signal
+                           ->with('open_modal', 'editDepartmentModal_' . $department->id);
          }
 
         try {
             $oldName = $department->name;
+            $oldData = $department->toArray(); // Für Event
+
             $department->update([
                 'name' => $request->edit_department_name,
                 'leitung_role_name' => $request->edit_leitung_role_name ?? $department->leitung_role_name,
                 'min_rank_level_to_assign_leitung' => $request->edit_min_rank_level_to_assign_leitung ?? $department->min_rank_level_to_assign_leitung,
             ]);
 
+            // Logging
             $logDescription = "Abteilung '{$oldName}' aktualisiert.";
             if ($oldName !== $department->name) $logDescription .= " Neuer Name: '{$department->name}'.";
-            // Ggf. Log für andere Felder hinzufügen
+            // Ggf. Log für andere Felder
 
-            ActivityLog::create([ /* ... Log-Daten ... */ 'description' => $logDescription ]);
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'log_type' => 'DEPARTMENT',
+                'action' => 'UPDATED',
+                'target_id' => $department->id,
+                'description' => $logDescription,
+            ]);
+
+            // Event
+            PotentiallyNotifiableActionOccurred::dispatch(
+                 action_name: 'Admin\RoleController@updateDepartment',
+                 subject: $department,
+                 object: null,
+                 actor: Auth::user(),
+                 context_data: ['old_department_data' => $oldData]
+            );
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich aktualisiert.');
 
@@ -488,7 +524,6 @@ class RoleController extends Controller
      */
     public function destroyDepartment(Department $department)
     {
-        // Sicherheitsprüfung: Abteilung löschen, wenn Rollen zugewiesen sind?
         if ($department->roles()->count() > 0) {
              return back()->with('error', 'Abteilung kann nicht gelöscht werden, da ihr noch Rollen zugewiesen sind.');
         }
@@ -496,11 +531,27 @@ class RoleController extends Controller
         try {
             $deptName = $department->name;
             $deptId = $department->id;
-            
-            // Abteilung löschen (Pivot-Einträge sollten durch Cascade gelöscht werden, wenn in Migration gesetzt)
-            $department->delete(); 
+            $deletedDeptData = $department->toArray(); // Für Event
 
-            ActivityLog::create([ /* ... Log-Daten ... */ 'description' => "Abteilung '{$deptName}' gelöscht." ]);
+            $department->delete();
+
+            // Logging
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'log_type' => 'DEPARTMENT',
+                'action' => 'DELETED',
+                'target_id' => $deptId,
+                'description' => "Abteilung '{$deptName}' gelöscht.",
+            ]);
+
+            // Event
+            PotentiallyNotifiableActionOccurred::dispatch(
+                  action_name: 'Admin\RoleController@destroyDepartment',
+                  subject: (object) $deletedDeptData, // Gelöschte Daten als Objekt
+                  object: null,
+                  actor: Auth::user(),
+                  context_data: []
+            );
 
             return redirect()->route('admin.roles.index')->with('success', 'Abteilung erfolgreich gelöscht.');
 
@@ -510,3 +561,4 @@ class RoleController extends Controller
         }
     }
 }
+
