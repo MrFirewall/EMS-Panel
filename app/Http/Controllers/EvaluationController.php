@@ -139,7 +139,7 @@ class EvaluationController extends Controller
 
     public function mitarbeiter()
     {
-        $exemptRoles = ['emt-trainee', 'praktikant'];
+        $exemptRoles = ['trainee', 'praktikant'];
         $users = User::whereDoesntHave('roles', function ($query) use ($exemptRoles) {
             $query->whereIn('name', $exemptRoles);
         })->orderBy('name')->get(['id', 'name']);
