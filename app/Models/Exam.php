@@ -11,4 +11,5 @@ class Exam extends Model
 
     public function questions() { return $this->hasMany(Question::class); }
     public function attempts() { return $this->hasMany(ExamAttempt::class); }
+    public function trainingModule(): BelongsTo{ return $this->belongsTo(TrainingModule::class); }
 }
