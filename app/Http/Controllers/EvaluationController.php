@@ -260,7 +260,7 @@ class EvaluationController extends Controller
              );
         }
 
-        return redirect()->route('forms.evaluations.index');
+        return redirect()->back();
     }
 
     public function show(Evaluation $evaluation)
