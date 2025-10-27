@@ -122,7 +122,7 @@ class EvaluationController extends Controller
 
     public function azubi()
     {
-        $users = User::role('emt-trainee')->orderBy('name')->get(['id', 'name']);
+        $users = User::role('trainee')->orderBy('name')->get(['id', 'name']);
         return view('forms.evaluations.azubi', ['users' => $users, 'evaluationType' => 'azubi']);
     }
 
