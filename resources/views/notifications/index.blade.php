@@ -3,8 +3,7 @@
 @section('title', 'Benachrichtigungen')
 
 @push('styles')
-{{-- NEU: iCheck-Bootstrap für Mailbox-Checkboxen (aus dem AdminLTE Beispiel) --}}
-<link rel="stylesheet" href="{{ asset('plugins/icheck-bootstrap/icheck-bootstrap.min.css') }}">
+
 <style>
     /* Aktiv-Status für unsere neuen Filter-Links */
     .nav-pills .nav-link.active, .nav-pills .show>.nav-link {
