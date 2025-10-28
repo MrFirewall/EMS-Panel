@@ -189,12 +189,16 @@
                                     </td>
                                 </tr>
                                 @empty
-                                <tr>
+                                <!-- <tr>
                                     <td></td>
                                     <td class="d-none"></td>
                                     <td></td>
                                     <td class="text-center text-muted">Keine Benachrichtigungen vorhanden.</td>
                                     <td></td>
+                                </tr> -->
+                                
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Keine Benachrichtigungen vorhanden.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
