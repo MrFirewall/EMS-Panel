@@ -1,188 +1,270 @@
 @extends('layouts.app')
 
-@section('title', 'Benachrichtigungs-Archiv')
+@section('title', 'Benachrichtigungen')
 
-{{-- DataTables CSS --}}
 @push('styles')
-<link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-<link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
+{{-- NEU: iCheck-Bootstrap für Mailbox-Checkboxen (aus dem AdminLTE Beispiel) --}}
+<link rel="stylesheet" href="{{ asset('plugins/icheck-bootstrap/icheck-bootstrap.min.css') }}">
 <style>
-    /* Stellt sicher, dass der "Alle auswählen"-Checkbox zentriert ist */
-    #notificationsTable thead th:first-child {
+    /* Aktiv-Status für unsere neuen Filter-Links */
+    .nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+        background-color: #007bff;
+        color: #fff !important;
+    }
+    /* Stellt sicher, dass die Checkboxen in der Tabelle korrekt angezeigt werden */
+    .mailbox-messages .icheck-primary>label {
+        padding-left: 5px !important;
+    }
+    .mailbox-messages tr>td:first-child {
+        width: 30px;
         text-align: center;
-    }
-    /* NEU: Filter-Inputs stylen */
-    #notificationsTable tfoot th {
-        padding: 5px;
-    }
-    #notificationsTable tfoot input,
-    #notificationsTable tfoot select {
-        width: 100%;
-        box-sizing: border-box;
-        font-weight: normal;
-        font-size: 0.85rem;
-        padding: 0.25rem 0.5rem;
     }
 </style>
 @endpush
 
 @section('content')
-<div class="container-fluid">
+
+{{-- Wir verwenden jetzt die Sektion-Struktur aus dem AdminLTE-Beispiel --}}
+<section class="content">
     <div class="row">
-        <div class="col-12">
+
+        {{-- ================================================= --}}
+        {{-- LINKE SPALTE (Filter) --}}
+        {{-- ================================================= --}}
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Filter</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            {{-- Dieser Link filtert die Tabelle --}}
+                            <a href="#" class="nav-link active" id="filter-all">
+                                <i class="fas fa-inbox"></i> Alle
+                                <span class="badge bg-secondary float-right">{{ $totalCount }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" id="filter-unread">
+                                <i class="fas fa-envelope"></i> Ungelesene
+                                <span class="badge bg-primary float-right">{{ $unreadCount }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" id="filter-read">
+                                <i class="fas fa-envelope-open"></i> Gelesene
+                                <span class="badge bg-light float-right text-dark">{{ $readCount }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
             
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Aktionen</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            {{-- Formular für "Alle als gelesen markieren" --}}
+                            <form action="{{ route('notifications.markAllRead') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-link nav-link text-left" {{ $unreadCount == 0 ? 'disabled' : '' }}>
+                                    <i class="fas fa-check-double text-success"></i> Alle als gelesen markieren
+                                </button>
+                            </form>
+                        </li>
+                        <li class="nav-item">
+                             {{-- Formular für "Alle gelesenen löschen" --}}
+                            <form action="{{ route('notifications.clearRead') }}" method="POST" class="d-inline" onsubmit="return confirm('Möchten Sie wirklich ALLE gelesenen Benachrichtigungen löschen?');">
+                                @csrf
+                                <button type="submit" class="btn btn-link nav-link text-left text-danger" {{ $readCount == 0 ? 'disabled' : '' }}>
+                                    <i class="far fa-trash-alt"></i> Alle Gelesenen löschen
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        {{-- ================================================= --}}
+        {{-- RECHTE SPALTE (Tabelle)
+        {{-- ================================================= --}}
+        <div class="col-md-9">
             {{-- WICHTIG: Das Formular umschließt die gesamte Logik --}}
             <form id="bulkActionForm" method="POST">
                 @csrf
-                <div class="card">
+                
+                {{-- Die Hauptkarte im Stil der Mailbox --}}
+                <div class="card card-primary card-outline">
+                    
+                    {{-- HINWEIS: Feedback-Meldungen --}}
+                    @if (session('success'))
+                    <div class="m-3">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                            {{ session('success') }}
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- OBERE STEUERLEISTE (Mailbox-Controls) --}}
                     <div class="card-header">
-                        <h3 class="card-title">Benachrichtigungs-Archiv</h3>
-                        
-                        <div class="card-tools">
-                            {{-- Dropdown für Bulk-Aktionen --}}
-                            <div class="btn-group mr-2">
-                                <select id="bulk-action-select" class="form-control form-control-sm" style="width: auto;">
-                                    <option value="">Bulk-Aktion...</option>
-                                    <option value="mark_read">Auswahl als gelesen markieren</option>
-                                    <option value="destroy">Auswahl löschen</option>
-                                </select>
-                                <button type="submit" id="bulk-action-submit" class="btn btn-sm btn-primary" disabled>Ausführen</button>
+                        <div class="mailbox-controls">
+                            <button type="button" class="btn btn-default btn-sm checkbox-toggle" title="Alle auswählen/abwählen">
+                                <i class="far fa-square"></i>
+                            </button>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default btn-sm" id="bulk-destroy" title="Auswahl löschen">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                                <button type="button" class="btn btn-default btn-sm" id="bulk-mark-read" title="Auswahl als gelesen markieren">
+                                    <i class="far fa-envelope-open"></i>
+                                </button>
                             </div>
+                            
+                            {{-- DataTables Paginierungs-Info (wird von JS hierher verschoben) --}}
+                            <div class="float-right" id="datatable-info-platzhalter">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        {{-- Die Tabelle im Mailbox-Stil --}}
+                        <div class="table-responsive mailbox-messages">
+                            
+                            <table id="notificationsTable" class="table table-hover table-striped dt-responsive nowrap" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        {{-- 0. Checkbox --}}
+                                        <th class="no-sort no-search"></th>
+                                        {{-- 1. Status (versteckt, nur zum Filtern) --}}
+                                        <th class="d-none">Status</th> 
+                                        {{-- 2. Benachrichtigung --}}
+                                        <th>Benachrichtigung</th>
+                                        {{-- 3. Zeitpunkt --}}
+                                        <th style="width: 170px;">Zeitpunkt</th>
+                                        {{-- 4. Aktion --}}
+                                        <th class="no-sort no-search" style="width: 50px;">Aktion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($allNotifications as $notification)
+                                        {{-- Zeile fett markieren, wenn ungelesen --}}
+                                        <tr class="{{ $notification->read_at ? '' : 'font-weight-bold' }}">
+                                            
+                                            {{-- 0. Checkbox (im iCheck-Stil) --}}
+                                            <td>
+                                                <div class="icheck-primary">
+                                                    <input type="checkbox" class="row-checkbox" name="notification_ids[]" value="{{ $notification->id }}" id="check_{{ $notification->id }}">
+                                                    <label for="check_{{ $notification->id }}"></label>
+                                                </div>
+                                            </td>
+                                            
+                                            {{-- 1. Status (versteckt) --}}
+                                            <td class="d-none">
+                                                {{ $notification->read_at ? 'Gelesen' : 'Neu' }}
+                                            </td>
 
-                            {{-- Original-Button "Alle als gelesen markieren" --}}
-                            @if($unreadCount > 0)
-                            <form action="{{ route('notifications.markAllRead') }}" method="POST" class="d-inline mr-2">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-success" title="Alle ungelesenen als gelesen markieren">
-                                    <i class="fas fa-check-double"></i> ({{ $unreadCount }})
-                                </button>
-                            </form>
-                            @endif
+                                            {{-- 2. Benachrichtigung (mit Icon) --}}
+                                            <td class="mailbox-name">
+                                                <a href="{{ $notification->data['url'] ?? '#' }}" class="text-dark">
+                                                    <i class="{{ $notification->data['icon'] ?? 'fas fa-bell' }} text-muted mr-2"></i>
+                                                    <span>{{ $notification->data['text'] ?? '...' }}</span>
+                                                </a>
+                                            </td>
 
-                            {{-- NEU: Alle gelesenen löschen --}}
-                            <form action="{{ route('notifications.clearRead') }}" method="POST" class="d-inline" onsubmit="return confirm('Möchten Sie wirklich ALLE gelesenen Benachrichtigungen löschen?');">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-danger" title="Alle gelesenen löschen">
-                                    <i class="fas fa-trash-alt"></i> Alle Gelesenen löschen
+                                            {{-- 3. Zeitpunkt --}}
+                                            <td class="mailbox-date" data-order="{{ $notification->created_at->timestamp }}">
+                                                {{ $notification->created_at->diffForHumans() }}
+                                                <small class="d-block text-muted">{{ $notification->created_at->format('d.m.Y H:i') }}</H:i>
+                                            </td>
+                                            
+                                            {{-- 4. Aktion (Löschen) --}}
+                                            <td>
+                                                <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Möchten Sie diese Benachrichtigung wirklich löschen?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-xs btn-default text-danger" title="Löschen">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">
+                                                Keine Benachrichtigungen vorhanden.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+
+                        </div> {{-- /.mailbox-messages --}}
+                    </div> {{-- /.card-body --}}
+                    
+                    {{-- UNTERE STEUERLEISTE (Mailbox-Controls) --}}
+                    <div class="card-footer p-0">
+                         <div class="mailbox-controls p-3">
+                            <button type="button" class="btn btn-default btn-sm checkbox-toggle" title="Alle auswählen/abwählen">
+                                <i class="far fa-square"></i>
+                            </button>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default btn-sm" id="bulk-destroy-footer" title="Auswahl löschen">
+                                    <i class="far fa-trash-alt"></i>
                                 </button>
-                            </form>
+                                <button type="button" class="btn btn-default btn-sm" id="bulk-mark-read-footer" title="Auswahl als gelesen markieren">
+                                    <i class="far fa-envelope-open"></i>
+                                </button>
+                            </div>
+                            
+                            {{-- DataTables Paginierung (wird von JS hierher verschoben) --}}
+                            <div class="float-right" id="datatable-pagination-platzhalter">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="card-body">
-                        {{-- Hinweis:
-                            - session('success') wird hier hinzugefügt, um Feedback nach der Aktion zu geben
-                            - Dies setzt voraus, dass du in deinem layouts.app eine Sektion für 'session('success')' hast
-                        --}}
-                        @if (session('success'))
-                            <div class="alert alert-success alert-dismissible">
-                                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                                {{ session('success') }}
-                            </div>
-                        @endif
-
-                        <table id="notificationsTable" class="table table-bordered table-striped dt-responsive nowrap" style="width:100%">
-                            <thead>
-                                <tr>
-                                    {{-- NEU: Checkbox für "Alle auswählen" --}}
-                                    <th class="no-sort no-search" style="width: 10px;">
-                                        <input type="checkbox" id="select-all">
-                                    </th>
-                                    <th class="no-sort no-search" style="width: 20px;"></th> {{-- Icon --}}
-                                    <th style="width: 100px;">Status</th>
-                                    <th>Benachrichtigung</th>
-                                    <th style="width: 170px;">Zeitpunkt</th>
-                                    <th class="no-sort no-search" style="width: 50px;">Aktion</th>
-                                </tr>
-                            </thead>
-                            {{-- NEU: TFOOT FÜR FILTER HINZUFÜGEN --}}
-                            <thead>
-                                <tr>
-                                    <th></th> {{-- Checkbox --}}
-                                    <th></th> {{-- Icon --}}
-                                    <th>Status</th>
-                                    <th>Benachrichtigung</th>
-                                    <th>Zeitpunkt</th>
-                                    <th></th> {{-- Aktion --}}
-                                </tr>
-                        </thead>
-                            <tbody>
-                                @forelse ($allNotifications as $notification)
-                                    <tr class="{{ $notification->read_at ? '' : 'font-weight-bold' }}">
-                                        {{-- NEU: Checkbox für einzelne Zeile --}}
-                                        <td class="text-center">
-                                            <input type="checkbox" class="row-checkbox" name="notification_ids[]" value="{{ $notification->id }}">
-                                        </td>
-                                        <td>
-                                            <i class="{{ $notification->data['icon'] ?? 'fas fa-bell' }} text-muted"></i>
-                                        </td>
-                                        <td>
-                                            @if($notification->read_at)
-                                                <span class="badge badge-light">Gelesen</span>
-                                            @else
-                                                <span class="badge badge-primary">Neu</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <a href="{{ $notification->data['url'] ?? '#' }}" class="text-dark">
-                                                <span>{{ $notification->data['text'] ?? '...' }}</span>
-                                            </a>
-                                        </td>
-                                        <td data-order="{{ $notification->created_at->timestamp }}">
-                                            {{ $notification->created_at->diffForHumans() }}
-                                            <br>
-                                            <small class="text-muted">{{ $notification->created_at->format('d.m.Y H:i') }} Uhr</small>
-                                        </td>
-                                        <td>
-                                            <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Möchten Sie diese Benachrichtigung wirklich löschen?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-xs btn-danger" title="Löschen">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted">
-                                            Keine Benachrichtigungen vorhanden.
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                </div> {{-- /.card --}}
             </form> {{-- Ende des Formulars --}}
-        </div>
-    </div>
-</div>
+        </div> {{-- /.col-md-9 --}}
+    </div> {{-- /.row --}}
+</section>
 @endsection
 
 {{-- DataTables JS --}}
 @push('scripts')
-<script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-<script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-<script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-<script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
 
 <script>
     $(function () {
-      // DataTables-Instanz in einer Variable speichern
+      
+      // DataTables-Initialisierung
       var notificationsTable = $("#notificationsTable").DataTable({
         "language": {
             "url": "{{ asset('js/i18n/de-DE.json') }}" 
         },
-        // Nach Spalte 4 (Zeitpunkt) absteigend sortieren (da Spalte 0 jetzt Checkbox ist)
-        "order": [[4, 'desc']] , 
+        // Nach Spalte 3 (Zeitpunkt) absteigend sortieren
+        "order": [[3, 'desc']] , 
         "responsive": {
             details: {
                 display: DataTable.Responsive.display.modal({
                     header: function (row) {
                         var data = row.data();
-                        // data[3] ist der Benachrichtigungstext
-                        return 'Details für: ' + $(data[3]).text(); 
+                        // data[2] ist der Benachrichtigungstext
+                        return 'Details für: ' + $(data[2]).find('span').text(); 
                     }
                 }),
                 renderer: DataTable.Responsive.renderer.tableAll({
@@ -194,159 +276,115 @@
         "paging": true,
         "ordering": true,
         "info": true,        
-        "searching": true,         
-        "lengthChange": true,
-        "lengthMenu": [10, 25, 50, -1],
-        "columnDefs": [ {
-            "targets": 'no-sort',
-            "orderable": false
-          },
-          {
-            "targets": 'no-search',
-            "searchable": false
-        }],
-        "layout": {
-            bottomEnd: {
-                paging: {
-                    firstLast: false
-                }
-            }
-        },// ======================================================
-        // NEU: INITCOMPLETE FÜR SPALTENFILTER
-        // ======================================================
-        initComplete: function () {
-            this.api().columns().every(function (colIdx) {
-                var column = this;
-                var $footer = $(column.footer());
+        "searching": true, // Globale Suche bleibt aktiv        
+        "lengthChange": false, // Wir verwenden Paging, aber nicht die "Zeige X Einträge" Auswahl
+        "lengthMenu": [25, 50, -1],
+        "pageLength": 25,
 
-                // Überspringe Checkbox (0), Icon (1) und Aktion (5)
-                if (colIdx === 0 || colIdx === 1 || colIdx === 5) {
-                    $footer.html(''); // Inhalt leeren
-                    return;
-                }
+        // Spalten-Definitionen (Sort/Search deaktivieren)
+        "columnDefs": [ 
+          { "targets": 'no-sort', "orderable": false },
+          { "targets": 'no-search', "searchable": false },
+          // Verstecke die Status-Spalte (Index 1)
+          { "targets": 1, "visible": false }
+        ],
 
-                // -----------------------------
-                // Filter für STATUS (Spalte 2)
-                // -----------------------------
-                if (colIdx === 2) { 
-                    var select = $('<select class="form-control form-control-sm"><option value="">Alle Status</option></select>')
-                        .appendTo($footer)
-                        .on('change', function () {
-                            var val = $.fn.dataTable.util.escapeRegex($(this).val());
-                            // Suche exakten String (mit ^ und $)
-                            column.search(val ? '^' + val + '$' : '', true, false).draw();
-                        });
-
-                    // Werte (Neu, Gelesen) aus der Spalte auslesen und Select füllen
-                    column.data().unique().sort().each(function (d, j) {
-                        // Extrahiere den reinen Text (ohne Badge-HTML)
-                        var text = $(d).text(); 
-                        if (text && !select.find("option[value='" + text + "']").length) {
-                             select.append('<option value="' + text + '">' + text + '</option>');
-                        }
-                    });
-                    return; // Nächste Spalte
-                }
-                
-                // -----------------------------
-                // Filter für TEXT (Spalte 3 & 4)
-                // -----------------------------
-                var title = $footer.text();
-                var input = $('<input type="text" class="form-control form-control-sm" placeholder="Suche ' + title + '..." />')
-                    .appendTo($footer)
-                    .on('keyup change clear', function () {
-                        if (column.search() !== this.value) {
-                            column.search(this.value).draw();
-                        }
-                    });
-            });
+        // NEU: Layout anpassen (DOM) - Wir verschieben die Elemente
+        "dom":  "<'row'<'col-12't>>", // 't' = nur die Tabelle
+        "infoCallback": function( settings, start, end, max, total, pre ) {
+            // Verschiebt die Info-Anzeige (z.B. "1 bis 25 von 100") in unseren Platzhalter
+             $('#datatable-info-platzhalter').html(pre);
         }
-        // ======================================================
-        // ENDE INITCOMPLETE
-        // ======================================================
 
       }); // Ende DataTable Initialisierung
 
+      // Verschiebe die Paginierung in unseren Platzhalter im Footer
+      $('#notificationsTable_paginate').appendTo('#datatable-pagination-platzhalter');
+
+      // Verschiebe die globale Suche (aus dem Standard-Layout) in den Card-Header
+      $('#notificationsTable_filter').find('label').addClass('m-0');
+      $('#notificationsTable_filter').find('input').attr('placeholder', 'Suche...').addClass('form-control-sm');
+      // $('#notificationsTable_filter').appendTo('#datatable-search-platzhalter'); // Falls du einen Platzhalter im Header hättest
+
+
       // ======================================================
-      // NEU: JavaScript für Bulk-Aktionen
+      // NEU: JS für LINKE FILTER-SPALTE
       // ======================================================
+      var $filterLinks = $('.nav-pills a[id^="filter-"]');
+      
+      $filterLinks.on('click', function(e) {
+          e.preventDefault();
+          
+          // Setze alle Links zurück
+          $filterLinks.removeClass('active');
+          // Aktiviere den geklickten Link
+          $(this).addClass('active');
 
-      var $table = $('#notificationsTable');
-      var $selectAll = $('#select-all');
-      var $rowCheckboxes = $('.row-checkbox');
-      var $bulkSubmitBtn = $('#bulk-action-submit');
-      var $bulkActionSelect = $('#bulk-action-select');
+          var filterValue = '';
+          var column = notificationsTable.column(1); // Spalte 1 = Status
 
-      // 1. "Alle auswählen" Checkbox
-      // WICHTIG: .on('click', ...) funktioniert nur für die erste Seite.
-      // Wir müssen den 'change'-Event nutzen und DataTables API verwenden,
-      // um ALLE Zeilen zu ändern (auch auf anderen Seiten).
-      $selectAll.on('change', function() {
-            var isChecked = $(this).is(':checked');
-            // Finde alle Checkboxen in der Tabelle (über alle Seiten hinweg) und setze ihren Status
-            notificationsTable.rows().nodes().to$().find('.row-checkbox').prop('checked', isChecked);
-            updateBulkSubmitButton();
-      });
-
-      // 2. Einzelne Checkboxen
-      // Wir nutzen Event-Delegation am Tabellen-Body, damit es auch nach Sortierung/Seitenwechsel funktioniert
-      $table.on('change', '.row-checkbox', function() {
-            // Wenn eine Checkbox abgewählt wird, deaktiviere "Alle auswählen"
-            if (!$(this).is(':checked')) {
-                $selectAll.prop('checked', false);
-            }
-            // Prüfe, ob alle Checkboxen auf der *aktuellen Seite* (oder alle) gecheckt sind
-            // Für Einfachheit: Wir prüfen, ob *alle* Checkboxen (überall) gecheckt sind
-            var allChecked = notificationsTable.rows().nodes().to$().find('.row-checkbox:not(:checked)').length === 0;
-            $selectAll.prop('checked', allChecked);
-            
-            updateBulkSubmitButton();
-      });
-
-      // 3. Status des Submit-Buttons aktualisieren
-      function updateBulkSubmitButton() {
-            // Finde alle gecheckten Checkboxen
-            var checkedCount = notificationsTable.rows().nodes().to$().find('.row-checkbox:checked').length;
-            // Prüfe, ob eine Aktion (nicht der Platzhalter) gewählt ist
-            var actionSelected = $bulkActionSelect.val() !== "";
-            
-            // Aktiviere Button nur, wenn min. 1 Checkbox UND eine Aktion gewählt ist
-            $bulkSubmitBtn.prop('disabled', !(checkedCount > 0 && actionSelected));
-      }
-
-      // 4. Dropdown-Änderung überwachen
-      $bulkActionSelect.on('change', function() {
-          updateBulkSubmitButton();
-      });
-
-      // 5. Formular-Submit abfangen
-      $('#bulkActionForm').on('submit', function(e) {
-          var action = $bulkActionSelect.val();
-
-          if (action === "destroy") {
-                // Sicherheitsabfrage
-                if (!confirm('Möchten Sie die ausgewählten Benachrichtigungen wirklich löschen?')) {
-                    e.preventDefault(); // Abbruch
-                    return;
-                }
-                $(this).attr('action', '{{ route('notifications.bulkDestroy') }}');
-
-          } else if (action === "mark_read") {
-                $(this).attr('action', '{{ route('notifications.bulkMarkRead') }}');
-
-          } else {
-                e.preventDefault(); // Keine Aktion gewählt
+          if (this.id === 'filter-unread') {
+              // Suche exakt nach "Neu"
+              filterValue = '^Neu$'; 
+          } else if (this.id === 'filter-read') {
+              // Suche exakt nach "Gelesen"
+              filterValue = '^Gelesen$';
           }
+          
+          // Wende den Filter an (Regex, kein Smart-Search) und zeichne neu
+          column.search(filterValue, true, false).draw();
+      });
+
+      // ======================================================
+      // JS für BULK-AKTIONEN (leicht angepasst)
+      // ======================================================
+      
+      var $table = $('#notificationsTable');
+      var $form = $('#bulkActionForm');
+
+      // 1. "Alle auswählen" Button (AdminLTE-Stil)
+      $('.checkbox-toggle').click(function () {
+            var clicks = $(this).data('clicks');
+            var $icon = $(this).find('i');
+            var $checkboxes = notificationsTable.rows({ search: 'applied' }).nodes().to$().find('.row-checkbox');
+            
+            if (clicks) {
+                //Uncheck all checkboxes
+                $checkboxes.prop('checked', false);
+                $icon.removeClass('fa-check-square').addClass('fa-square');
+            } else {
+                //Check all checkboxes
+                $checkboxes.prop('checked', true);
+                $icon.removeClass('fa-square').addClass('fa-check-square');
+            }
+            $(this).data('clicks', !clicks);
       });
       
-      // 6. DataTables Draw-Event (nach Seitenwechsel, Sortierung, Suche)
-      // Stellt sicher, dass die Checkboxen den korrekten Status haben
+      // 2. Aktionen ausführen (Event-Handler für alle Buttons)
+      $('#bulk-destroy, #bulk-mark-read, #bulk-destroy-footer, #bulk-mark-read-footer').on('click', function(e) {
+          e.preventDefault();
+          var action = this.id.includes('destroy') ? 'destroy' : 'mark_read';
+
+          if (action === "destroy") {
+                if (!confirm('Möchten Sie die ausgewählten Benachrichtigungen wirklich löschen?')) {
+                    return;
+                }
+                $form.attr('action', '{{ route('notifications.bulkDestroy') }}');
+          } else {
+                 if (!confirm('Möchten Sie die ausgewählten Benachrichtigungen wirklich als gelesen markieren?')) {
+                    return;
+                }
+                $form.attr('action', '{{ route('notifications.bulkMarkRead') }}');
+          }
+          
+          // Formular absenden
+          $form.submit();
+      });
+      
+      // 3. Status des "Alle auswählen"-Buttons zurücksetzen, wenn Tabelle neu gezeichnet wird
       notificationsTable.on('draw.dt', function() {
-          // Setze "Alle auswählen" zurück, da die Auswahl evtl. nicht mehr stimmt
-          // (Es sei denn, alle *jetzt sichtbaren* sollen gecheckt sein)
-          // Einfachste Lösung: "Alle auswählen" zurücksetzen
-          $selectAll.prop('checked', false);
-          updateBulkSubmitButton();
+           $('.checkbox-toggle').data('clicks', false);
+           $('.checkbox-toggle').find('i').removeClass('fa-check-square').addClass('fa-square');
       });
 
     });
