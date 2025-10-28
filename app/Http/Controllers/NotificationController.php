@@ -99,17 +99,22 @@ class NotificationController extends Controller
     public function index()
     {
         $user = Auth::user();
-        // Neueste zuerst sortiert.
+
+        // Hole alle Benachrichtigungen (Neueste zuerst)
         $allNotifications = $user->notifications()
                                  ->orderBy('created_at', 'desc')
                                  ->get();
-
-        // Get only unread ones for the counter
-        $unreadCount = $user->unreadNotifications()->count();
+        
+        // Zählungen durchführen
+        $totalCount = $allNotifications->count();
+        $unreadCount = $allNotifications->whereNull('read_at')->count();
+        $readCount = $totalCount - $unreadCount;
 
         return view('notifications.index', [
             'allNotifications' => $allNotifications,
-            'unreadCount' => $unreadCount
+            'unreadCount' => $unreadCount,
+            'readCount' => $readCount, // NEU
+            'totalCount' => $totalCount, // NEU
         ]);
     }
 
