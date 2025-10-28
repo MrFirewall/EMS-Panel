@@ -275,7 +275,6 @@
           { "responsivePriority": 3, "targets": 4 }, // Aktion (Index 4)
           { "responsivePriority": 4, "targets": 3 }  // Zeitpunkt (Index 3)
         ],
-        "dom":  "<'row'<'col-12't>>", 
         "infoCallback": function( settings, start, end, max, total, pre ) {
              $('#datatable-info-platzhalter').html(pre);
         }
