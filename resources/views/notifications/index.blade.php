@@ -96,7 +96,7 @@
                                 </tr>
                             </thead>
                             {{-- NEU: TFOOT FÜR FILTER HINZUFÜGEN --}}
-                            <tfoot>
+                            <thead>
                                 <tr>
                                     <th></th> {{-- Checkbox --}}
                                     <th></th> {{-- Icon --}}
@@ -105,7 +105,7 @@
                                     <th>Zeitpunkt</th>
                                     <th></th> {{-- Aktion --}}
                                 </tr>
-                            </tfoot>
+                        </thead>
                             <tbody>
                                 @forelse ($allNotifications as $notification)
                                     <tr class="{{ $notification->read_at ? '' : 'font-weight-bold' }}">
@@ -264,7 +264,7 @@
         // ======================================================
         // ENDE INITCOMPLETE
         // ======================================================
-        
+
       }); // Ende DataTable Initialisierung
 
       // ======================================================
