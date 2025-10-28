@@ -164,4 +164,51 @@ class NotificationController extends Controller
         // Removed ->with('success', ...)
         return redirect()->back(); 
     }
+
+    /**
+     * Markiert ausgewählte Benachrichtigungen als gelesen.
+     */
+    public function bulkMarkRead(Request $request)
+    {
+        $request->validate([
+            'notification_ids'   => 'required|array',
+            'notification_ids.*' => 'string|exists:notifications,id',
+        ]);
+
+        Auth::user()->notifications()
+            ->whereIn('id', $request->notification_ids)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return redirect()->back()->with('success', 'Ausgewählte Benachrichtigungen wurden als gelesen markiert.');
+    }
+
+    /**
+     * Löscht ausgewählte Benachrichtigungen.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'notification_ids'   => 'required|array',
+            'notification_ids.*' => 'string|exists:notifications,id',
+        ]);
+
+        Auth::user()->notifications()
+            ->whereIn('id', $request->notification_ids)
+            ->delete();
+
+        return redirect()->back()->with('success', 'Ausgewählte Benachrichtigungen wurden gelöscht.');
+    }
+
+    /**
+     * Löscht alle gelesenen Benachrichtigungen des Benutzers.
+     */
+    public function clearRead()
+    {
+        Auth::user()->notifications()
+            ->whereNotNull('read_at')
+            ->delete();
+            
+        return redirect()->back()->with('success', 'Alle gelesenen Benachrichtigungen wurden gelöscht.');
+    }
 }

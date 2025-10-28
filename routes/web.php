@@ -116,6 +116,9 @@ Route::middleware('auth.cfx')->group(function () {
         Route::post('/mark-all-read', [NotificationController::class, 'markAllRead'])->name('markAllRead');
         Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('markAsRead');
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-mark-read', [NotificationController::class, 'bulkMarkRead'])->name('bulkMarkRead');
+        Route::post('/bulk-destroy', [NotificationController::class, 'bulkDestroy'])->name('bulkDestroy');
+        Route::post('/clear-read', [NotificationController::class, 'clearRead'])->name('clearRead');
     });
 
     Route::post('/push-subscribe', [PushSubscriptionController::class, 'store'])->middleware('auth')->name('push.subscribe');
