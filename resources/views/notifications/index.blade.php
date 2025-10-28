@@ -147,7 +147,7 @@
                                     {{-- 0. Checkbox --}}
                                     <th class="no-sort no-search"></th>
                                     {{-- 1. Status (versteckt, nur zum Filtern) --}}
-                                    <th class="d-none">Status</th> 
+                                    <th>Status</th> 
                                     {{-- 2. Benachrichtigung --}}
                                     <th>Benachrichtigung</th>
                                     {{-- 3. Zeitpunkt --}}
@@ -165,7 +165,7 @@
                                             <label for="check_{{ $notification->id }}"></label>
                                         </div>
                                     </td>
-                                    <td class="d-none">
+                                    <td class="mailbox-status">
                                         {{ $notification->read_at ? 'Gelesen' : 'Neu' }}
                                     </td>
                                     <td class="mailbox-name">
