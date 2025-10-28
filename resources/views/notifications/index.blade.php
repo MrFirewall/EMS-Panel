@@ -158,62 +158,49 @@
                             </thead>
                             <tbody>
                                 @forelse ($allNotifications as $notification)
-                                    {{-- Zeile fett markieren, wenn ungelesen --}}
-                                    <tr class="{{ $notification->read_at ? '' : 'font-weight-bold' }}">
-                                        
-                                        {{-- 0. Checkbox (im iCheck-Stil) --}}
-                                        <td>
-                                            <div class="icheck-primary">
-                                                <input type="checkbox" class="row-checkbox" name="notification_ids[]" value="{{ $notification->id }}" id="check_{{ $notification->id }}">
-                                                <label for="check_{{ $notification->id }}"></label>
-                                            </div>
-                                        </td>
-                                        
-                                        {{-- 1. Status (versteckt) --}}
-                                        <td class="d-none">
-                                            {{ $notification->read_at ? 'Gelesen' : 'Neu' }}
-                                        </td>
-
-                                        {{-- 2. Benachrichtigung (mit Icon) --}}
-                                        <td class="mailbox-name">
-                                            <a href="{{ $notification->data['url'] ?? '#' }}" class="text-dark">
-                                                <i class="{{ $notification->data['icon'] ?? 'fas fa-bell' }} text-muted mr-2"></i>
-                                                <span>{{ $notification->data['text'] ?? '...' }}</span>
-                                            </a>
-                                        </td>
-
-                                        {{-- 3. Zeitpunkt --}}
-                                        <td class="mailbox-date" data-order="{{ $notification->created_at->timestamp }}">
-                                            {{ $notification->created_at->diffForHumans() }}
-                                            <small class="d-block text-muted">{{ $notification->created_at->format('d.m.Y H:i') }}</H:i>
-                                        </td>
-                                        
-                                        {{-- 4. Aktion (Löschen) --}}
-                                        <td>
-                                            {{-- DIESES FORMULAR IST JETZT NICHT MEHR VERSCHACHTELT --}}
-                                            <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Möchten Sie diese Benachrichtigung wirklich löschen?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-xs btn-default text-danger" title="Löschen">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    @empty
-                                    <tr>
-                                        <td></td>
-                                        <td class="d-none"></td>
-                                        <td colspan="4" class="text-center text-muted"> 
-                                            Keine Benachrichtigungen vorhanden.
-                                        </td>
-                                    </tr>
+                                <tr class="{{ $notification->read_at ? '' : 'font-weight-bold' }}">
+                                    <td>
+                                        <div class="icheck-primary">
+                                            <input type="checkbox" class="row-checkbox" name="notification_ids[]" value="{{ $notification->id }}" id="check_{{ $notification->id }}">
+                                            <label for="check_{{ $notification->id }}"></label>
+                                        </div>
+                                    </td>
+                                    <td class="d-none">
+                                        {{ $notification->read_at ? 'Gelesen' : 'Neu' }}
+                                    </td>
+                                    <td class="mailbox-name">
+                                        <a href="{{ $notification->data['url'] ?? '#' }}" class="text-dark">
+                                            <i class="{{ $notification->data['icon'] ?? 'fas fa-bell' }} text-muted mr-2"></i>
+                                            <span>{{ $notification->data['text'] ?? '...' }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="mailbox-date" data-order="{{ $notification->created_at->timestamp }}">
+                                        {{ $notification->created_at->diffForHumans() }}
+                                        <small class="d-block text-muted">{{ $notification->created_at->format('d.m.Y H:i') }}</H:i>
+                                    </td>
+                                    <td>
+                                        <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Möchten Sie diese Benachrichtigung wirklich löschen?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-xs btn-default text-danger" title="Löschen">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td></td>
+                                    <td class="d-none"></td>
+                                    <td class="text-center text-muted">Keine Benachrichtigungen vorhanden.</td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
                                 @endforelse
                             </tbody>
                         </table>
-
-                    </div> {{-- /.mailbox-messages --}}
-                </div> {{-- /.card-body --}}
+                    </div>
+                </div>
                 
                 {{-- UNTERE STEUERLEISTE (Mailbox-Controls) --}}
                 <div class="card-footer p-0">
