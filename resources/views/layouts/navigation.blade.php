@@ -5,9 +5,12 @@
     |--------------------------------------------------------------------------
     */
     
+    // NEU: Für den Link zum Benachrichtigungs-Archiv
+    $isNotificationsActive = Request::routeIs('notifications.*');
+
     // Dropdown: Ausbildung (User)
     $isAusbildungAnmeldungActive = Request::routeIs('forms.evaluations.modulAnmeldung', 'forms.evaluations.pruefungsAnmeldung');
-    $isAusbildungUserActive = Request::routeIs('modules.*') || $isAusbildungAnmeldungActive;
+    $isAusbildungUserActive = $isAusbildungAnmeldungActive;
 
     // Dropdown: Formulare (User)
     $isEvaluationsActive = Request::routeIs('forms.evaluations.azubi', 'forms.evaluations.praktikant', 'forms.evaluations.mitarbeiter', 'forms.evaluations.leitstelle');
@@ -26,12 +29,15 @@
 
     // Dropdown: Ausbildungsleitung (Admin)
     $isExamManagementActive = Request::routeIs('admin.exams.*') || Request::routeIs('admin.exams.attempts.*');
-    $isAdminAusbildungActive = Request::routeIs('forms.evaluations.index') || $isExamManagementActive;
+    $isAdminAusbildungActive = Request::routeIs('forms.evaluations.index') || 
+                               Request::routeIs('modules.*') || 
+                               $isExamManagementActive;
 
     // Dropdown: System & Konfiguration (Admin)
     $isNotificationRulesActive = Request::routeIs('admin.notification-rules.*');
+    // Optimiert: admin.permissions.* (statt .index) und admin.logs.index (da nur index existiert)
     $isAdminSystemActive = Request::routeIs('admin.announcements.*') ||
-                           Request::routeIs('admin.permissions.index') ||
+                           Request::routeIs('admin.permissions.*') ||
                            Request::routeIs('admin.logs.index') ||
                            $isNotificationRulesActive;
 
@@ -58,6 +64,14 @@
         </a>
     </li>
     @endcan
+
+    {{-- NEU HINZUGEFÜGT (BASIEREND AUF WEB.PHP) --}}
+    <li class="nav-item">
+        <a href="{{ route('notifications.index') }}" class="nav-link {{ $isNotificationsActive ? 'active' : '' }}">
+            <i class="nav-icon fas fa-bell"></i>
+            <p>Benachrichtigungen</p>
+        </a>
+    </li>
     
     {{-- EINSATZWESEN GRUPPE --}}
     @canany(['reports.view', 'citizens.view'])
@@ -81,7 +95,7 @@
     @endcanany
 
     {{-- AUSBILDUNG GRUPPE (USER) --}}
-    @can('training.view') {{-- Ggf. anpassen, falls es eine bessere Berechtigung gibt --}}
+    @can('training.view') {{-- Ggf. Berechtigung anpassen --}}
     <li class="nav-item has-treeview {{ $isAusbildungUserActive ? 'menu-open' : '' }}">
         <a href="#" class="nav-link {{ $isAusbildungUserActive ? 'active' : '' }}">
             <i class="nav-icon fas fa-graduation-cap"></i>
@@ -91,13 +105,6 @@
             </p>
         </a>
         <ul class="nav nav-treeview">
-             {{-- HINWEIS: Dieser Link war vorher fälschlicherweise im Admin-Bereich --}}
-            <li class="nav-item">
-                <a href="{{ route('modules.index') }}" class="nav-link {{ Request::routeIs('modules.*') ? 'active' : '' }}">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Ausbildungsmodule</p>
-                </a>
-            </li>
             @can('evaluations.create') 
             <li class="nav-item"><a href="{{ route('forms.evaluations.modulAnmeldung') }}" class="nav-link {{ Request::routeIs('forms.evaluations.modulAnmeldung') ? 'active' : '' }}"><i class="far fa-circle nav-icon"></i><p>Modul-Anmeldung</p></a></li>
             <li class="nav-item"><a href="{{ route('forms.evaluations.pruefungsAnmeldung') }}" class="nav-link {{ Request::routeIs('forms.evaluations.pruefungsAnmeldung') ? 'active' : '' }}"><i class="far fa-circle nav-icon"></i><p>Prüfungs-Anmeldung</p></a></li>
@@ -191,7 +198,7 @@
         @endcanany
 
         {{-- AUSBILDUNGSLEITUNG (Ausbildungsabteilung) --}}
-        @canany(['evaluations.view.all', 'exams.manage'])
+        @canany(['evaluations.view.all', 'exams.manage', 'training.view']) 
         <li class="nav-item has-treeview {{ $isAdminAusbildungActive ? 'menu-open' : '' }}">
             <a href="#" class="nav-link {{ $isAdminAusbildungActive ? 'active' : '' }}">
                 <i class="nav-icon fas fa-book-reader"></i>
@@ -200,11 +207,23 @@
             <ul class="nav nav-treeview">
                 @can('evaluations.view.all')
                 <li class="nav-item">
+                    {{-- Diese Route ist NICHT im Admin-Prefix, daher route('forms.evaluations.index') --}}
                     <a href="{{ route('forms.evaluations.index') }}" class="nav-link {{ Request::routeIs('forms.evaluations.index') ? 'active' : '' }}">
                         <i class="far fa-circle nav-icon"></i><p>Eing. Formulare</p>
                     </a>
                 </li>
                 @endcan
+                
+                @can('training.view') 
+                <li class="nav-item">
+                     {{-- Diese Route ist NICHT im Admin-Prefix, daher route('modules.index') --}}
+                    <a href="{{ route('modules.index') }}" class="nav-link {{ Request::routeIs('modules.*') ? 'active' : '' }}">
+                        <i class="far fa-circle nav-icon"></i>
+                        <p>Ausbildungsmodule</p>
+                    </a>
+                </li>
+                @endcan
+
                 @can('exams.manage')
                 <li class="nav-item has-treeview {{ $isExamManagementActive ? 'menu-open' : '' }}">
                     <a href="#" class="nav-link {{ $isExamManagementActive ? 'active' : '' }}">
@@ -246,7 +265,7 @@
                 @endcan
                 @can('permissions.view')
                 <li class="nav-item">
-                    <a href="{{ route('admin.permissions.index') }}" class="nav-link {{ Request::routeIs('admin.permissions.index') ? 'active' : '' }}">
+                    <a href="{{ route('admin.permissions.index') }}" class="nav-link {{ Request::routeIs('admin.permissions.*') ? 'active' : '' }}">
                         <i class="far fa-circle nav-icon"></i><p>Berechtigungen</p>
                     </a>
                 </li>
