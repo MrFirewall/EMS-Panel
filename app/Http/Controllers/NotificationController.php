@@ -99,9 +99,10 @@ class NotificationController extends Controller
     public function index()
     {
         $user = Auth::user();
-
-        // Get all notifications, paginated
-        $allNotifications = $user->notifications()->paginate(20);
+        // Neueste zuerst sortiert.
+        $allNotifications = $user->notifications()
+                                 ->orderBy('created_at', 'desc')
+                                 ->get();
 
         // Get only unread ones for the counter
         $unreadCount = $user->unreadNotifications()->count();
