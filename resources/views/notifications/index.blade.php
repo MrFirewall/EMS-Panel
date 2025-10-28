@@ -277,7 +277,7 @@
         "columnDefs": [ 
           { "targets": 'no-sort', "orderable": false },
           { "targets": 'no-search', "searchable": false },
-          { "targets": 1, "visible": false } // Status-Spalte
+          { "targets": 1, "visible": true } // Status-Spalte
         ],
         "dom":  "<'row'<'col-12't>>", 
         "infoCallback": function( settings, start, end, max, total, pre ) {
