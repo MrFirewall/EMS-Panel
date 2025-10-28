@@ -11,6 +11,18 @@
     #notificationsTable thead th:first-child {
         text-align: center;
     }
+    /* NEU: Filter-Inputs stylen */
+    #notificationsTable tfoot th {
+        padding: 5px;
+    }
+    #notificationsTable tfoot input,
+    #notificationsTable tfoot select {
+        width: 100%;
+        box-sizing: border-box;
+        font-weight: normal;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+    }
 </style>
 @endpush
 
@@ -83,6 +95,17 @@
                                     <th class="no-sort no-search" style="width: 50px;">Aktion</th>
                                 </tr>
                             </thead>
+                            {{-- NEU: TFOOT FÜR FILTER HINZUFÜGEN --}}
+                            <tfoot>
+                                <tr>
+                                    <th></th> {{-- Checkbox --}}
+                                    <th></th> {{-- Icon --}}
+                                    <th>Status</th>
+                                    <th>Benachrichtigung</th>
+                                    <th>Zeitpunkt</th>
+                                    <th></th> {{-- Aktion --}}
+                                </tr>
+                            </tfoot>
                             <tbody>
                                 @forelse ($allNotifications as $notification)
                                     <tr class="{{ $notification->read_at ? '' : 'font-weight-bold' }}">
@@ -188,7 +211,60 @@
                     firstLast: false
                 }
             }
+        },// ======================================================
+        // NEU: INITCOMPLETE FÜR SPALTENFILTER
+        // ======================================================
+        initComplete: function () {
+            this.api().columns().every(function (colIdx) {
+                var column = this;
+                var $footer = $(column.footer());
+
+                // Überspringe Checkbox (0), Icon (1) und Aktion (5)
+                if (colIdx === 0 || colIdx === 1 || colIdx === 5) {
+                    $footer.html(''); // Inhalt leeren
+                    return;
+                }
+
+                // -----------------------------
+                // Filter für STATUS (Spalte 2)
+                // -----------------------------
+                if (colIdx === 2) { 
+                    var select = $('<select class="form-control form-control-sm"><option value="">Alle Status</option></select>')
+                        .appendTo($footer)
+                        .on('change', function () {
+                            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                            // Suche exakten String (mit ^ und $)
+                            column.search(val ? '^' + val + '$' : '', true, false).draw();
+                        });
+
+                    // Werte (Neu, Gelesen) aus der Spalte auslesen und Select füllen
+                    column.data().unique().sort().each(function (d, j) {
+                        // Extrahiere den reinen Text (ohne Badge-HTML)
+                        var text = $(d).text(); 
+                        if (text && !select.find("option[value='" + text + "']").length) {
+                             select.append('<option value="' + text + '">' + text + '</option>');
+                        }
+                    });
+                    return; // Nächste Spalte
+                }
+                
+                // -----------------------------
+                // Filter für TEXT (Spalte 3 & 4)
+                // -----------------------------
+                var title = $footer.text();
+                var input = $('<input type="text" class="form-control form-control-sm" placeholder="Suche ' + title + '..." />')
+                    .appendTo($footer)
+                    .on('keyup change clear', function () {
+                        if (column.search() !== this.value) {
+                            column.search(this.value).draw();
+                        }
+                    });
+            });
         }
+        // ======================================================
+        // ENDE INITCOMPLETE
+        // ======================================================
+        
       }); // Ende DataTable Initialisierung
 
       // ======================================================
