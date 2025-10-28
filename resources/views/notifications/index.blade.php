@@ -200,9 +200,11 @@
                                             </form>
                                         </td>
                                     </tr>
-                                @empty
+                                    @empty
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted">
+                                        <td></td>
+                                        <td class="d-none"></td>
+                                        <td colspan="3" class="text-center text-muted"> 
                                             Keine Benachrichtigungen vorhanden.
                                         </td>
                                     </tr>
