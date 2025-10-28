@@ -277,7 +277,11 @@
         "columnDefs": [ 
           { "targets": 'no-sort', "orderable": false },
           { "targets": 'no-search', "searchable": false },
-          { "targets": 1, "visible": true } // Status-Spalte
+          { "targets": 1, "visible": false }, // Status-Spalte
+          { "responsivePriority": 1, "targets": 0 }, // Checkbox (Index 0)
+          { "responsivePriority": 2, "targets": 2 }, // Benachrichtigung (Index 2)
+          { "responsivePriority": 3, "targets": 4 }, // Aktion (Index 4)
+          { "responsivePriority": 4, "targets": 3 }  // Zeitpunkt (Index 3)
         ],
         "dom":  "<'row'<'col-12't>>", 
         "infoCallback": function( settings, start, end, max, total, pre ) {
