@@ -192,8 +192,8 @@
                                 <tr>
                                     <td></td>
                                     <td class="d-none"></td>
-                                    <td class="text-center text-muted">Keine Benachrichtigungen vorhanden.</td>
                                     <td></td>
+                                    <td class="text-center text-muted">Keine Benachrichtigungen vorhanden.</td>
                                     <td></td>
                                 </tr>
                                 @endforelse
