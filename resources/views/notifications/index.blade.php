@@ -266,7 +266,7 @@
                 })
             }
         },
-        "autoWidth": true,
+        "autoWidth": false,
         "paging": true,
         "ordering": true,
         "info": true,        
