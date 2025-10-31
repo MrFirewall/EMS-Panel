@@ -423,11 +423,19 @@ class UserController extends Controller
 
         $adminUser = Auth::user(); // Der aktuell eingeloggte Admin
 
+        // --- START: PROBLEM-LÖSUNG ---
+
+        // 1. Hole alle Rollen, die der Admin verwalten DARF
         $managableRoleNames = $this->getManagableRoles()->pluck('name')->toArray();
+        
+        // 2. Hole alle Rollen, die der User VORHER hatte
         $originalRoleNames = $user->getRoleNames()->toArray();
+        
+        // 3. Hole die Rollen, die vom Formular übermittelt wurden
+        //    (Das sind nur die managebaren Rollen, die der Admin angehakt hat)
         $submittedRoleNames = $request->input('roles', []);
 
-        // Prüfen, ob der Admin versucht, Rollen zuzuweisen, die er nicht managen darf
+        // 4. Prüfen, ob der Admin versucht, NEUE Rollen zuzuweisen, die er nicht managen darf
         $newlyAddedRoles = array_diff($submittedRoleNames, $originalRoleNames);
         foreach ($newlyAddedRoles as $addedRole) {
             if (!in_array($addedRole, $managableRoleNames)) {
@@ -436,12 +444,27 @@ class UserController extends Controller
                                 ->withInput();
             }
         }
-        // Sicherstellen, dass die Super-Admin-Rolle nicht entfernt werden kann
-        if ($user->hasRole($this->superAdminRole)) {
-            if (!in_array($this->superAdminRole, $submittedRoleNames)) {
-                $submittedRoleNames[] = $this->superAdminRole;
-            }
+        
+        // 5. Finde alle Rollen, die der User bereits hat, die der Admin aber NICHT managen darf
+        //    (z.B. höhere Ränge oder die Super-Admin-Rolle).
+        $unmanagableRolesToKeep = array_diff($originalRoleNames, $managableRoleNames);
+
+        // 6. Kombiniere die vom Formular übermittelten (managebaren) Rollen
+        //    mit den zu behaltenden (unmanagebaren) Rollen.
+        $finalRolesToSync = array_merge($submittedRoleNames, $unmanagableRolesToKeep);
+        $finalRolesToSync = array_unique($finalRolesToSync);
+
+        // Der alte Super-Admin-Check ist jetzt überflüssig, da $unmanagableRolesToKeep
+        // die Super-Admin-Rolle automatisch enthält (da sie nicht in $managableRoleNames ist).
+        /* if ($user->hasRole($this->superAdminRole)) {
+             if (!in_array($this->superAdminRole, $submittedRoleNames)) {
+                 $submittedRoleNames[] = $this->superAdminRole;
+             }
         }
+        */
+        
+        // --- ENDE: PROBLEM-LÖSUNG ---
+
 
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
 
@@ -449,11 +472,10 @@ class UserController extends Controller
         $oldStatus = $user->status;
         $newStatus = $validatedData['status'];
 
-        // Einstellungsdatum neu setzen, wenn von inaktiv zu aktiv gewechselt wird
-        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert']; // 'inaktiv' hinzugefügt falls verwendet
-        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase']; // Ggf. anpassen
+        // Einstellungsdatum neu setzen... (Restliche Logik bleibt gleich)
+        $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert']; 
+        $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase']; 
         if (in_array($oldStatus, $inactiveStatuses) && in_array($newStatus, $activeStatuses)) {
-            // Nur setzen, wenn hire_date nicht explizit im Formular gesetzt wurde
             if (empty($validatedData['hire_date'])) {
                  $validatedData['hire_date'] = now();
             }
@@ -463,10 +485,11 @@ class UserController extends Controller
         $newRank = 'praktikant'; // Standard
         $highestLevel = 0;
         
-        // Hole die Level der Ränge, die auch ausgewählt wurden, aus der DB
-        $rankLevels = Rank::whereIn('name', $submittedRoleNames)->pluck('level', 'name');
+        // WICHTIG: $finalRolesToSync statt $submittedRoleNames verwenden
+        $rankLevels = Rank::whereIn('name', $finalRolesToSync)->pluck('level', 'name');
 
-        foreach ($submittedRoleNames as $roleName) {
+        // WICHTIG: $finalRolesToSync statt $submittedRoleNames verwenden
+        foreach ($finalRolesToSync as $roleName) {
             if ($rankLevels->has($roleName) && $rankLevels[$roleName] > $highestLevel) {
                 $highestLevel = $rankLevels[$roleName];
                 $newRank = $roleName;
@@ -482,7 +505,8 @@ class UserController extends Controller
         $oldModuleIds = $userBeforeUpdate->trainingModules->pluck('id')->toArray();
 
         // Rollen und Berechtigungen synchronisieren
-        $user->syncRoles($submittedRoleNames);
+        // WICHTIG: $finalRolesToSync statt $submittedRoleNames verwenden
+        $user->syncRoles($finalRolesToSync); 
         $user->syncPermissions($request->permissions ?? []);
 
         // Stammdaten aktualisieren
@@ -490,7 +514,7 @@ class UserController extends Controller
         $validatedData['last_edited_by'] = $adminUser->name;
         $user->update($validatedData);
 
-        // --- Module synchronisieren ---
+        // --- Module synchronisieren --- (Restliche Logik bleibt gleich)
         $submittedModuleIds = $request->input('modules', []);
         $modulesToSync = [];
         $adminName = $adminUser->name;
@@ -524,7 +548,7 @@ class UserController extends Controller
         $user->load(['roles', 'trainingModules']);
         $newModuleIds = $user->trainingModules->pluck('id')->toArray();
 
-        // Activity Log erstellen
+        // Activity Log erstellen (Restliche Logik bleibt gleich)
         $description = "Benutzerprofil von '{$user->name}' ({$user->id}) aktualisiert.";
         if ($oldRank !== $newRank) {
             $description .= " Rang geändert: {$oldRank} -> {$newRank}.";
@@ -553,7 +577,7 @@ class UserController extends Controller
              'description' => $description,
            ]);
 
-        // Service Record bei Beförderung/Degradierung
+        // Service Record bei Beförderung/Degradierung (Restliche Logik bleibt gleich)
         if ($oldRank !== $newRank) {
             
             // --- ANGEPASSTE RANG-LEVEL LOGIK (DB-ABFRAGE) ---
