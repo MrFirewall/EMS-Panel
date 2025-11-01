@@ -565,8 +565,10 @@
 @if(session('is_remembered') === false)
 <script>
  (function() {
-  // 1. Setze die Dauer (OHNE Puffer, für eine saubere Anzeige)
-  let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }});
+  // 1. Setze die Dauer
+  const configLifetime = ({{ config('session.lifetime', 120) * 60 }});
+  // WICHTIG: Der Puffer von 10 Sekunden. JS läuft VOR dem Server ab.
+  let sessionLifetimeInSeconds = configLifetime - 10; 
   
   // 2. Finde die Timer-Elemente
   const timerElement = document.getElementById('session-timer');
@@ -578,11 +580,15 @@
    window.location.href = '{{ route('lockscreen') }}';
   }
 
-  // NEU: 4. Eigene Funktion NUR für die Anzeige
-  function displayTime() {
-    // Berechne die verbleibenden Minuten
-    // Math.ceil() rundet auf, damit 120:00 als 120 min angezeigt wird
-    let totalMinutes = Math.ceil(sessionLifetimeInSeconds / 60);
+  // 4. Funktion NUR für die Anzeige
+  function displayTime(seconds) {
+    // Runde auf die nächste volle Minute auf, für die Anzeige
+    let totalMinutes = Math.ceil(seconds / 60);
+
+    // Korrigiert die erste Anzeige, damit 1m 50s als "2 min" angezeigt wird
+    if (seconds === configLifetime - 10) {
+      totalMinutes = Math.ceil(configLifetime / 60);
+    }
 
     // Logik für die Anzeige
     if (totalMinutes < 60) {
@@ -600,39 +606,42 @@
       timerElement.classList.add('badge-warning');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:';
     } else {
-      // Stelle sicher, dass die Farbe zurückgesetzt wird
       timerElement.classList.remove('badge-warning');
       timerElement.classList.add('badge-danger');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:';
     }
   }
 
-  // 5. Funktion, die die Zeit reduziert
+  // 5. Funktion, die die Zeit SEKÜNDLICH reduziert
   function updateTimer() {
-    sessionLifetimeInSeconds -= 60; 
+    sessionLifetimeInSeconds--; 
 
+    // 6. PRÄZISER CHECK: Leite um, sobald der Puffer-Timer (z.B. 110s) abgelaufen ist
     if (sessionLifetimeInSeconds <= 0) {
       clearInterval(timerInterval);
       redirectToLockscreen();
       return;
     }
     
-    // Rufe die Anzeige-Funktion auf
-    displayTime();
+    // 7. ANZEIGE NUR JEDE MINUTE AKTUALISIEREN
+    // (z.B. wenn 59s -> 0s, also bei 1:00, 2:00, etc.)
+    if (sessionLifetimeInSeconds % 60 === 0) {
+      displayTime(sessionLifetimeInSeconds);
+    }
   }
 
-  // 6. Timer starten
-  displayTime(); // Zeige die Startzeit (z.B. 120 min) SOFORT an
+  // 8. Timer starten
+  displayTime(sessionLifetimeInSeconds); // Zeige die Startzeit (z.B. 2 min) SOFORT an
   
-  // Starte das Intervall, das in 1 Minute `updateTimer` aufruft (was dann 119 min anzeigt)
-  let timerInterval = setInterval(updateTimer, 60000);
+  // Starte das SEKÜNDLICHE Intervall (1000ms)
+  let timerInterval = setInterval(updateTimer, 1000);
 
-  // 7. Inaktivitäts-Reset
+  // 9. Inaktivitäts-Reset
   function resetTimer() {
     clearInterval(timerInterval);
-    sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }});
-    displayTime(); // Zeige die zurückgesetzte Zeit SOFORT an
-    timerInterval = setInterval(updateTimer, 60000);
+    sessionLifetimeInSeconds = configLifetime - 10;
+    displayTime(sessionLifetimeInSeconds); // Zeige die zurückgesetzte Zeit SOFORT an
+    timerInterval = setInterval(updateTimer, 1000);
   }
 
   // Events, die den Timer zurücksetzen
