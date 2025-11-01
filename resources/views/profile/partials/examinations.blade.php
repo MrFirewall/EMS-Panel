@@ -25,7 +25,7 @@
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
                             <!-- <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small> -->
                         </td>
-                        <td>{{ $attempt->evaluator->name ?? 'System }}</td>
+                        <td>{{ $attempt->evaluator->name ?? 'System' }}</td>
                     </tr>
                 @empty
                     {{-- Das @empty ist leer, WIE IM ORIGINAL --}}
