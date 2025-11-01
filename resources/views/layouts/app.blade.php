@@ -564,81 +564,81 @@
 {{-- ANGEPASSTER SESSION-TIMER --}}
 @if(session('is_remembered') === false)
 <script>
-  (function() {
-    // 1. Setze die Dauer
-    let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
+ (function() {
+  // 1. Setze die Dauer (OHNE Puffer, für eine saubere Anzeige)
+  let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }});
+  
+  // 2. Finde die Timer-Elemente
+  const timerElement = document.getElementById('session-timer');
+  const timerTextElement = document.querySelector('.d-sm-inline.mr-1');
+  if(!timerElement) return; 
+
+  // 3. Funktion zum Umleiten
+  function redirectToLockscreen() {
+   window.location.href = '{{ route('lockscreen') }}';
+  }
+
+  // NEU: 4. Eigene Funktion NUR für die Anzeige
+  function displayTime() {
+    // Berechne die verbleibenden Minuten
+    // Math.ceil() rundet auf, damit 120:00 als 120 min angezeigt wird
+    let totalMinutes = Math.ceil(sessionLifetimeInSeconds / 60);
+
+    // Logik für die Anzeige
+    if (totalMinutes < 60) {
+      timerElement.textContent = totalMinutes + ' min';
+    } else {
+      let hours = Math.floor(totalMinutes / 60);
+      let minutes = totalMinutes % 60;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      timerElement.textContent = hours + 'h ' + minutes + ' min';
+    }
     
-    // 2. Finde das Timer-Element
-    const timerElement = document.getElementById('session-timer');
-    const timerTextElement = document.querySelector('.d-sm-inline.mr-1'); // Finde auch den Text davor
-    if(!timerElement) return; 
-
-    // 3. Funktion zum Umleiten
-    function redirectToLockscreen() {
-      window.location.href = '{{ route('lockscreen') }}';
-    }
-
-    // 4. Funktion zum Aktualisieren des Timers
-    function updateTimer() {
-      // NEU: Zieht 60 Sekunden ab (da wir minütlich aktualisieren)
-      sessionLifetimeInSeconds -= 60; 
-
-      if (sessionLifetimeInSeconds <= 0) {
-        clearInterval(timerInterval);
-        redirectToLockscreen();
-        return;
-      }
-
-      // NEU: Berechne die verbleibenden Minuten
-      let totalMinutes = Math.floor(sessionLifetimeInSeconds / 60);
-
-      // NEU: Logik für die Anzeige (hh:mm oder min)
-      if (totalMinutes < 60) {
-        // Weniger als 1 Stunde
-        timerElement.textContent = totalMinutes + ' min';
-        if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:'; // Standardtext
-      } else {
-        // 1 Stunde oder mehr
-        let hours = Math.floor(totalMinutes / 60);
-        let minutes = totalMinutes % 60;
-        minutes = minutes < 10 ? '0' + minutes : minutes; // Führende Null
-        timerElement.textContent = hours + 'h ' + minutes + ' min';
-        if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:'; // Standardtext
-      }
-      
-      // NEU: Farblogik basiert jetzt auf Minuten
-      if(totalMinutes < 5) { // Weniger als 5 Minuten
-        timerElement.classList.remove('badge-danger');
-        timerElement.classList.add('badge-warning');
-        if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:'; // Text ändern
-      }
-    }
-
-    // 5. Timer starten
-    updateTimer(); // NEU: Timer sofort beim Laden anzeigen
-    // NEU: Intervall auf 1 Minute (60000 ms) gesetzt
-    let timerInterval = setInterval(updateTimer, 60000);
-
-    // 6. Inaktivitäts-Reset
-    function resetTimer() {
-      clearInterval(timerInterval);
-      sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
-      updateTimer(); // Timer sofort aktualisieren
-      // NEU: Intervall auf 1 Minute (60000 ms) gesetzt
-      timerInterval = setInterval(updateTimer, 60000);
-      
-      // Farbe zurücksetzen
+    // Farblogik (weniger als 5 Minuten)
+    if(totalMinutes < 5) { 
+      timerElement.classList.remove('badge-danger');
+      timerElement.classList.add('badge-warning');
+      if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:';
+    } else {
+      // Stelle sicher, dass die Farbe zurückgesetzt wird
       timerElement.classList.remove('badge-warning');
       timerElement.classList.add('badge-danger');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:';
     }
+  }
 
-    // NEU: Events, die den Timer zurücksetzen.
-    // 'mousemove' und 'scroll' wurden entfernt.
-    // 'mousedown' fängt alle Klicks ab. 'keydown' fängt Tastatureingaben ab.
-    $(window).on('mousedown keydown', resetTimer);
+  // 5. Funktion, die die Zeit reduziert
+  function updateTimer() {
+    sessionLifetimeInSeconds -= 60; 
 
-  })();
+    if (sessionLifetimeInSeconds <= 0) {
+      clearInterval(timerInterval);
+      redirectToLockscreen();
+      return;
+    }
+    
+    // Rufe die Anzeige-Funktion auf
+    displayTime();
+  }
+
+  // 6. Timer starten
+  displayTime(); // Zeige die Startzeit (z.B. 120 min) SOFORT an
+  
+  // Starte das Intervall, das in 1 Minute `updateTimer` aufruft (was dann 119 min anzeigt)
+  let timerInterval = setInterval(updateTimer, 60000);
+
+  // 7. Inaktivitäts-Reset
+  function resetTimer() {
+    clearInterval(timerInterval);
+    sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }});
+    displayTime(); // Zeige die zurückgesetzte Zeit SOFORT an
+    timerInterval = setInterval(updateTimer, 60000);
+  }
+
+  // Events, die den Timer zurücksetzen
+  $(window).on('mousedown keydown', resetTimer);
+
+ })();
 </script>
 @endif
 
