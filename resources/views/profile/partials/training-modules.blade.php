@@ -6,9 +6,9 @@
         <table class="table table-sm mb-0 table-striped">
             <thead>
                 <tr>
-                    <th scope="col" style="width: 15%;">Datum</th>
-                    <th scope="col" style="width: 55%;">Modul</th>
-                    <th scope="col" style="width: 30%;">Ausbilder</th>
+                    <th>Datum</th>
+                    <th>Modul</th>
+                    <th>Ausbilder</th>
                 </tr>
             </thead>
             <tbody>
