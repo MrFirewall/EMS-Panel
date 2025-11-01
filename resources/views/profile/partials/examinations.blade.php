@@ -26,21 +26,25 @@
                             $statusColor = 'bg-warning';
                             $statusText = 'Eingereicht (Wartet auf Bewertung)';
                         } elseif ($attempt->status === 'evaluated') {
-                            // Wenn bewertet, prüfe den finalen Modulstatus aus der Pivot-Tabelle
-                            $moduleUser = $attempt->user->trainingModules->where('id', $attempt->exam->training_module_id)->first();
-                            $finalStatus = $moduleUser->pivot->status ?? 'evaluated'; // Holt 'bestanden' / 'nicht_bestanden'
-
-                            if ($finalStatus === 'bestanden') {
-                                $statusColor = 'bg-success';
-                                $statusText = 'Bestanden';
-                            } elseif ($finalStatus === 'nicht_bestanden') {
-                                $statusColor = 'bg-danger';
-                                $statusText = 'Nicht bestanden';
+                            
+                            // --- KORRIGIERTE LOGIK START ---
+                            // Prüfe, ob die Relationen geladen sind, um Fehler zu vermeiden
+                            if ($attempt->exam) {
+                                // Vergleiche den Score des Versuchs direkt mit der Bestehensgrenze der Prüfung
+                                if ($attempt->score >= $attempt->exam->pass_mark) {
+                                    $statusColor = 'bg-success';
+                                    $statusText = 'Bestanden';
+                                } else {
+                                    $statusColor = 'bg-danger';
+                                    $statusText = 'Nicht bestanden';
+                                }
                             } else {
-                                // Fallback, falls Pivot-Status unerwartet ist, aber Versuch bewertet wurde
-                                $statusColor = 'bg-secondary';
-                                $statusText = 'Bewertet (Ergebnis unklar)';
-                             }
+                                // Fallback, falls 'exam' Relation fehlt (sollte nicht passieren)
+                                $statusColor = 'bg-dark';
+                                $statusText = 'Bewertet (Fehler)';
+                            }
+                            // --- KORRIGIERTE LOGIK ENDE ---
+                            
                         }
                     @endphp
                     <tr>
