@@ -81,7 +81,7 @@
             @if(session('is_remembered') === false)
             <li class="nav-item d-flex align-items-center px-2">
                 <span class="text-muted small d-none d-sm-inline mr-1">Sitzung endet in:</span>
-                <span class="badge badge-danger" id="session-timer">--:--</span>
+                <span class="badge badge-info" id="session-timer">--:--</span>
             </li>
             @endif
 
@@ -603,11 +603,11 @@
     // Farblogik (weniger als 5 Minuten)
     if(totalMinutes < 5) { 
       timerElement.classList.remove('badge-danger');
-      timerElement.classList.add('badge-warning');
+      timerElement.classList.add('badge-info');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:';
     } else {
       timerElement.classList.remove('badge-warning');
-      timerElement.classList.add('badge-danger');
+      timerElement.classList.add('badge-info');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:';
     }
   }
