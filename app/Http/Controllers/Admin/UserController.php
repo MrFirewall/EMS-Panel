@@ -22,6 +22,7 @@ use App\Models\Rank;       // NEU: Rank-Modell
 // ------------------------------------
 
 use App\Models\Pivots\TrainingModuleUser;
+use Carbon\Carbon; // NEU: Für Datumsvergleiche
 
 class UserController extends Controller
 {
@@ -54,7 +55,6 @@ class UserController extends Controller
         $departments = Department::with('roles')->get(); // Lädt Abteilungen & deren Rollen
 
         // Ausnahme: 'chief' (oder Super-Admin) dürfen immer alle Rollen verwalten (außer Super-Admin).
-        // Wir nutzen 'chief' als hardcodierte Top-Rolle, da die DB-Abfrage (Rank::max('level')) langsamer wäre.
         if ($admin->hasAnyRole('chief', $this->superAdminRole)) {
             return Role::where('name', '!=', $this->superAdminRole)->get();
         }
@@ -67,34 +67,29 @@ class UserController extends Controller
         $managableRoles = collect();
 
         foreach ($allRoles as $role) {
-            // 1. Rang-Rollen prüfen (Ist die Rolle ein Rang in der 'ranks' Tabelle?)
+            // 1. Rang-Rollen prüfen
             if ($ranks->has($role->name)) {
-                // Darf der Admin diesen Rang zuweisen? (Nur Ränge unter seinem eigenen)
                 if ($ranks[$role->name] < $adminRankLevel) {
                     $managableRoles->push($role);
                 }
-                continue; // Rolle wurde als Rang behandelt, weiter zur nächsten Rolle
+                continue; 
             }
 
             // 2. Abteilungs-Rollen prüfen
             foreach ($departments as $department) {
-                // Gehört die Rolle zu dieser Abteilung? (Prüft die Pivot-Tabelle)
                 if ($department->roles->contains('name', $role->name)) {
-                    
-                    // Ist es die Leitungsrolle dieser Abteilung?
+                    // Ist es die Leitungsrolle?
                     if ($role->name === $department->leitung_role_name) {
-                        // Darf der Admin diese Leitungsrolle zuweisen? (Prüft min_rank_level)
                         if ($adminRankLevel >= $department->min_rank_level_to_assign_leitung) {
                             $managableRoles->push($role);
                         }
                     } else {
-                        // Es ist eine "normale" Abteilungsrolle (z.B. Mitglied)
-                        // Darf der Admin diese zuweisen (hat er selbst die Leitungsrolle)?
+                        // Es ist eine "normale" Abteilungsrolle
                         if ($adminRoleNames->contains($department->leitung_role_name)) {
                             $managableRoles->push($role);
                         }
                     }
-                    break; // Rolle wurde einer Abteilung zugeordnet, nächste Rolle prüfen
+                    break; 
                 }
             }
         }
@@ -103,17 +98,23 @@ class UserController extends Controller
     }
 
     /**
-     * NEU: Hilfsfunktion, die die Super-Admin Rolle aus der Anzeige entfernt.
+     * KORRIGIERT: Hilfsfunktion, die die Super-Admin Rolle aus der Anzeige entfernt.
+     * Klont den User, um das Original (z.B. Auth::user()) nicht zu verändern.
      */
     private function filterSuperAdminFromRoles(User $user): User
     {
-        if ($user->relationLoaded('roles')) {
-            $filteredRoles = $user->roles->reject(function ($role) {
+        // KORREKTUR: Klonen, um das Originalobjekt nicht zu verändern (wichtig für Auth::user())
+        $viewUser = clone $user; 
+        
+        if ($viewUser->relationLoaded('roles')) {
+            $filteredRoles = $viewUser->roles->reject(function ($role) {
                 return $role->name === $this->superAdminRole;
             });
-            $user->setRelation('roles', $filteredRoles);
+            // Modifiziere nur den Klon
+            $viewUser->setRelation('roles', $filteredRoles);
         }
-        return $user;
+        // Gib den modifizierten Klon zurück
+        return $viewUser;
     }
 
     public function index()
@@ -121,11 +122,14 @@ class UserController extends Controller
         $users = User::with('roles')->orderBy('personal_number')->get();
 
         // KORREKTUR: Filtere die Super-Admin-Rolle für die Anzeige heraus.
-        $users->each(function ($user) {
-            $this->filterSuperAdminFromRoles($user);
+        // Verwende map(), um eine neue Collection mit den gefilterten Klonen zu erstellen.
+        $filteredUsers = $users->map(function ($user) {
+            return $this->filterSuperAdminFromRoles($user);
         });
 
-        return view('admin.users.index', compact('users'));
+        // KORREKTUR: 'compact' kann keine assoziativen Zuweisungen ('=>') annehmen.
+        // Wir übergeben das Array direkt.
+        return view('admin.users.index', ['users' => $filteredUsers]);
     }
 
     public function create()
@@ -255,51 +259,45 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-       // Laden der einfachen Relationen
+       // KORREKTUR: Laden der Relationen, 'roles' hinzugefügt
         $user->load([
-            // 'trainingModules.assigner' HIER ENTFERNEN!
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
+            'roles' // KORREKTUR: Rollen müssen geladen werden!
         ]);
 
         // 1. Lade die Module
         $user->load('trainingModules');
 
-        // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte (verhindert N+1 Queries)
+        // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte
         if ($user->trainingModules->isNotEmpty()) {
-            // 1. Hole die Sammlung der Pivot-Objekte (als normale Collection)
             $pivots = $user->trainingModules->pluck('pivot'); 
-            
-            // 2. Erstelle eine NEUE Eloquent Collection daraus und lade die Beziehung
             (new \Illuminate\Database\Eloquent\Collection($pivots))->load('assigner');
         }
 
-        // 1. Prüfungsversuche laden (dein bestehender Code)
+        // 1. Prüfungsversuche laden
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                     ->with('exam.trainingModule')
-                                     ->latest('completed_at') 
-                                     ->get();
+                                    ->with('exam.trainingModule')
+                                    ->latest('completed_at') 
+                                    ->get();
 
-        // 2. Weitere Variablen laden, die der View erwartet
+        // 2. Weitere Variablen laden
         $serviceRecords = $user->serviceRecords()->with('author')->latest()->get();
         $evaluationCounts = $this->calculateEvaluationCounts($user);
-
-        // Annahme: Diese Methoden existieren im User Model
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
 
-        // Filter Super-Admin Rolle
-        $this->filterSuperAdminFromRoles($user);
+        // KORREKTUR: Wende den "sicheren" Filter an und übergib den Klon an die View
+        $viewUser = $this->filterSuperAdminFromRoles($user);
 
-        // $examinations ist nicht mehr nötig
-        return view('profile.show', compact(
-            'user',
-            'serviceRecords',
-            'examAttempts', // Übergeben
-            'evaluationCounts',
-            'hourData',
-            'weeklyHours'
-        ));
+         return view('profile.show', [
+             'user' => $viewUser,
+             'serviceRecords' => $serviceRecords,
+             'examAttempts' => $examAttempts,
+             'evaluationCounts' => $evaluationCounts,
+             'hourData' => $hourData,
+             'weeklyHours' => $weeklyHours
+         ]);
     }
 
     private function calculateEvaluationCounts(User $user): array
@@ -315,7 +313,6 @@ class UserController extends Controller
                                     ->pluck('count', 'evaluation_type');
 
         // Zählungen des angemeldeten Benutzers (Auth::user()) - VERFASST
-        // Wichtig: Zeigt *immer* die vom *aktuell eingeloggten Admin* verfassten an, nicht die vom Profilinhaber!
         $authoredCounts = Evaluation::selectRaw('evaluation_type, count(*) as count')
                                     ->where('evaluator_id', Auth::id())
                                     ->whereIn('evaluation_type', $typeLabels)
@@ -389,7 +386,6 @@ class UserController extends Controller
 
         return view('admin.users.edit', compact(
             'user',
-            // 'roles', // Alte Variable
             'categorizedRoles', // NEUE Variable
             'permissions',
             'userDirectPermissions',
@@ -400,6 +396,9 @@ class UserController extends Controller
         ));
     }
 
+    /**
+     * KORRIGIERT: update-Methode mit detailliertem Logging
+     */
     public function update(Request $request, User $user)
     {
         $validatedData = $request->validate([
@@ -414,28 +413,18 @@ class UserController extends Controller
             'discord_name' => 'nullable|string|max:255',
             'forum_name' => 'nullable|string|max:255',
             'special_functions' => 'nullable|string',
-            'hire_date' => 'nullable|date', // Einstellungsdatum validieren
-
-            // NEU: Validierung für Module
+            'hire_date' => 'nullable|date', 
             'modules' => 'sometimes|array',
             'modules.*' => 'exists:training_modules,id',
         ]);
 
-        $adminUser = Auth::user(); // Der aktuell eingeloggte Admin
+        $adminUser = Auth::user(); 
 
-        // --- START: PROBLEM-LÖSUNG ---
-
-        // 1. Hole alle Rollen, die der Admin verwalten DARF
+        // --- START: ROLLEN-LOGIK ---
         $managableRoleNames = $this->getManagableRoles()->pluck('name')->toArray();
-        
-        // 2. Hole alle Rollen, die der User VORHER hatte
         $originalRoleNames = $user->getRoleNames()->toArray();
-        
-        // 3. Hole die Rollen, die vom Formular übermittelt wurden
-        //    (Das sind nur die managebaren Rollen, die der Admin angehakt hat)
         $submittedRoleNames = $request->input('roles', []);
 
-        // 4. Prüfen, ob der Admin versucht, NEUE Rollen zuzuweisen, die er nicht managen darf
         $newlyAddedRoles = array_diff($submittedRoleNames, $originalRoleNames);
         foreach ($newlyAddedRoles as $addedRole) {
             if (!in_array($addedRole, $managableRoleNames)) {
@@ -445,50 +434,54 @@ class UserController extends Controller
             }
         }
         
-        // 5. Finde alle Rollen, die der User bereits hat, die der Admin aber NICHT managen darf
-        //    (z.B. höhere Ränge oder die Super-Admin-Rolle).
         $unmanagableRolesToKeep = array_diff($originalRoleNames, $managableRoleNames);
+        $finalRolesToSync = array_unique(array_merge($submittedRoleNames, $unmanagableRolesToKeep));
+        // --- ENDE: ROLLEN-LOGIK ---
 
-        // 6. Kombiniere die vom Formular übermittelten (managebaren) Rollen
-        //    mit den zu behaltenden (unmanagebaren) Rollen.
-        $finalRolesToSync = array_merge($submittedRoleNames, $unmanagableRolesToKeep);
-        $finalRolesToSync = array_unique($finalRolesToSync);
 
-        // Der alte Super-Admin-Check ist jetzt überflüssig, da $unmanagableRolesToKeep
-        // die Super-Admin-Rolle automatisch enthält (da sie nicht in $managableRoleNames ist).
-        /* if ($user->hasRole($this->superAdminRole)) {
-             if (!in_array($this->superAdminRole, $submittedRoleNames)) {
-                 $submittedRoleNames[] = $this->superAdminRole;
-             }
-        }
-        */
+        // --- START: DETAILLIERTES LOGGING (Setup) ---
+        $userBeforeUpdate = clone $user;
+        $userBeforeUpdate->load('trainingModules', 'permissions');
         
-        // --- ENDE: PROBLEM-LÖSUNG ---
+        $oldValues = [
+            'name' => $userBeforeUpdate->name,
+            'status' => $userBeforeUpdate->status,
+            'personal_number' => $userBeforeUpdate->personal_number,
+            'employee_id' => $userBeforeUpdate->employee_id,
+            'email' => $userBeforeUpdate->email,
+            'birthday' => $userBeforeUpdate->birthday ? $userBeforeUpdate->birthday->format('Y-m-d') : null,
+            'discord_name' => $userBeforeUpdate->discord_name,
+            'forum_name' => $userBeforeUpdate->forum_name,
+            'special_functions' => $userBeforeUpdate->special_functions,
+            'hire_date' => $userBeforeUpdate->hire_date ? $userBeforeUpdate->hire_date->format('Y-m-d') : null,
+            'second_faction' => $userBeforeUpdate->second_faction,
+            'rank' => $userBeforeUpdate->rank,
+        ];
+        
+        $oldModuleIds = $userBeforeUpdate->trainingModules->pluck('id')->toArray();
+        $oldRoleNames = $originalRoleNames; // Bereits oben geholt
+        $oldPermissionNames = $userBeforeUpdate->getPermissionNames()->toArray();
+        // --- ENDE: DETAILLIERTES LOGGING (Setup) ---
 
+
+        // --- START: UPDATE-LOGIK ---
 
         $validatedData['second_faction'] = $request->has('second_faction') ? 'Ja' : 'Nein';
+        $newStatus = $validatedData['status']; 
 
-        $oldRank = $user->rank;
-        $oldStatus = $user->status;
-        $newStatus = $validatedData['status'];
-
-        // Einstellungsdatum neu setzen... (Restliche Logik bleibt gleich)
         $inactiveStatuses = ['Ausgetreten', 'inaktiv', 'Suspendiert']; 
         $activeStatuses = ['Aktiv', 'Probezeit', 'Bewerbungsphase']; 
-        if (in_array($oldStatus, $inactiveStatuses) && in_array($newStatus, $activeStatuses)) {
+        if (in_array($oldValues['status'], $inactiveStatuses) && in_array($newStatus, $activeStatuses)) {
             if (empty($validatedData['hire_date'])) {
                  $validatedData['hire_date'] = now();
             }
         }
 
-        // --- ANGEPASSTE RANG-LOGIK (DB-ABFRAGE) ---
-        $newRank = 'praktikant'; // Standard
+        // --- RANG-LOGIK ---
+        $newRank = 'praktikant'; 
         $highestLevel = 0;
-        
-        // WICHTIG: $finalRolesToSync statt $submittedRoleNames verwenden
         $rankLevels = Rank::whereIn('name', $finalRolesToSync)->pluck('level', 'name');
 
-        // WICHTIG: $finalRolesToSync statt $submittedRoleNames verwenden
         foreach ($finalRolesToSync as $roleName) {
             if ($rankLevels->has($roleName) && $rankLevels[$roleName] > $highestLevel) {
                 $highestLevel = $rankLevels[$roleName];
@@ -496,36 +489,36 @@ class UserController extends Controller
             }
         }
         $validatedData['rank'] = $newRank;
-        // --- ENDE ANGEPASSTE RANG-LOGIK ---
+        // --- ENDE RANG-LOGIK ---
 
-        // Clone User object BEFORE update
-        $userBeforeUpdate = clone $user;
-        // Lade die Module VOR dem Update, um Änderungen zu erkennen
-        $userBeforeUpdate->load('trainingModules');
-        $oldModuleIds = $userBeforeUpdate->trainingModules->pluck('id')->toArray();
+        // Hole neue Werte für den Vergleich
+        $newValues = $validatedData;
+        if (isset($newValues['birthday'])) {
+            $newValues['birthday'] = $newValues['birthday'] ? Carbon::parse($newValues['birthday'])->format('Y-m-d') : null;
+        }
+        if (isset($newValues['hire_date'])) {
+             $newValues['hire_date'] = $newValues['hire_date'] ? Carbon::parse($newValues['hire_date'])->format('Y-m-d') : null;
+        }
 
-        // Rollen und Berechtigungen synchronisieren
-        // WICHTIG: $finalRolesToSync statt $submittedRoleNames verwenden
+        // Aktionen durchführen
+        $submittedPermissionNames = $request->permissions ?? [];
         $user->syncRoles($finalRolesToSync); 
-        $user->syncPermissions($request->permissions ?? []);
+        $user->syncPermissions($submittedPermissionNames);
 
-        // Stammdaten aktualisieren
         $validatedData['last_edited_at'] = now();
         $validatedData['last_edited_by'] = $adminUser->name;
         $user->update($validatedData);
 
-        // --- Module synchronisieren --- (Restliche Logik bleibt gleich)
+        // --- Module synchronisieren ---
         $submittedModuleIds = $request->input('modules', []);
         $modulesToSync = [];
         $adminName = $adminUser->name;
         $timestamp = now();
 
         foreach ($submittedModuleIds as $moduleId) {
-            // Prüfen, ob der User das Modul bereits hat
             $existingPivot = $userBeforeUpdate->trainingModules->firstWhere('id', $moduleId)?->pivot;
 
             if ($existingPivot) {
-                // Modul war bereits vorhanden. Bestehende Daten beibehalten.
                 $modulesToSync[$moduleId] = [
                     'assigned_by_user_id' => $existingPivot->assigned_by_user_id ?? $adminUser->id,
                     'completed_at' => $existingPivot->completed_at, 
@@ -533,10 +526,9 @@ class UserController extends Controller
                     'updated_at' => $timestamp,
                 ];
             } else {
-                // Standard-Pivot-Daten für NEU manuell zugewiesene Module
                 $modulesToSync[$moduleId] = [
                     'assigned_by_user_id' => $adminUser->id,
-                    'completed_at' => $timestamp->toDateString(), // Als bestanden markiert
+                    'completed_at' => $timestamp->toDateString(),
                     'notes' => "Manuell zugewiesen von {$adminName} am " . $timestamp->format('d.m.Y H:i')
                 ];
             }
@@ -544,56 +536,101 @@ class UserController extends Controller
         $user->trainingModules()->sync($modulesToSync);
         // --- Ende Modul-Synchronisation ---
 
-        // Reload relationships to reflect changes for the event/log
+        // --- ENDE: UPDATE-LOGIK ---
+
+
+        // --- START: DETAILLIERTES LOGGING (Generation) ---
         $user->load(['roles', 'trainingModules']);
-        $newModuleIds = $user->trainingModules->pluck('id')->toArray();
+        
+        $changes = [];
 
-        // Activity Log erstellen (Restliche Logik bleibt gleich)
-        $description = "Benutzerprofil von '{$user->name}' ({$user->id}) aktualisiert.";
-        if ($oldRank !== $newRank) {
-            $description .= " Rang geändert: {$oldRank} -> {$newRank}.";
-        }
-        if ($oldStatus !== $validatedData['status']) {
-            $description .= " Status geändert: {$oldStatus} -> {$validatedData['status']}.";
+        // 1. Vergleiche Stammdaten
+        $fieldsToCompare = [
+            'name' => 'Name', 'status' => 'Status', 'personal_number' => 'Dienstnummer',
+            'employee_id' => 'Mitarbeiter-ID', 'email' => 'E-Mail', 'birthday' => 'Geburtstag',
+            'discord_name' => 'Discord', 'forum_name' => 'Forum', 'special_functions' => 'Sonderfunktionen',
+            'hire_date' => 'Einstelldatum', 'second_faction' => 'Zweitfraktion', 'rank' => 'Rang'
+        ];
+
+        foreach ($fieldsToCompare as $key => $label) {
+            $newValue = $newValues[$key] ?? null; 
+            $oldValue = $oldValues[$key] ?? null;
+
+            if ($key === 'hire_date' && in_array($oldValues['status'], $inactiveStatuses) && in_array($newStatus, $activeStatuses) && empty($request->hire_date)) {
+                 $newValue = $validatedData['hire_date']->format('Y-m-d');
+            }
+
+            if ($newValue != $oldValue) {
+                $changes[] = "{$label} geändert: '{$oldValue}' -> '{$newValue}'";
+            }
         }
 
-        // Log für Moduländerungen
-        $addedModules = array_diff($newModuleIds, $oldModuleIds);
-        $removedModules = array_diff($oldModuleIds, $newModuleIds);
+        // 2. Vergleiche Rollen
+        $addedRoles = array_diff($finalRolesToSync, $oldRoleNames);
+        $removedRoles = array_diff($oldRoleNames, $finalRolesToSync);
+        if (!empty($addedRoles)) {
+            $changes[] = "Rollen hinzugefügt: " . implode(', ', $addedRoles);
+        }
+        if (!empty($removedRoles)) {
+            $removedRoles = array_filter($removedRoles, fn($role) => $role !== $this->superAdminRole);
+            if(!empty($removedRoles)) {
+                $changes[] = "Rollen entfernt: " . implode(', ', $removedRoles);
+            }
+        }
+
+        // 3. Vergleiche Berechtigungen
+        $addedPermissions = array_diff($submittedPermissionNames, $oldPermissionNames);
+        $removedPermissions = array_diff($oldPermissionNames, $submittedPermissionNames);
+        if (!empty($addedPermissions)) {
+            $changes[] = "Berechtigungen hinzugefügt: " . implode(', ', $addedPermissions);
+        }
+        if (!empty($removedPermissions)) {
+            $changes[] = "Berechtigungen entfernt: " . implode(', ', $removedPermissions);
+        }
+
+        // 4. Vergleiche Module
+        $addedModules = array_diff($submittedModuleIds, $oldModuleIds); 
+        $removedModules = array_diff($oldModuleIds, $submittedModuleIds);
         if (!empty($addedModules)) {
             $addedModuleNames = TrainingModule::whereIn('id', $addedModules)->pluck('name')->implode(', ');
-            $description .= " Module manuell hinzugefügt/bestätigt: {$addedModuleNames}.";
+            $changes[] = "Module manuell hinzugefügt/bestätigt: {$addedModuleNames}";
         }
         if (!empty($removedModules)) {
             $removedModuleNames = TrainingModule::whereIn('id', $removedModules)->pluck('name')->implode(', ');
-            $description .= " Module entfernt: {$removedModuleNames}.";
+            $changes[] = "Module entfernt: {$removedModuleNames}";
+        }
+
+        // 5. Log-Beschreibung erstellen
+        $description = "Benutzerprofil von '{$user->name}' ({$user->id}) aktualisiert. ";
+        if (empty($changes)) {
+            $description .= "Keine Änderungen vorgenommen.";
+        } else {
+            $description .= "Änderungen: " . implode('. ', $changes) . ".";
         }
 
         ActivityLog::create([
              'user_id' => Auth::id(),
-             'log_type' => 'USER_RECORD', // Typ ggf. anpassen auf 'USER'
+             'log_type' => 'USER',
              'action' => 'UPDATED',
              'target_id' => $user->id,
              'description' => $description,
            ]);
+        
+        // --- ENDE: DETAILLIERTES LOGGING (Generation) ---
 
-        // Service Record bei Beförderung/Degradierung (Restliche Logik bleibt gleich)
-        if ($oldRank !== $newRank) {
-            
-            // --- ANGEPASSTE RANG-LEVEL LOGIK (DB-ABFRAGE) ---
-            $changedRankLevels = Rank::whereIn('name', [$oldRank, $newRank])
+        // Service Record bei Beförderung/Degradierung
+        if ($oldValues['rank'] !== $newRank) {
+            $changedRankLevels = Rank::whereIn('name', [$oldValues['rank'], $newRank])
                                       ->pluck('level', 'name');
-            
             $currentRankLevel = $changedRankLevels->get($newRank, 0);
-            $oldRankLevel = $changedRankLevels->get($oldRank, 0);
-            // --- ENDE ANGEPASSTE LOGIK ---
+            $oldRankLevel = $changedRankLevels->get($oldValues['rank'], 0);
 
             $recordType = $currentRankLevel > $oldRankLevel ? 'Beförderung' : ($currentRankLevel < $oldRankLevel ? 'Degradierung' : 'Rangänderung');
             ServiceRecord::create([
                 'user_id' => $user->id,
                 'author_id' => Auth::id(),
                 'type' => $recordType,
-                'content' => "Rang geändert von '{$oldRank}' zu '{$newRank}'."
+                'content' => "Rang geändert von '{$oldValues['rank']}' zu '{$newRank}'."
             ]);
         }
 
@@ -603,7 +640,11 @@ class UserController extends Controller
             $user,
             $user,
             Auth::user(),
-            ['old_rank' => $oldRank, 'old_status' => $oldStatus, 'added_modules' => $addedModules, 'removed_modules' => $removedModules]
+            [
+                'old_values' => $oldValues, 'added_roles' => $addedRoles, 'removed_roles' => $removedRoles,
+                'added_modules' => $addedModules, 'removed_modules' => $removedModules,
+                'added_permissions' => $addedPermissions, 'removed_permissions' => $removedPermissions
+            ]
         );
 
         return redirect()->route('admin.users.index'); // Ohne success
@@ -637,3 +678,4 @@ class UserController extends Controller
         return redirect()->route('admin.users.show', $user); // Ohne success
     }
 }
+

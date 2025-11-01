@@ -24,17 +24,23 @@ class ProfileController extends Controller
     }
 
     /**
-     * NEU: Hilfsfunktion, die die Super-Admin Rolle aus der Anzeige entfernt.
+     * KORRIGIERT: Hilfsfunktion, die die Super-Admin Rolle aus der Anzeige entfernt.
+     * Klont den User, um das Original (z.B. Auth::user()) nicht zu verändern.
      */
     private function filterSuperAdminFromRoles(User $user): User
     {
-        if ($user->relationLoaded('roles')) {
-            $filteredRoles = $user->roles->reject(function ($role) {
+        // KORREKTUR: Klonen, um das Originalobjekt nicht zu verändern (wichtig für Auth::user())
+        $viewUser = clone $user;
+
+        if ($viewUser->relationLoaded('roles')) {
+            $filteredRoles = $viewUser->roles->reject(function ($role) {
                 return $role->name === $this->superAdminRole;
             });
-            $user->setRelation('roles', $filteredRoles);
+            // Modifiziere nur den Klon
+            $viewUser->setRelation('roles', $filteredRoles);
         }
-        return $user;
+        // Gib den modifizierten Klon zurück
+        return $viewUser;
     }
 
     /**
@@ -79,17 +85,20 @@ class ProfileController extends Controller
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
         
-        // NEU: Filtert die Super-Admin Rolle aus der Anzeige
-        $this->filterSuperAdminFromRoles($user);
+        // KORREKTUR: Wende den "sicheren" Filter an und übergib den Klon an die View
+        // Das Original $user (Auth::user()) bleibt unberührt, was die Navigation rettet.
+        $viewUser = $this->filterSuperAdminFromRoles($user);
 
-        return view('profile.show', compact(
-            'user', 
-            'serviceRecords', 
-            'evaluationCounts',
-            'hourData',
-            'weeklyHours',
-            'examAttempts'
-        ));
+        // KORREKTUR: 'compact' kann keine assoziativen Zuweisungen ('=>') annehmen.
+        // Wir übergeben das Array direkt.
+        return view('profile.show', [
+            'user' => $viewUser, // KORREKTUR: Übergib den gefilterten Klon
+            'serviceRecords' => $serviceRecords, 
+            'evaluationCounts' => $evaluationCounts,
+            'hourData' => $hourData,
+            'weeklyHours' => $weeklyHours,
+            'examAttempts' => $examAttempts
+        ]);
     }
 
     /**
@@ -125,3 +134,4 @@ class ProfileController extends Controller
         return $counts;
     }
 }
+
