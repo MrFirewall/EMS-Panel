@@ -65,6 +65,7 @@ class LoginController extends Controller
                 // NEU: Leere Lockscreen-Daten, falls vorhanden
                 session()->forget('lockscreen_name');
                 session()->forget('lockscreen_avatar');
+                session()->forget('is_locked');
 
                 return redirect()->intended(route('dashboard'));
             } else {
