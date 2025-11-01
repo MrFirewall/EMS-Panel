@@ -47,11 +47,11 @@
        role="button" 
        aria-expanded="false" 
        aria-controls="{{ $collapseId }}">
-        <span>
+       <span>
             <i class="{{ $group['group_icon'] }} mr-2"></i> {{ $group['group_title'] }}
-        </span>
-        {{-- Chevron-Icon für visuelles Feedback (rotiert durch Bootstrap/AdminLTE CSS) --}}
-        <i class="fas fa-chevron-down ml-auto"></i>
+       </span>
+       {{-- Chevron-Icon für visuelles Feedback (rotiert durch Bootstrap/AdminLTE CSS) --}}
+       <i class="fas fa-chevron-down ml-auto"></i>
     </a>
 
     {{-- Level 2: Einzelne Benachrichtigungen innerhalb der Gruppe (Collapsable Area) --}}
@@ -67,9 +67,19 @@
                 {{-- Verwende Flexbox für bessere Kontrolle --}}
                 <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-left w-100 pl-4 py-2 d-flex justify-content-between align-items-center">
                     {{-- Pl-4 (Padding-Left) rückt die Einzelnachrichten leicht ein --}}
+                    
+                    {{-- NEU: Logik zum Kürzen des Textes im Dropdown --}}
+                    @php
+                        $fullText = $notification['text'] ?? '...';
+                        // Wir zeigen nur den Teil VOR "Änderungen:" an, falls vorhanden
+                        $mainText = str_contains($fullText, 'Änderungen: ') ? explode('Änderungen: ', $fullText, 2)[0] : $fullText;
+                        // Füge "..." hinzu, wenn der Text gekürzt wurde
+                        $displayText = (strlen($mainText) < strlen($fullText)) ? rtrim($mainText, '. ') . '...' : $mainText;
+                    @endphp
+                    
                     {{-- KORREKTUR: CSS-Klasse geändert --}}
                     <span class="notification-text-wrap"> 
-                        <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $notification['text'] }}
+                        <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $displayText }}
                     </span>
                     <span class="text-muted text-sm ml-2">{{ $notification['time'] }}</span> {{-- ml-2 für etwas Abstand --}}
                 </button>
@@ -87,4 +97,3 @@
 {{-- Benachrichtigungs-Footer --}}
 <div class="dropdown-divider"></div>
 <a href="{{ route('notifications.index') }}" class="dropdown-item dropdown-footer">Alle Benachrichtigungen anzeigen</a>
-

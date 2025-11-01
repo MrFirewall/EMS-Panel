@@ -18,6 +18,23 @@
         width: 30px;
         text-align: center;
     }
+    /* NEU: Stil für die Detailliste */
+    .notification-details-list {
+        list-style-type: none;
+        padding-left: 1.75rem; /* Einrücken unter dem Icon */
+        margin-top: 5px;
+        margin-bottom: 0;
+        font-size: 0.85rem;
+    }
+    .notification-details-list li {
+        position: relative;
+    }
+    .notification-details-list li .fa-arrow-right {
+        position: absolute;
+        left: -1.25rem;
+        top: 0.3em;
+        font-size: 0.7rem;
+    }
 </style>
 @endpush
 
@@ -169,14 +186,34 @@
                                         {{ $notification->read_at ? 'Gelesen' : 'Neu' }}
                                     </td>
                                     <td class="mailbox-name">
+                                        {{-- NEU: Logik zum Aufteilen der Beschreibung --}}
+                                        @php
+                                            $fullText = $notification->data['text'] ?? '...';
+                                            $parts = str_contains($fullText, 'Änderungen: ') ? explode('Änderungen: ', $fullText, 2) : [$fullText, null];
+                                            $mainText = $parts[0];
+                                            $changes = $parts[1] ? explode('. ', $parts[1]) : [];
+                                        @endphp
+
                                         <a href="{{ $notification->data['url'] ?? '#' }}" class="text-dark">
                                             <i class="{{ $notification->data['icon'] ?? 'fas fa-bell' }} text-muted mr-2"></i>
-                                            <span>{{ $notification->data['text'] ?? '...' }}</span>
+                                            {{-- Zeige den Haupttext (z.B. "Profil von... aktualisiert.") --}}
+                                            <span>{!! $mainText !!}</span>
                                         </a>
+
+                                        {{-- Zeige die Liste der Änderungen, falls vorhanden --}}
+                                        @if (!empty($changes))
+                                            <ul class="notification-details-list">
+                                            @foreach ($changes as $change)
+                                                @if (!empty(trim($change, '.')))
+                                                    <li><i class="fas fa-xs fa-arrow-right mr-1"></i> {{ rtrim($change, '.') }}</li>
+                                                @endif
+                                            @endforeach
+                                            </ul>
+                                        @endif
                                     </td>
                                     <td class="mailbox-date" data-order="{{ $notification->created_at->timestamp }}">
                                         {{ $notification->created_at->diffForHumans() }}
-                                        <small class="d-block text-muted">{{ $notification->created_at->format('d.m.Y H:i') }}</H:i>
+                                        <small class="d-block text-muted">{{ $notification->created_at->format('d.m.Y H:i') }}</small>
                                     </td>
                                     <td>
                                         <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" onsubmit="return confirm('Möchten Sie diese Benachrichtigung wirklich löschen?');">
@@ -379,8 +416,8 @@
       
       // 3. Status des "Alle auswählen"-Buttons zurücksetzen, wenn Tabelle neu gezeichnet wird
       notificationsTable.on('draw.dt', function() {
-           $('.checkbox-toggle').data('clicks', false);
-           $('.checkbox-toggle').find('i').removeClass('fa-check-square').addClass('fa-square');
+            $('.checkbox-toggle').data('clicks', false);
+            $('.checkbox-toggle').find('i').removeClass('fa-check-square').addClass('fa-square');
       });
 
     });
