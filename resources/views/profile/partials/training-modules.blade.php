@@ -1,9 +1,9 @@
 <div class="card card-primary card-outline mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Module</h5>
+        <h3 class="card-title"><i class="fas fa-file-signature me-2"></i> Module</h3>
     </div>
-    <div class="card-body">
-        <table class="table table-striped table-hover mb-0">
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0 table-striped">
             <thead>
                 <tr>
                     <th scope="col" style="width: 15%;">Datum</th>
