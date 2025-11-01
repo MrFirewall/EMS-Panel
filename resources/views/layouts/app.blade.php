@@ -78,6 +78,13 @@
         </ul>
 
         <ul class="navbar-nav ml-auto">
+            @if(session('is_remembered') === false)
+            <li class="nav-item d-flex align-items-center px-2">
+                <span class="text-muted small d-none d-sm-inline mr-1">Sitzung endet in:</span>
+                <span class="badge badge-danger" id="session-timer">--:--</span>
+            </li>
+            @endif
+
             {{-- Dark Mode Toggle --}}
             <li class="nav-item">
                 <a class="nav-link" id="darkModeToggle" href="#" role="button">
