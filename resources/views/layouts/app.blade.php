@@ -577,7 +577,7 @@
 
   // 3. Funktion zum Umleiten
   function redirectToLockscreen() {
-   window.location.href = '{{ route('lockscreen') }}';
+   window.location.href = '{{ route('lock') }}';
   }
 
   // 4. Funktion NUR für die Anzeige

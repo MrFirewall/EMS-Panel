@@ -41,4 +41,23 @@ class LockscreenController extends Controller
 
         return view('auth.lockscreen', compact('name', 'avatar'));
     }
+    
+    public function lock(Request $request)
+    {
+        // 1. Benutzerdaten holen, BEVOR wir ihn ausloggen
+        $user = Auth::user(); 
+        
+        // 2. Ausloggen und Session invalidieren
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        // 3. Minimale Daten für den Lockscreen in die NEUE Session speichern
+        $request->session()->put('lockscreen_name', $user->name ?? 'Gesperrter Benutzer');
+        $request->session()->put('lockscreen_avatar', $user->avatar ?? null);
+        $request->session()->put('is_locked', true); // Als gesperrt markieren
+
+        // 4. Zum Lockscreen umleiten (zur 'show'-Methode)
+        return redirect()->route('lockscreen');
+    }
 }

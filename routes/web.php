@@ -64,6 +64,7 @@ Route::middleware(['web', 'auth'])->group(function() {
 
 Route::middleware('auth.cfx')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/lock', [LockscreenController::class, 'lock'])->name('lock');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
 
     // Standard-Ressourcen
