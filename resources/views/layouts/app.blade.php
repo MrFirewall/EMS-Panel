@@ -566,17 +566,16 @@
     console.log('[DEBUG] Seite geladen.');
     
     // 1. Den Wert aus der Server-Session ausgeben
-    // Wir benutzen var_export, um 'true', 'false' oder 'null' klar zu sehen
     let isRemembered = '{{ var_export(session('is_remembered'), true) }}';
     console.log('[DEBUG] session(is_remembered) ist: ' + isRemembered);
 
     @if(session('is_remembered') === false)
         // 2. Dieser Log erscheint NUR, wenn die Bedingung WAHR ist
-        console.log('[DEBUG] @if-Bedingung (is_remembered === false) ist WAHR.');
+        console.log('[DEBUG] @@if-Bedingung (is_remembered === false) ist WAHR.');
         console.log('[DEBUG] => Der Timer-Block WIRD geladen.');
     @else
         // 3. Dieser Log erscheint NUR, wenn die Bedingung FALSCH ist
-        console.log('[DEBUG] @if-Bedingung (is_remembered === false) ist FALSCH.');
+        console.log('[DEBUG] @@if-Bedingung (is_remembered === false) ist FALSCH.');
         console.log('[DEBUG] => Der Timer-Block WIRD NICHT geladen.');
     @endif
     
