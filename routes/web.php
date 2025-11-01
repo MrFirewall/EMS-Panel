@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\LockscreenController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
@@ -44,7 +45,7 @@ Route::get('login', fn() => redirect()->route('login.cfx'))->name('login');
 Route::get('login/cfx', [LoginController::class, 'redirectToCfx'])->name('login.cfx');
 Route::get('login/cfx/callback', [LoginController::class, 'handleCfxCallback']);
 Route::post('logout', [LoginController::class, 'logout'])->name('logout');
-
+Route::get('/lockscreen', [LockscreenController::class, 'show'])->name('lockscreen');
 // ID-Check
 Route::get('/check-id', [LoginController::class, 'showCheckIdPage'])->name('check-id.show');
 Route::get('/check-id/start', [LoginController::class, 'startCheckIdFlow'])->name('check-id.start');

@@ -25,8 +25,15 @@ class EnsureAuthenticatedViaCfx
         }
 
         // ========================================================================
+        // NEU: Prüfen, ob die Sitzung gesperrt ist (Lockscreen)
+        // ========================================================================
+        // Verhindert eine Endlosschleife, indem Lockscreen- und Login-Routen erlaubt werden
+        if (session('is_locked') === true && !$request->routeIs('lockscreen') && !$request->routeIs('login.*')) {
+            return redirect()->route('lockscreen');
+        }
+
+        // ========================================================================
         // Check if the user is currently impersonating someone else.
-        // This checks the session key used by the impersonation library.
         // ========================================================================
         $impersonatorId = session(app('impersonate')->getSessionKey());
         $isImpersonating = $impersonatorId !== null;
@@ -38,7 +45,6 @@ class EnsureAuthenticatedViaCfx
 
         // ========================================================================
         // Check if the user was authenticated via the standard CFX login flow.
-        // This relies on a session variable set during the CFX callback.
         // ========================================================================
         $isCfxAuthenticated = session('is_cfx_authenticated') === true;
         
@@ -48,14 +54,24 @@ class EnsureAuthenticatedViaCfx
         }
 
         // ========================================================================
-        // FALLBACK: If neither impersonating nor authenticated via CFX,
-        // the session is considered invalid or expired for protected routes.
-        // Log the user out and redirect to login.
+        // FALLBACK: Session ist abgelaufen oder ungültig.
+        // NEUE LOGIK: Zum Lockscreen umleiten statt zum Login.
         // ========================================================================
+        
+        // 1. Benutzerdaten holen, BEVOR wir ihn ausloggen
+        $user = Auth::user(); 
+        
+        // 2. Ausloggen und Session invalidieren
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect()->route('login')->with('error', 'Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.');
+        // 3. Minimale Daten für den Lockscreen in die NEUE Session speichern
+        $request->session()->put('lockscreen_name', $user->name ?? 'Gesperrter Benutzer');
+        $request->session()->put('lockscreen_avatar', $user->avatar ?? null);
+        $request->session()->put('is_locked', true); // Als gesperrt markieren
+
+        // 4. Zum Lockscreen umleiten
+        return redirect()->route('lockscreen');
     }
 }

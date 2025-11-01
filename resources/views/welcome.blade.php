@@ -35,15 +35,35 @@
                 Bitte melde dich mit deinem FiveM Account an, um fortzufahren.
             </p>
             
-            <div class="mb-4 text-center">
-                <a href="{{ route('login.cfx') }}" class="btn btn-primary btn-block btn-flat btn-lg">
-                    <i class="bi bi-box-arrow-in-right me-2"></i> Login mit Cfx.re
-                </a>
+            {{-- KORREKTUR: Umwandlung in ein GET-Formular, um die Checkbox zu senden --}}
+            <form action="{{ route('login.cfx') }}" method="GET">
+                {{-- Wir brauchen kein @csrf, da es eine GET-Anfrage ist --}}
+                
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary btn-block btn-flat btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Login mit Cfx.re
+                    </button>
+                </div>
+                
+                {{-- NEU: "Angemeldet bleiben" Checkbox --}}
+                <div class="row">
+                    <div class="col-8">
+                        <div class="icheck-primary">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">
+                                Angemeldet bleiben
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            {{-- ENDE KORREKTUR --}}
+
+            <div class="mt-3 text-center">
+                 <p class="mb-1 text-center">
+                    <a href="{{ route('check-id.show') }}" class="text-muted small">Du kennst deine Cfx.re ID nicht oder bist neu? Klicke hier!</a>
+                </p>
             </div>
-            
-            <p class="mb-1 text-center">
-                <a href="{{ route('check-id.show') }}" class="text-muted small">Du kennst deine Cfx.re ID nicht oder bist neu? Klicke hier!</a>
-            </p>
         </div>
         <!-- /.card-body -->
     </div>
@@ -52,8 +72,10 @@
 <!-- /.login-box -->
 
 <!-- REQUIRED SCRIPTS (Minimal für den Login Screen) -->
-<script src="https://rac-panel.de/adminlte/jquery/jquery.min.js"></script>
-<script src="https://rac-panel.de/adminlte/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.1/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/js/adminlte.min.js"></script>
+{{-- AdminLTE 3 benötigt icheck-bootstrap für die Checkbox-Styles --}}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/icheck-bootstrap/3.0.1/icheck-bootstrap.min.css">
 </body>
 </html>

@@ -4,14 +4,22 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Http\Request;
+use Illuminate\Http\Request; // Request hinzugefügt
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 
 class LoginController extends Controller
 {
-    public function redirectToCfx()
+    /**
+     * NEU: Akzeptiert Request, um "remember" zu lesen
+     */
+    public function redirectToCfx(Request $request)
     {
+        // NEU: Speichere den "remember" Status in der Session,
+        // da wir ihn nach dem CFX-Callback wieder brauchen.
+        $remember = $request->has('remember');
+        session(['login_remember' => $remember]);
+
         return Socialite::driver('cfx')->redirect();
     }
 
@@ -41,15 +49,31 @@ class LoginController extends Controller
                     'cfx_name' => $cfxUser->getNickname(),
                     'avatar' => $cfxUser->getAvatar(),
                 ]);
-                Auth::login($user, true);
+
+                // NEU: Hole den "remember" Status aus der Session
+                // 'pull' holt den Wert und löscht den Key sofort.
+                $remember = session()->pull('login_remember', false);
+
+                // NEU: Speichere den finalen Status für den JS-Timer
+                session(['is_remembered' => $remember]);
+                
+                // NEU: Setze das 'remember' Flag (true/false)
+                Auth::login($user, $remember); 
+                
                 session(['is_cfx_authenticated' => true]);
+                
+                // NEU: Leere Lockscreen-Daten, falls vorhanden
+                session()->forget('lockscreen_name');
+                session()->forget('lockscreen_avatar');
+
                 return redirect()->intended(route('dashboard'));
             } else {
-                return redirect('/')->with('error', 'Dein Account wurde im System nicht gefunden. Bitte wende dich an die Leitung.');
+                return redirect('/')->with('error', 'Dein Account wurde im System nicht gefunden. Bitte wende dich an die Personalabteilung.');
             }
 
         } catch (\Exception $e) {
             session()->forget('auth_flow'); // Session auch im Fehlerfall löschen
+            session()->forget('login_remember'); // Auch hier löschen
             \Illuminate\Support\Facades\Log::error('Cfx.re Callback Fehler: ' . $e->getMessage());
             return redirect('/')->with('error', 'Es ist ein Fehler aufgetreten. Bitte erneut versuchen.');
         }
@@ -76,6 +100,7 @@ class LoginController extends Controller
     public function startCheckIdFlow()
     {
         session(['auth_flow' => 'id_check']);
+        // Leitet zur Login-Route weiter, die dann "redirectToCfx" aufruft
         return redirect()->route('login.cfx');
     }
 }

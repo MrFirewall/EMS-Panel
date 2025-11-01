@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/icheck-bootstrap/3.0.1/icheck-bootstrap.min.css" integrity="sha512-8vq2g5nHE062j3xor4XxPeZiPjmRDh6wlufQlfC6pdQ/9urJkU07NM0tEREeymP++NczacJ/Q59ul+/K2eYvcg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/icheck-bootstrap/3.0.1/icheck-bootstrap.min.css" xintegrity="sha512-8vq2g5nHE062j3xor4XxPeZiPjmRDh6wlufQlfC6pdQ/9urJkU07NM0tEREeymP++NczacJ/Q59ul+/K2eYvcg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     {{-- DATATABLES DEPENDENCIES --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.bootstrap4.min.css">
@@ -78,6 +78,16 @@
         </ul>
 
         <ul class="navbar-nav ml-auto">
+            
+            {{-- NEU: Session-Timer (nur wenn "Angemeldet bleiben" FALSCH ist) --}}
+            @if(session('is_remembered') === false)
+                <li class="nav-item d-flex align-items-center px-2">
+                    <span class="text-muted small d-none d-sm-inline mr-1">Sitzung endet in:</span>
+                    <span class="badge badge-danger" id="session-timer">--:--</span>
+                </li>
+            @endif
+            {{-- ENDE NEU --}}
+
             {{-- Dark Mode Toggle --}}
             <li class="nav-item">
                 <a class="nav-link" id="darkModeToggle" href="#" role="button">
@@ -359,11 +369,11 @@
         @auth
         if (typeof window.Echo !== 'undefined') {
              window.Echo.private(`users.{{ Auth::id() }}`)
-                .listen('.new.ems.notification', (e) => {
+                 .listen('.new.ems.notification', (e) => {
                      fetchNotifications();
                      $('#notification-dropdown .fa-bell').addClass('text-warning').delay(500).queue(function(next){ $(this).removeClass('text-warning'); next(); });
-                })
-                .error((error) => { console.error('Echo Kanal-Fehler:', error); });
+                 })
+                 .error((error) => { console.error('Echo Kanal-Fehler:', error); });
         }
         @endauth
 
@@ -540,9 +550,9 @@
                      }).catch(() => {
                          updatePushButtons(false);
                      });
-                }).catch(() => {
+                 }).catch(() => {
                      updatePushButtons(false);
-                });
+                 });
             }
         } else {
             const pushButtonEnable = document.getElementById('enable-push');
@@ -555,14 +565,86 @@
 </script>
 
 
+{{-- NEU: SESSION-TIMER (nur wenn nicht "angemeldet bleiben") --}}
+@if(session('is_remembered') === false)
+<script>
+    // Diese Funktion wird ausgeführt, sobald das Dokument geladen ist.
+    (function() {
+        // 1. Setze die Dauer (aus Laravel Config, z.B. 120 Minuten)
+        // (config('session.lifetime') ist in Minuten, wir brauchen Sekunden)
+        // Wir ziehen 10 Sekunden ab, um einen Puffer zu haben, bevor der Server uns rauswirft.
+        let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
+        
+        // 2. Finde das Timer-Element
+        const timerElement = document.getElementById('session-timer');
+        if(!timerElement) return; // Stopp, wenn das Element nicht da ist
+
+        // 3. Funktion zum Umleiten (zum Lockscreen)
+        function redirectToLockscreen() {
+            // Setze einen Flag, damit die Middleware weiß, dass dies ein Inaktivitäts-Timeout war
+            // (Obwohl die Middleware dies bereits durch 'is_cfx_authenticated' erkennen sollte)
+            window.location.href = '{{ route('lockscreen') }}';
+        }
+
+        // 4. Funktion zum Aktualisieren des Timers
+        function updateTimer() {
+            sessionLifetimeInSeconds--;
+
+            if (sessionLifetimeInSeconds <= 0) {
+                clearInterval(timerInterval);
+                redirectToLockscreen();
+                return;
+            }
+
+            let minutes = Math.floor(sessionLifetimeInSeconds / 60);
+            let seconds = sessionLifetimeInSeconds % 60;
+
+            // Führende Null hinzufügen
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+
+            timerElement.textContent = minutes + ':' + seconds;
+            
+            // Ändere die Farbe auf rot, wenn weniger als 5 Minuten übrig sind
+            if(sessionLifetimeInSeconds < 300) {
+                timerElement.classList.remove('badge-danger');
+                timerElement.classList.add('badge-warning');
+            }
+        }
+
+        // 5. Timer starten
+        let timerInterval = setInterval(updateTimer, 1000);
+
+        // 6. Inaktivitäts-Reset
+        // (Setzt den Timer zurück, wenn der Benutzer etwas tut)
+        function resetTimer() {
+            clearInterval(timerInterval);
+            sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
+            updateTimer(); // Timer sofort aktualisieren
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // Farbe zurücksetzen
+            timerElement.classList.remove('badge-warning');
+            timerElement.classList.add('badge-danger');
+        }
+
+        // Events, die den Timer zurücksetzen (jQuery verwenden, da es bereits geladen ist)
+        $(window).on('mousemove mousedown click keydown scroll', resetTimer);
+
+    })();
+</script>
+@endif
+{{-- ENDE NEU --}}
+
 
 @impersonating
     <div style="position: fixed; bottom: 0; width: 100%; z-index: 9999; background-color: #dc3545; color: white; text-align: center; padding: 10px; font-weight: bold;">
         Achtung: Du bist gerade als {{ auth()->user()->name }} eingeloggt.
         <a href="{{ route('impersonate.leave') }}" style="color: white; text-decoration: underline; margin-left: 20px;">Zurück zu meinem Account</a>
     </div>
-@endImpersonating
+@endimpersonating
 
 @stack('scripts')
 </body>
 </html>
+
