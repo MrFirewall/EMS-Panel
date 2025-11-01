@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.2.0/css/adminlte.min.css">
-    {{-- KORREKTUR: 'xintegrity' zu 'integrity' geändert --}}
+    {{-- KORREKTUR: 'xintegrity' zu 'integrity' --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/icheck-bootstrap/3.0.1/icheck-bootstrap.min.css" xintegrity="sha512-8vq2g5nHE062j3xor4XxPeZiPjmRDh6wlufQlfC6pdQ/9urJkU07NM0tEREeymP++NczacJ/Q59ul+/K2eYvcg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     {{-- DATATABLES DEPENDENCIES --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap4.min.css">
@@ -109,35 +109,35 @@
             </li>
 
             {{-- User Dropdown --}}
+            {{-- KORREKTUR: @if-Prüfung nach außen verschoben --}}
+            @if(Auth::check())
             <li class="nav-item dropdown user-menu">
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
-                    @if(Auth::check()) {{-- Sicherstellen, dass der Benutzer eingeloggt ist --}}
-                        <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
-                        <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
-                    @endif
+                    <img src="{{ Auth::user()->avatar }}" class="user-image img-circle elevation-1" alt="User Image">
+                    <span class="d-none d-md-inline">{{ Auth::user()->name }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                    @if(Auth::check()) {{-- Sicherstellen, dass der Benutzer eingeloggt ist --}}
-                        <li class="user-header bg-primary">
-                            <img src="{{ Auth::user()->avatar }}" class="img-circle elevation-2" alt="User Image">
-                            <p>
-                                {{ Auth::user()->name }}
-                                <small>{{ Auth::user()->rank ?? 'Mitarbeiter' }}</small>
-                            </p>
-                        </li>
-                        <li class="user-footer">
-                             <a href="{{ route('profile.show') }}" class="btn btn-default btn-flat">Profil</a>
-                            <a href="#" class="btn btn-default btn-flat float-right"
-                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                Abmelden
-                            </a>
-                            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                                @csrf
-                            </form>
-                        </li>
-                    @endif
+                    <li class="user-header bg-primary">
+                        <img src="{{ Auth::user()->avatar }}" class="img-circle elevation-2" alt="User Image">
+                        <p>
+                            {{ Auth::user()->name }}
+                            <small>{{ Auth::user()->rank ?? 'Mitarbeiter' }}</small>
+                        </p>
+                    </li>
+                    <li class="user-footer">
+                         <a href="{{ route('profile.show') }}" class="btn btn-default btn-flat">Profil</a>
+                        <a href="#" class="btn btn-default btn-flat float-right"
+                           onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            Abmelden
+                        </a>
+                        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                            @csrf
+                        </form>
+                    </li>
                 </ul>
             </li>
+            @endif
+            {{-- ENDE KORREKTUR --}}
         </ul>
     </nav>
 
@@ -171,7 +171,7 @@
         <button id="disable-push" class="btn btn-sm btn-danger float-left mr-3" style="display: none;">Desktop-Benachrichtigungen deaktivieren</button>
 
         <div class="float-right d-none d-sm-inline">Version 1.0</div>
-        {{-- KORREKTUR: Copyright-Jahr dynamisch gemacht --}}
+        {{-- KORREKTUR: Copyright-Jahr --}}
         <strong>Copyright &copy; 2024-{{ date('Y') }} EMS Panel.</strong> All rights reserved.
     </footer>
 </div>
