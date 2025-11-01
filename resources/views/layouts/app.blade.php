@@ -80,14 +80,11 @@
 
         <ul class="navbar-nav ml-auto">
             
-            {{-- NEU: Session-Timer (nur wenn "Angemeldet bleiben" FALSCH ist) --}}
-            @if(session('is_remembered') === false)
-                <li class="nav-item d-flex align-items-center px-2">
-                    <span class="text-muted small d-none d-sm-inline mr-1">Sitzung endet in:</span>
-                    <span class="badge badge-danger" id="session-timer">--:--</span>
-                </li>
-            @endif
-            {{-- ENDE NEU --}}
+            {{-- TIMER ENTFERNT --}}
+            {{-- @if(session('is_remembered') === false)
+                ...
+            @endif --}}
+            {{-- ENDE ENTFERNT --}}
 
             {{-- Dark Mode Toggle --}}
             <li class="nav-item">
@@ -567,76 +564,13 @@
 </script>
 
 
-{{-- NEU: SESSION-TIMER (nur wenn nicht "angemeldet bleiben") --}}
-@if(session('is_remembered') === false)
+{{-- SESSION-TIMER ENTFERNT --}}
+{{-- @if(session('is_remembered') === false)
 <script>
-    // Diese Funktion wird ausgeführt, sobald das Dokument geladen ist.
-    (function() {
-        // 1. Setze die Dauer (aus Laravel Config, z.B. 120 Minuten)
-        // (config('session.lifetime') ist in Minuten, wir brauchen Sekunden)
-        // Wir ziehen 10 Sekunden ab, um einen Puffer zu haben, bevor der Server uns rauswirft.
-        let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
-        
-        // 2. Finde das Timer-Element
-        const timerElement = document.getElementById('session-timer');
-        if(!timerElement) return; // Stopp, wenn das Element nicht da ist
-
-        // 3. Funktion zum Umleiten (zum Lockscreen)
-        function redirectToLockscreen() {
-            // Setze einen Flag, damit die Middleware weiß, dass dies ein Inaktivitäts-Timeout war
-            // (Obwohl die Middleware dies bereits durch 'is_cfx_authenticated' erkennen sollte)
-            window.location.href = '{{ route('lockscreen') }}';
-        }
-
-        // 4. Funktion zum Aktualisieren des Timers
-        function updateTimer() {
-            sessionLifetimeInSeconds--;
-
-            if (sessionLifetimeInSeconds <= 0) {
-                clearInterval(timerInterval);
-                redirectToLockscreen();
-                return;
-            }
-
-            let minutes = Math.floor(sessionLifetimeInSeconds / 60);
-            let seconds = sessionLifetimeInSeconds % 60;
-
-            // Führende Null hinzufügen
-            minutes = minutes < 10 ? '0' + minutes : minutes;
-            seconds = seconds < 10 ? '0' + seconds : seconds;
-
-            timerElement.textContent = minutes + ':' + seconds;
-            
-            // Ändere die Farbe auf rot, wenn weniger als 5 Minuten übrig sind
-            if(sessionLifetimeInSeconds < 300) {
-                timerElement.classList.remove('badge-danger');
-                timerElement.classList.add('badge-warning');
-            }
-        }
-
-        // 5. Timer starten
-        let timerInterval = setInterval(updateTimer, 1000);
-
-        // 6. Inaktivitäts-Reset
-        // (Setzt den Timer zurück, wenn der Benutzer etwas tut)
-        function resetTimer() {
-            clearInterval(timerInterval);
-            sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
-            updateTimer(); // Timer sofort aktualisieren
-            timerInterval = setInterval(updateTimer, 1000);
-            
-            // Farbe zurücksetzen
-            timerElement.classList.remove('badge-warning');
-            timerElement.classList.add('badge-danger');
-        }
-
-        // Events, die den Timer zurücksetzen (jQuery verwenden, da es bereits geladen ist)
-        $(window).on('mousemove mousedown click keydown scroll', resetTimer);
-
-    })();
+    ...
 </script>
-@endif
-{{-- ENDE NEU --}}
+@endif --}}
+{{-- ENDE ENTFERNT --}}
 
 
 @impersonating
