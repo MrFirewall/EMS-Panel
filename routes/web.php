@@ -126,7 +126,28 @@ Route::middleware('auth.cfx')->group(function () {
     });
 
     Route::post('/push-subscribe', [PushSubscriptionController::class, 'store'])->middleware('auth')->name('push.subscribe');
-    Route::post('/push-unsubscribe', [PushSubscriptionController::class, 'destroy'])->middleware('auth')->name('push.unsubscribe');
+    Route::post('/push-unsubscribe', [PushSubscriptionController::class, 'destroy'])->middleware('auth')->name('push.unsubscribe');    
+    
+    Route::get('/api/session-expiry', function (Request $request) {
+        $lastActivity = DB::table(config('session.table'))
+        ->where('user_id', Auth::id())
+        ->where('id', $request->session()->getId())
+        ->value('last_activity');
+        
+        if (!$lastActivity) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+        
+        $expiryTimestamp = $lastActivity + (config('session.lifetime') * 60);
+        
+        return response()->json([
+            'expiry_timestamp' => $expiryTimestamp,
+        ]);
+    })->name('api.session.expiry');
+
+    Route::get('/api/session-ping', function () {
+        return response()->json(['status' => 'pong']);
+    })->name('api.session.ping');
  });
 /*
 |--------------------------------------------------------------------------
@@ -211,27 +232,6 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
 
     // Benachrichtigungsregeln Verwaltung
     Route::middleware(['can:notification.rules.manage'])->resource('notification-rules', NotificationRuleController::class)->except(['show']);
-    
-    Route::get('/api/session-expiry', function (Request $request) {
-        $lastActivity = DB::table(config('session.table'))
-        ->where('user_id', Auth::id())
-        ->where('id', $request->session()->getId())
-        ->value('last_activity');
-        
-        if (!$lastActivity) {
-            return response()->json(['error' => 'Session not found'], 404);
-        }
-        
-        $expiryTimestamp = $lastActivity + (config('session.lifetime') * 60);
-        
-        return response()->json([
-            'expiry_timestamp' => $expiryTimestamp,
-        ]);
-    })->name('api.session.expiry');
-
-    Route::get('/api/session-ping', function () {
-        return response()->json(['status' => 'pong']);
-    })->name('api.session.ping');
 
 });
 
