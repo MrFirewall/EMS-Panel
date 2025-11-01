@@ -24,10 +24,10 @@
                         $statusText = $attempt->evaluator->name ?? 'System';
                     @endphp
                     <tr>
-                        <td><span class="badge bg-primary text-sm">{{ $attempt->completed_at }}</span></td>
+                        <td>{{ $attempt->completed_at->format('d.m.Y') }}</td>
                         <td>
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
-                           <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small>
+                            <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small>
                         </td>
                         <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
                     </tr>
