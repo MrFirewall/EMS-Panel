@@ -12,22 +12,24 @@
                 </tr>
             </thead>
             <tbody>
-                {{-- Die $user Variable kommt vom ProfileController --}}
-                @forelse($user->trainingModules as $module)
+                @php
+                    $assignedModules = $user->trainingModules->filter(function($module) {
+                        return !is_null($module->pivot->assigned_by_user_id);
+                    });
+                @endphp
+
+                @forelse($assignedModules as $module)
                 <tr>
                     <td>{{ $module->pivot->created_at ? \Carbon\Carbon::parse($module->pivot->created_at)->format('d.m.Y') : '-' }}</td>
                     <td>{{ $module->name }}</td>
                     <td>
-                        @if ($module->pivot->assigned_by_user_id)
-                            Zugewiesen: {{ $module->pivot->assigner->name ?? 'System' }}
-                        @else
-                            <span class="badge bg-danger">Anmeldung</span>
-                        @endif
+                        {{ $module->pivot->assigner->name ?? 'System' }}
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="3" class="text-center text-muted">Keine Moduleinträge.</td>
+                    {{-- Text angepasst an den neuen Filter --}}
+                    <td colspan="3" class="text-center text-muted">Keine bestandenen Moduleinträge.</td>
                 </tr>
                 @endforelse
             </tbody>
