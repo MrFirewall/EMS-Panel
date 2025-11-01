@@ -8,60 +8,38 @@
                 <tr>
                     <th>Typ</th>
                     <th>Titel</th>
-                    <th>Status</th>
+                    <th>Ausbilder</th>
                 </tr>
             </thead>
             <tbody>
-                {{-- Anzeige der automatisierten Prüfungsversuche --}}
-                @forelse($examAttempts as $attempt)
+                @php
+                    $passedAttempts = $examAttempts->filter(function($attempt) {
+                        return $attempt->status === 'evaluated' && $attempt->exam && $attempt->score >= $attempt->exam->pass_mark;
+                    });
+                @endphp
+                
+                @forelse($passedAttempts as $attempt)
                     @php
-                        $statusColor = 'bg-secondary'; // Standardfarbe
-                        $statusText = 'Unbekannt'; // Standardtext
-
-                        // Status aus dem Enum übersetzen und Farbe setzen
-                        if ($attempt->status === 'in_progress') {
-                            $statusColor = 'bg-info';
-                            $statusText = 'In Bearbeitung';
-                        } elseif ($attempt->status === 'submitted') {
-                            $statusColor = 'bg-warning';
-                            $statusText = 'Wartet auf Bewertung';
-                        } elseif ($attempt->status === 'evaluated') {
-                            
-                            // --- KORRIGIERTE LOGIK START (Zeigt Bewerter an) ---
-                            // (Stelle sicher, dass ->with('evaluator') im Controller geladen wurde!)
-                            $evaluatorName = $attempt->evaluator->name ?? 'System';
-                            
-                            // Setze Farbe basierend auf bestanden/nicht bestanden
-                            if ($attempt->exam && $attempt->score >= $attempt->exam->pass_mark) {
-                                $statusColor = 'bg-success';
-                            } else {
-                                $statusColor = 'bg-danger';
-                            }
-                            
-                            // Zeige den Namen des Bewerters an
-                            $statusText = "Bewertet von: {$evaluatorName}";
-                            // --- KORRIGIERTE LOGIK ENDE ---
-                            
-                        }
+                        $statusColor = 'bg-success';
+                        $statusText = $attempt->evaluator->name ?? 'System';
                     @endphp
                     <tr>
-                        <td><span class="badge bg-primary text-sm">Prüfung</span></td> {{-- Typ immer "Prüfung" --}}
+                        <td><span class="badge bg-primary text-sm">Prüfung</span></td>
                         <td>
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
-                            {{-- Optional: Modulname anzeigen --}}
-                            {{-- <small class="text-muted d-block">({{ $attempt->exam->trainingModule->name ?? 'N/A' }})</small> --}}
+                           <small class="text-muted d-block">({{ $attempt->exam->trainingModule->name ?? 'N/A' }})</small>
                         </td>
                         <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
                     </tr>
                 @empty
-                    {{-- Wird unten behandelt, falls beide leer sind --}}
+                    {{-- Das @empty ist leer, WIE IM ORIGINAL --}}
                 @endforelse
 
-                {{-- Fallback: Nur anzeigen, wenn BEIDE Listen leer sind --}}
-                {{-- Annahme: $examinations ist eine andere Variable für manuelle Einstufungen? --}}
-                @if($examAttempts->isEmpty() && (!isset($examinations) || $examinations->isEmpty()))
+                {{-- Fallback: Angepasst an die NEUE $passedAttempts Variable --}}
+                {{-- (Nimmt an, dass $examinations eine separate, vielleicht manuelle Liste ist) --}}
+                @if($passedAttempts->isEmpty() && (!isset($examinations) || $examinations->isEmpty()))
                     <tr>
-                        <td colspan="3" class="text-center text-muted p-3">Keine Prüfungseinträge.</td>
+                        <td colspan="3" class="text-center text-muted p-3">Keine bestandenen Prüfungseinträge.</td>
                     </tr>
                 @endif
             </tbody>
