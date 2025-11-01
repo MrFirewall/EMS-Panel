@@ -1,6 +1,6 @@
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Zugewiesene Module</h5>
+<div class="card card-primary card-outline mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Module</h5>
     </div>
     <div class="card-body">
         <table class="table table-striped table-hover mb-0">
