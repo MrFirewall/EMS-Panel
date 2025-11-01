@@ -451,11 +451,13 @@ class UserController extends Controller
             'personal_number' => $userBeforeUpdate->personal_number,
             'employee_id' => $userBeforeUpdate->employee_id,
             'email' => $userBeforeUpdate->email,
-            'birthday' => $userBeforeUpdate->birthday ? $userBeforeUpdate->birthday->format('Y-m-d') : null,
+            // KORREKTUR: Carbon::parse() verwenden, da $birthday ein String sein kann
+            'birthday' => $userBeforeUpdate->birthday ? Carbon::parse($userBeforeUpdate->birthday)->format('Y-m-d') : null,
             'discord_name' => $userBeforeUpdate->discord_name,
             'forum_name' => $userBeforeUpdate->forum_name,
             'special_functions' => $userBeforeUpdate->special_functions,
-            'hire_date' => $userBeforeUpdate->hire_date ? $userBeforeUpdate->hire_date->format('Y-m-d') : null,
+            // KORREKTUR: Carbon::parse() zur Sicherheit auch hier anwenden
+            'hire_date' => $userBeforeUpdate->hire_date ? Carbon::parse($userBeforeUpdate->hire_date)->format('Y-m-d') : null,
             'second_faction' => $userBeforeUpdate->second_faction,
             'rank' => $userBeforeUpdate->rank,
         ];
@@ -684,4 +686,5 @@ class UserController extends Controller
         return redirect()->route('admin.users.show', $user); // Ohne success
     }
 }
+
 
