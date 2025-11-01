@@ -87,9 +87,37 @@
                                         </span>
                                     </td>
                                     
-                                    {{-- Spalte 5: Beschreibung --}}
+                                    {{-- Spalte 5: Beschreibung (KORRIGIERT FÜR LISTENANSICHT) --}}
                                     <td class="text-wrap">
-                                        {{ $log->description }}
+                                        @if (Str::contains($log->description, 'Änderungen: '))
+                                            @php
+                                                // Teile die Beschreibung in den Hauptteil und die Änderungsliste
+                                                $parts = explode('Änderungen: ', $log->description, 2);
+                                                $mainDescription = $parts[0]; // z.B. "Benutzerprofil von 'User' aktualisiert."
+                                                
+                                                // Teile die Änderungen in einzelne Punkte,
+                                                // benutze ". " als Trennzeichen.
+                                                // filtere leere Einträge (falls die Beschreibung mit ". " endet)
+                                                $changes = array_filter(explode('. ', $parts[1] ?? ''));
+                                            @endphp
+                                            
+                                            {{-- Zeige den Hauptteil an --}}
+                                            {{ $mainDescription }} 
+                                            
+                                            @if (!empty($changes))
+                                                <span class="d-block fw-bold mt-1">Änderungen:</span>
+                                                {{-- Liste für die Änderungen --}}
+                                                <ul class="mb-0 ps-3" style="list-style-type: disc;">
+                                                    @foreach ($changes as $change)
+                                                        {{-- Stelle sicher, dass der Punkt am Ende entfernt wird --}}
+                                                        <li>{{ rtrim($change, '.') }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            @endif
+                                        @else
+                                            {{-- Normale Beschreibung (keine "Änderungen:" gefunden) --}}
+                                            {{ $log->description }}
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
