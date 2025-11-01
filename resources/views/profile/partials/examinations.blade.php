@@ -24,7 +24,7 @@
                         $statusText = $attempt->evaluator->name ?? 'System';
                     @endphp
                     <tr>
-                        <td><span class="badge bg-primary text-sm">$attempt->completed_at</span></td>
+                        <td><span class="badge bg-primary text-sm">{{ $attempt->completed_at }}</span></td>
                         <td>
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
                            <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small>
