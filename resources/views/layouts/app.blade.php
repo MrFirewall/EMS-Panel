@@ -566,8 +566,7 @@
 </script>
 
 
-{{-- NEU: SESSION-TIMER (nur wenn nicht "angemeldet bleiben") --}}
-@if(session('is_remembered') === false)
+<!-- @if(session('is_remembered') === false)
 <script>
     // Diese Funktion wird ausgeführt, sobald das Dokument geladen ist.
     (function() {
@@ -634,8 +633,7 @@
 
     })();
 </script>
-@endif
-{{-- ENDE NEU --}}
+@endif -->
 
 
 @impersonating
