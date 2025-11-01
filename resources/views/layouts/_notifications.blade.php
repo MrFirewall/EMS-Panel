@@ -68,20 +68,18 @@
                 <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-left w-100 pl-4 py-2 d-flex justify-content-between align-items-center">
                     {{-- Pl-4 (Padding-Left) rückt die Einzelnachrichten leicht ein --}}
                     
-                    {{-- NEU: Logik zum Kürzen des Textes im Dropdown --}}
+                    {{-- KORREKTUR: PHP-Logik zum Kürzen entfernt --}}
                     @php
                         $fullText = $notification['text'] ?? '...';
-                        // Wir zeigen nur den Teil VOR "Änderungen:" an, falls vorhanden
-                        $mainText = str_contains($fullText, 'Änderungen: ') ? explode('Änderungen: ', $fullText, 2)[0] : $fullText;
-                        // Füge "..." hinzu, wenn der Text gekürzt wurde
-                        $displayText = (strlen($mainText) < strlen($fullText)) ? rtrim($mainText, '. ') . '...' : $mainText;
                     @endphp
                     
-                    {{-- KORREKTUR: CSS-Klasse geändert --}}
-                    <span class="notification-text-wrap"> 
-                        <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $displayText }}
+                    {{-- KORREKTUR: CSS-Klasse geändert und flex-grow-1 hinzugefügt --}}
+                    <span class="notification-text-wrap flex-grow-1"> 
+                        <i class="far fa-circle text-info mr-2" style="font-size: 0.6rem;"></i> {{ $fullText }}
                     </span>
-                    <span class="text-muted text-sm ml-2">{{ $notification['time'] }}</span> {{-- ml-2 für etwas Abstand --}}
+                    
+                    {{-- KORREKTUR: flex-shrink-0 hinzugefügt --}}
+                    <span class="text-muted text-sm ml-2 flex-shrink-0">{{ $notification['time'] }}</span>
                 </button>
             </form>
         @endforeach
