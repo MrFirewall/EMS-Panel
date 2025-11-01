@@ -11,10 +11,30 @@ use App\Models\Pivots\TrainingModuleUser;
 
 class ProfileController extends Controller
 {
+    /**
+     * Definiert die unsichtbare Super-Admin Rolle.
+     * @var string
+     */
+    private $superAdminRole = 'Super-Admin'; // NEU
+
     public function __construct()
     {
         // Stellt sicher, dass nur eingeloggte Benutzer Zugriff haben
         $this->middleware('auth');
+    }
+
+    /**
+     * NEU: Hilfsfunktion, die die Super-Admin Rolle aus der Anzeige entfernt.
+     */
+    private function filterSuperAdminFromRoles(User $user): User
+    {
+        if ($user->relationLoaded('roles')) {
+            $filteredRoles = $user->roles->reject(function ($role) {
+                return $role->name === $this->superAdminRole;
+            });
+            $user->setRelation('roles', $filteredRoles);
+        }
+        return $user;
     }
 
     /**
@@ -31,6 +51,7 @@ class ProfileController extends Controller
             // 'trainingModules' HIER ENTFERNEN!
             'vacations',
             'receivedEvaluations' => fn($q) => $q->with('evaluator')->latest(),
+            'roles' // NEU: Sicherstellen, dass Rollen geladen sind
         ]);
 
         // 1. Lade die Module
@@ -58,6 +79,9 @@ class ProfileController extends Controller
         $hourData = $user->calculateDutyHours();
         $weeklyHours = $user->calculateWeeklyHoursSinceEntry();
         
+        // NEU: Filtert die Super-Admin Rolle aus der Anzeige
+        $this->filterSuperAdminFromRoles($user);
+
         return view('profile.show', compact(
             'user', 
             'serviceRecords', 

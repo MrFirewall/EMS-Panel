@@ -21,6 +21,9 @@ use App\Models\Department;
 
 class RoleController extends Controller
 {
+    // NEU: Definiert die versteckte Super-Admin Rolle.
+    private $superAdminRole = 'Super-Admin';
+
     public function __construct()
     {
         // Middleware für Rollen bleibt
@@ -41,14 +44,19 @@ class RoleController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Alle Daten laden
-        $allRolesCollection = Role::withCount('users')->get(); // Hole Collection für spätere Verwendung
+        // 1. Alle Daten laden (Super-Admin herausfiltern)
+        // GEÄNDERT: 'Super-Admin' wird von Anfang an ausgeschlossen.
+        $allRolesCollection = Role::where('name', '!=', $this->superAdminRole)
+                                 ->withCount('users')
+                                 ->get(); 
+                                 
         $allRoles = $allRolesCollection->keyBy(fn($role) => strtolower($role->name));
         $ranks = Rank::orderBy('level', 'desc')->get();
         $allDepartments = Department::orderBy('name')->get();
 
         // NEU: Hole alle Rollennamen und Ränge für Dropdowns
-        $allRoleNames = $allRolesCollection->pluck('name');
+        // (Diese Liste ist dank der obigen Änderung bereits gefiltert)
+        $allRoleNames = $allRolesCollection->pluck('name'); 
         $allRanks = Rank::orderBy('level', 'desc')->pluck('level', 'name'); // Format: ['chief' => 11, 'deputy chief' => 10, ...]
 
 
@@ -94,6 +102,12 @@ class RoleController extends Controller
 
         if ($request->has('role')) {
             $currentRole = Role::findById($request->query('role'));
+            
+            // NEU: Verhindern, dass die Super-Admin-Rolle (falls ID bekannt) angezeigt wird.
+            if ($currentRole && $currentRole->name === $this->superAdminRole) {
+                return redirect()->route('admin.roles.index')->with('error', 'Diese Rolle kann nicht angezeigt werden.');
+            }
+
             if ($currentRole) {
                 $currentRolePermissions = $currentRole->permissions->pluck('name')->toArray();
                 $currentRoleNameLower = strtolower($currentRole->name);
@@ -180,6 +194,14 @@ class RoleController extends Controller
         }
 
         $roleName = strtolower(trim($request->name));
+
+        // NEU: Verhindern, dass eine Rolle mit dem reservierten Namen erstellt wird.
+        if ($roleName === strtolower($this->superAdminRole)) {
+            return back()->withErrors(['name' => 'Dieser Rollenname ist reserviert.'], 'createRole')
+                         ->withInput()
+                         ->with('open_modal', 'createRoleModal');
+        }
+        
         $roleType = $request->role_type;
         $departmentId = $request->department_id;
         $role = null;
@@ -226,7 +248,8 @@ class RoleController extends Controller
      */
     public function update(Request $request, Role $role)
     {
-        if ($role->name === 'super-admin' || $role->name === 'chief') {
+        // GEÄNDERT: Verwendet die $superAdminRole Eigenschaft
+        if ($role->name === $this->superAdminRole || $role->name === 'chief') {
             return back()->with('error', 'Diese Standardrolle kann nicht geändert oder verschoben werden.');
         }
 
@@ -335,11 +358,12 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
-        if ($role->name === 'super-admin' || $role->name === 'chief' || $role->users()->count() > 0) {
+        // GEÄNDERT: Verwendet die $superAdminRole Eigenschaft
+        if ($role->name === $this->superAdminRole || $role->name === 'chief' || $role->users()->count() > 0) {
              $error = match(true) {
-                 $role->name === 'super-admin', $role->name === 'chief' => 'Standardrollen können nicht gelöscht werden.',
-                 $role->users()->count() > 0 => 'Rolle kann nicht gelöscht werden, da noch Benutzer zugewiesen sind.',
-                 default => 'Diese Rolle kann nicht gelöscht werden.'
+                   $role->name === $this->superAdminRole, $role->name === 'chief' => 'Standardrollen können nicht gelöscht werden.',
+                   $role->users()->count() > 0 => 'Rolle kann nicht gelöscht werden, da noch Benutzer zugewiesen sind.',
+                   default => 'Diese Rolle kann nicht gelöscht werden.'
              };
             return back()->with('error', $error);
         }
@@ -382,7 +406,8 @@ class RoleController extends Controller
     public function storeDepartment(Request $request)
     {
         // Hole Rollen und Ranks für die Validierung
-        $allRoleNames = Role::pluck('name')->toArray();
+        // GEÄNDERT: Filtert Super-Admin aus der Validierungsliste heraus.
+        $allRoleNames = Role::where('name', '!=', $this->superAdminRole)->pluck('name')->toArray();
         $allRankLevels = Rank::pluck('level')->toArray(); // Nur die Level-Werte
 
         $validator = Validator::make($request->all(), [
@@ -431,7 +456,8 @@ class RoleController extends Controller
     public function updateDepartment(Request $request, Department $department)
     {
          // Hole Rollen und Ranks für die Validierung
-        $allRoleNames = Role::pluck('name')->toArray();
+         // GEÄNDERT: Filtert Super-Admin aus der Validierungsliste heraus.
+        $allRoleNames = Role::where('name', '!=', $this->superAdminRole)->pluck('name')->toArray();
         $allRankLevels = Rank::pluck('level')->toArray();
 
          $validator = Validator::make($request->all(), [
@@ -448,9 +474,9 @@ class RoleController extends Controller
          ]);
 
          if ($validator->fails()) {
-              return back()->withErrors($validator, 'editDepartment_' . $department->id)
-                           ->withInput()
-                           ->with('open_modal', 'editDepartmentModal_' . $department->id);
+             return back()->withErrors($validator, 'editDepartment_' . $department->id)
+                          ->withInput()
+                          ->with('open_modal', 'editDepartmentModal_' . $department->id);
          }
 
         try {
@@ -518,4 +544,3 @@ class RoleController extends Controller
         }
     }
 }
-
