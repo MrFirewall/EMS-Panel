@@ -37,8 +37,8 @@ class SendConfigurableNotification // Optional: implements ShouldQueue
     {
         // 1. Finde alle aktiven Regeln, bei denen die controller_action im JSON-Array enthalten ist
         $rules = NotificationRule::whereJsonContains('controller_action', $event->controllerAction)
-                                     ->where('is_active', true)
-                                     ->get();
+                                    ->where('is_active', true)
+                                    ->get();
 
         if ($rules->isEmpty()) {
             // Log::info("[Notify] Keine Regeln für {$event->controllerAction}.");
@@ -243,26 +243,26 @@ class SendConfigurableNotification // Optional: implements ShouldQueue
              return;
         }
         elseif ($event->controllerAction === 'Admin\ExamAttemptController@update' && $event->relatedModel instanceof ExamAttempt) {
-              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
-              /** @var User $student */ $student = $attempt->user;
-              /** @var User $admin */ $admin = $event->actorUser;
-              $resultText = $event->additionalData['status_result'] ?? 'unbekannt';
-              $isPassed = ($resultText === 'bestanden');
-              $resultIcon = $isPassed ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
+               /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
+               /** @var User $student */ $student = $attempt->user;
+               /** @var User $admin */ $admin = $event->actorUser;
+               $resultText = $event->additionalData['status_result'] ?? 'unbekannt';
+               $isPassed = ($resultText === 'bestanden');
+               $resultIcon = $isPassed ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
 
-              $notifyStudentRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($student->id, $r->target_identifier));
-              if ($notifyStudentRuleExists) {
-                   $nTextStudent = "Deine Prüfung '{$attempt->exam->title}' wurde von {$admin->name} final bewertet: {$resultText} ({$attempt->score}%).";
-                   Notification::send($student, new GeneralNotification($nTextStudent, $resultIcon, route('profile.show')));
-                   $this->sendWebPush($student, (new WebPushMessage)->title('Prüfung bewertet')->body($nTextStudent)->data(['url' => route('profile.show')]));
-              }
-              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $student->id);
-              if ($otherRecipients->isNotEmpty()) {
-                   $nTextAdmin = "Prüfung '{$attempt->exam->title}' von {$student->name} wurde von {$admin->name} final als '{$resultText}' bewertet ({$attempt->score}%).";
-                   Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-clipboard-check text-info', route('admin.exams.attempts.show', $attempt)));
-                   $this->sendWebPush($otherRecipients, (new WebPushMessage)->title('Prüfung bewertet')->body($nTextAdmin)->data(['url' => route('admin.exams.attempts.show', $attempt)]));
-              }
-              return;
+               $notifyStudentRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($student->id, $r->target_identifier));
+               if ($notifyStudentRuleExists) {
+                    $nTextStudent = "Deine Prüfung '{$attempt->exam->title}' wurde von {$admin->name} final bewertet: {$resultText} ({$attempt->score}%).";
+                    Notification::send($student, new GeneralNotification($nTextStudent, $resultIcon, route('profile.show')));
+                    $this->sendWebPush($student, (new WebPushMessage)->title('Prüfung bewertet')->body($nTextStudent)->data(['url' => route('profile.show')]));
+               }
+               $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $student->id);
+               if ($otherRecipients->isNotEmpty()) {
+                    $nTextAdmin = "Prüfung '{$attempt->exam->title}' von {$student->name} wurde von {$admin->name} final als '{$resultText}' bewertet ({$attempt->score}%).";
+                    Notification::send($otherRecipients, new GeneralNotification($nTextAdmin, 'fas fa-clipboard-check text-info', route('admin.exams.attempts.show', $attempt)));
+                    $this->sendWebPush($otherRecipients, (new WebPushMessage)->title('Prüfung bewertet')->body($nTextAdmin)->data(['url' => route('admin.exams.attempts.show', $attempt)]));
+               }
+               return;
         }
         elseif ($event->controllerAction === 'Admin\ExamAttemptController@resetAttempt' && $event->relatedModel instanceof ExamAttempt) {
              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
@@ -271,11 +271,11 @@ class SendConfigurableNotification // Optional: implements ShouldQueue
 
              $notifyStudentRuleExists = $rules->contains(fn($r) => $r->target_type === 'user' && is_array($r->target_identifier) && in_array($student->id, $r->target_identifier));
              if($notifyStudentRuleExists) {
-                $nTextStudent = "Dein Prüfungsversuch für '{$attempt->exam->title}' wurde von {$resetter->name} zurückgesetzt. Du kannst die Prüfung erneut ablegen.";
-                $nIconStudent = 'fas fa-exclamation-triangle text-warning';
-                $nUrlStudent = route('exams.take', $attempt);
-                Notification::send($student, new GeneralNotification($nTextStudent, $nIconStudent, $nUrlStudent));
-                $this->sendWebPush($student, (new WebPushMessage)->title('Versuch zurückgesetzt')->body($nTextStudent)->data(['url' => $nUrlStudent]));
+                 $nTextStudent = "Dein Prüfungsversuch für '{$attempt->exam->title}' wurde von {$resetter->name} zurückgesetzt. Du kannst die Prüfung erneut ablegen.";
+                 $nIconStudent = 'fas fa-exclamation-triangle text-warning';
+                 $nUrlStudent = route('exams.take', $attempt);
+                 Notification::send($student, new GeneralNotification($nTextStudent, $nIconStudent, $nUrlStudent));
+                 $this->sendWebPush($student, (new WebPushMessage)->title('Versuch zurückgesetzt')->body($nTextStudent)->data(['url' => $nUrlStudent]));
              }
 
              $otherRecipients = $uniqueRecipients->reject(fn($u) => $u->id === $student->id);
@@ -339,19 +339,19 @@ class SendConfigurableNotification // Optional: implements ShouldQueue
              $pushTitle = "Prüfungsversuch gelöscht";
              $notificationText = "Prüfungsversuch #{$attemptId} ('{$examTitle}') von {$studentName} wurde von {$deleter->name} endgültig gelöscht.";
              $notificationIcon = 'fas fa-trash-alt text-danger'; $notificationUrl = route('admin.exams.attempts.index');
-         }
+        }
 
         // N-O) User Prüfungs-VERSUCH Aktionen (ExamAttemptController)
         elseif ($event->controllerAction === 'ExamAttemptController@update' && $event->relatedModel instanceof ExamAttempt) {
-              /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
-              /** @var User $user */ $user = $event->triggeringUser;
+               /** @var ExamAttempt $attempt */ $attempt = $event->relatedModel;
+               /** @var User $user */ $user = $event->triggeringUser;
 
-              if ($uniqueRecipients->isNotEmpty()) {
-                   $nText = "{$user->name} hat Prüfung '{$attempt->exam->title}' eingereicht (Auto-Score: {$attempt->score}%).";
-                   Notification::send($uniqueRecipients, new GeneralNotification($nText, 'fas fa-file-alt text-warning', route('admin.exams.attempts.show', $attempt)));
-                   $this->sendWebPush($uniqueRecipients, (new WebPushMessage)->title('Prüfung eingereicht')->body($nText)->data(['url' => route('admin.exams.attempts.show', $attempt)]));
-              }
-              return;
+               if ($uniqueRecipients->isNotEmpty()) {
+                    $nText = "{$user->name} hat Prüfung '{$attempt->exam->title}' eingereicht (Auto-Score: {$attempt->score}%).";
+                    Notification::send($uniqueRecipients, new GeneralNotification($nText, 'fas fa-file-alt text-warning', route('admin.exams.attempts.show', $attempt)));
+                    $this->sendWebPush($uniqueRecipients, (new WebPushMessage)->title('Prüfung eingereicht')->body($nText)->data(['url' => route('admin.exams.attempts.show', $attempt)]));
+               }
+               return;
         }
 
         // P-Q) Berechtigungen & Rollen (Admin)
@@ -400,19 +400,28 @@ class SendConfigurableNotification // Optional: implements ShouldQueue
              $notificationIcon = 'fas fa-user-plus text-success'; $notificationUrl = route('admin.users.show', $newUser);
         }
         elseif ($event->controllerAction === 'Admin\UserController@update' && $event->relatedModel instanceof User) {
-             /** @var User $editedUser */ $editedUser = $event->relatedModel; $editor = $event->actorUser;
-             $notificationText = "Profil von '{$editedUser->name}' wurde von {$editor->name} bearbeitet.";
-             $addedModules = $event->additionalData['added_modules'] ?? [];
-             $removedModules = $event->additionalData['removed_modules'] ?? [];
-             if(!empty($addedModules) || !empty($removedModules)){
-                 $pushTitle = "Modulzuweisung geändert";
-                 $notificationText .= " Modulzuweisungen wurden angepasst.";
-                 $notificationIcon = 'fas fa-user-graduate text-info';
-             } else {
-                 $pushTitle = "Benutzerprofil bearbeitet";
-                 $notificationIcon = 'fas fa-user-edit text-info';
-             }
-             $notificationUrl = route('admin.users.show', $editedUser);
+            /** @var User $editedUser */ $editedUser = $event->relatedModel; 
+            /** @var User $editor */ $editor = $event->actorUser;
+            
+            // --- KORREKTUR: Detaillierte Beschreibung aus dem Event holen ---
+            // Wir nutzen die 'description', die der UserController bereits formatiert hat.
+            $notificationText = $event->additionalData['description'] ?? "Profil von '{$editedUser->name}' wurde von {$editor->name} bearbeitet.";
+            
+            // Die Push-Title-Logik kann bleiben, um den Titel anzupassen
+            $addedModules = $event->additionalData['added_modules'] ?? [];
+            $removedModules = $event->additionalData['removed_modules'] ?? [];
+            
+            if(!empty($addedModules) || !empty($removedModules)){
+                $pushTitle = "Modulzuweisung geändert";
+                // Der $notificationText ist schon detailliert, wir brauchen nichts mehr anzuhängen.
+                // $notificationText .= " Modulzuweisungen wurden angepasst."; // <--- ENTFERNT
+                $notificationIcon = 'fas fa-user-graduate text-info';
+            } else {
+                $pushTitle = "Benutzerprofil bearbeitet";
+                $notificationIcon = 'fas fa-user-edit text-info';
+            }
+            $notificationUrl = route('admin.users.show', $editedUser);
+            // --- ENDE KORREKTUR ---
         }
         elseif ($event->controllerAction === 'Admin\UserController@addRecord' && $event->relatedModel instanceof ServiceRecord) {
              /** @var ServiceRecord $record */ $record = $event->relatedModel;
