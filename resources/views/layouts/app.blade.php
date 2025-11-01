@@ -560,33 +560,12 @@
 
     });
 </script>
-<script>
-    // Dieser Log wird IMMER angezeigt
-    console.log('[DEBUG] ------------------------------------');
-    console.log('[DEBUG] Seite geladen.');
-    
-    // 1. Den Wert aus der Server-Session ausgeben
-    let isRemembered = '{{ var_export(session('is_remembered'), true) }}';
-    console.log('[DEBUG] session(is_remembered) ist: ' + isRemembered);
-
-    @if(session('is_remembered') === false)
-        // 2. Dieser Log erscheint NUR, wenn die Bedingung WAHR ist
-        console.log('[DEBUG] @@if-Bedingung (is_remembered === false) ist WAHR.');
-        console.log('[DEBUG] => Der Timer-Block WIRD geladen.');
-    @else
-        // 3. Dieser Log erscheint NUR, wenn die Bedingung FALSCH ist
-        console.log('[DEBUG] @@if-Bedingung (is_remembered === false) ist FALSCH.');
-        console.log('[DEBUG] => Der Timer-Block WIRD NICHT geladen.');
-    @endif
-    
-    console.log('[DEBUG] ------------------------------------');
-</script>
 {{-- FINALER SESSION-TIMER (SERVER-GESTEUERT MIT PING-RESET & DEBUGGING) --}}
 @if(session('is_remembered') === false)
 <script>
  (function() {
   // === DEBUGGING: Globale Log-Funktion ===
-  const DEBUG = true;
+  const DEBUG = false;
   function log(message, ...args) {
       if (DEBUG) {
           // %c für CSS-Styling in der Konsole
