@@ -19,17 +19,13 @@
                 @endphp
                 
                 @forelse($passedAttempts as $attempt)
-                    @php
-                        $statusColor = 'bg-success';
-                        $statusText = $attempt->evaluator->name ?? 'System';
-                    @endphp
                     <tr>
                         <td>{{ $attempt->completed_at->format('d.m.Y') }}</td>
                         <td>
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
-                            <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small>
+                            <!-- <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small> -->
                         </td>
-                        <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
+                        <td>{{ $attempt->evaluator->name ?? 'System }}</td>
                     </tr>
                 @empty
                     {{-- Das @empty ist leer, WIE IM ORIGINAL --}}
