@@ -561,36 +561,39 @@
     });
 </script>
 
-{{-- ANGEPASSTER SESSION-TIMER --}}
+{{-- FINALER SESSION-TIMER (SERVER-GESTEUERT MIT PING-RESET) --}}
 @if(session('is_remembered') === false)
 <script>
  (function() {
-  // 1. Setze die Dauer
-  const configLifetime = ({{ config('session.lifetime', 120) * 60 }});
-  // WICHTIG: Der Puffer von 10 Sekunden. JS läuft VOR dem Server ab.
-  let sessionLifetimeInSeconds = configLifetime - 10; 
+  const puffer = 10; // 10 Sekunden Puffer
   
-  // 2. Finde die Timer-Elemente
   const timerElement = document.getElementById('session-timer');
   const timerTextElement = document.querySelector('.d-sm-inline.mr-1');
   if(!timerElement) return; 
 
-  // 3. Funktion zum Umleiten
+  let timerInterval;
+  let expiryTimestamp; // Hält den ZIEL-Timestamp (in Sekunden)
+  let lastDisplayedMinutes; 
+  let isResetting = false; // Sperre, um Ping-Spam zu verhindern
+
   function redirectToLockscreen() {
    window.location.href = '{{ route('lock') }}';
   }
 
-  // 4. Funktion NUR für die Anzeige
-  function displayTime(seconds) {
-    // Runde auf die nächste volle Minute auf, für die Anzeige
-    let totalMinutes = Math.ceil(seconds / 60);
-
-    // Korrigiert die erste Anzeige, damit 1m 50s als "2 min" angezeigt wird
-    if (seconds === configLifetime - 10) {
-      totalMinutes = Math.ceil(configLifetime / 60);
+  function displayTime(remainingSeconds) {
+    let totalMinutes = Math.ceil(remainingSeconds / 60);
+    
+    if (totalMinutes === lastDisplayedMinutes && remainingSeconds > 0) {
+        return; // Nicht aktualisieren, wenn sich die Minute nicht geändert hat
     }
+    lastDisplayedMinutes = totalMinutes;
 
     // Logik für die Anzeige
+    if (totalMinutes <= 0) {
+        // Falls wir im Puffer-Bereich sind, zeige 1 Min.
+        totalMinutes = 1; 
+    }
+    
     if (totalMinutes < 60) {
       timerElement.textContent = totalMinutes + ' min';
     } else {
@@ -600,52 +603,86 @@
       timerElement.textContent = hours + 'h ' + minutes + ' min';
     }
     
-    // Farblogik (weniger als 5 Minuten)
+    // Farblogik
     if(totalMinutes < 5) { 
-      timerElement.classList.remove('badge-danger');
-      timerElement.classList.add('badge-info');
+      timerElement.classList.remove('badge-primary');
+      timerElement.classList.add('badge-warning');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:';
     } else {
       timerElement.classList.remove('badge-warning');
-      timerElement.classList.add('badge-info');
+      timerElement.classList.add('badge-primary');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:';
     }
   }
 
-  // 5. Funktion, die die Zeit SEKÜNDLICH reduziert
-  function updateTimer() {
-    sessionLifetimeInSeconds--; 
-
-    // 6. PRÄZISER CHECK: Leite um, sobald der Puffer-Timer (z.B. 110s) abgelaufen ist
-    if (sessionLifetimeInSeconds <= 0) {
+  function checkTimer() {
+    const nowTimestamp = Math.floor(Date.now() / 1000);
+    
+    if (nowTimestamp >= (expiryTimestamp - puffer)) {
       clearInterval(timerInterval);
       redirectToLockscreen();
       return;
     }
     
-    // 7. ANZEIGE NUR JEDE MINUTE AKTUALISIEREN
-    // (z.B. wenn 59s -> 0s, also bei 1:00, 2:00, etc.)
-    if (sessionLifetimeInSeconds % 60 === 0) {
-      displayTime(sessionLifetimeInSeconds);
-    }
+    const remainingSeconds = (expiryTimestamp - puffer) - nowTimestamp;
+    displayTime(remainingSeconds);
   }
 
-  // 8. Timer starten
-  displayTime(sessionLifetimeInSeconds); // Zeige die Startzeit (z.B. 2 min) SOFORT an
-  
-  // Starte das SEKÜNDLICHE Intervall (1000ms)
-  let timerInterval = setInterval(updateTimer, 1000);
-
-  // 9. Inaktivitäts-Reset
-  function resetTimer() {
+  // STARTPUNKT: Holt die "Wahrheit" vom Server
+  function fetchSessionExpiry() {
+    // Stoppe den alten Timer, falls er noch läuft
     clearInterval(timerInterval);
-    sessionLifetimeInSeconds = configLifetime - 10;
-    displayTime(sessionLifetimeInSeconds); // Zeige die zurückgesetzte Zeit SOFORT an
-    timerInterval = setInterval(updateTimer, 1000);
+
+    $.ajax({
+        url: '{{ route("api.session.expiry") }}',
+        type: 'GET',
+        dataType: 'json',
+        success: function(data) {
+            expiryTimestamp = data.expiry_timestamp;
+            
+            // Starte den Timer
+            checkTimer(); // Einmal sofort anzeigen
+            timerInterval = setInterval(checkTimer, 1000); // Dann jede Sekunde prüfen
+        },
+        error: function() {
+            console.error("Konnte Session-Ablaufzeit nicht vom Server laden.");
+            timerElement.textContent = 'FEHLER';
+            timerElement.classList.add('badge-danger');
+        }
+    });
   }
 
-  // Events, die den Timer zurücksetzen
+  // ===================================================================
+  // HIER IST DER NEUE, "ORDENTLICHE" RESET-TIMER
+  // ===================================================================
+  function resetTimer() {
+    // 1. Verhindere Spam: Führe den Reset nur alle 5 Sek. aus
+    if (isResetting) return; 
+    isResetting = true;
+    
+    // 2. Stoppe den alten Timer
+    clearInterval(timerInterval);
+
+    // 3. PING: "Berühre" den Server, um 'last_activity' zu aktualisieren.
+    $.ajax({
+        url: '{{ route("api.session.ping") }}',
+        type: 'GET',
+        dataType: 'json'
+    }).done(function() {
+        // 4. FETCH: Hole die (jetzt aktualisierte) Ablaufzeit.
+        // fetchSessionExpiry startet den Timer-Loop (setInterval) neu.
+        fetchSessionExpiry();
+    }).always(function() {
+        // 5. Sperre nach 5 Sekunden wieder freigeben
+        setTimeout(() => { isResetting = false; }, 5000);
+    });
+  }
+
+  // Events, die den Timer zurücksetzen (und neu fetchen)
   $(window).on('mousedown keydown', resetTimer);
+  
+  // 5. Timer initial starten
+  fetchSessionExpiry();
 
  })();
 </script>

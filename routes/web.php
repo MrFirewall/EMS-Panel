@@ -27,6 +27,8 @@ use App\Http\Controllers\Admin\NotificationRuleController;
 use App\Http\Controllers\ExamAttemptController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
 use App\Http\Controllers\Admin\ExamAttemptController as AdminExamAttemptController;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 
 use App\Http\Controllers\PushSubscriptionController;
@@ -208,8 +210,29 @@ Route::middleware(['auth.cfx', 'can:admin.access'])->prefix('admin')->name('admi
     });
 
     // Benachrichtigungsregeln Verwaltung
-    Route::middleware(['can:notification.rules.manage'])
-         ->resource('notification-rules', NotificationRuleController::class)->except(['show']);
+    Route::middleware(['can:notification.rules.manage'])->resource('notification-rules', NotificationRuleController::class)->except(['show']);
+    
+    Route::get('/api/session-expiry', function (Request $request) {
+        $lastActivity = DB::table(config('session.table'))
+        ->where('user_id', Auth::id())
+        ->where('id', $request->session()->getId())
+        ->value('last_activity');
+        
+        if (!$lastActivity) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+        
+        $expiryTimestamp = $lastActivity + (config('session.lifetime') * 60);
+        
+        return response()->json([
+            'expiry_timestamp' => $expiryTimestamp,
+        ]);
+    })->name('api.session.expiry');
+
+    Route::get('/api/session-ping', function () {
+        return response()->json(['status' => 'pong']);
+    })->name('api.session.ping');
+
 });
 
 
