@@ -290,14 +290,16 @@ class UserController extends Controller
         // KORREKTUR: Wende den "sicheren" Filter an und übergib den Klon an die View
         $viewUser = $this->filterSuperAdminFromRoles($user);
 
-         return view('profile.show', [
-             'user' => $viewUser,
-             'serviceRecords' => $serviceRecords,
-             'examAttempts' => $examAttempts,
-             'evaluationCounts' => $evaluationCounts,
-             'hourData' => $hourData,
-             'weeklyHours' => $weeklyHours
-         ]);
+        // KORREKTUR: 'compact' kann keine assoziativen Zuweisungen ('=>') annehmen.
+        // Wir übergeben das Array direkt, damit die View die Variable $user erhält.
+        return view('profile.show', [
+            'user' => $viewUser, // KORREKTUR: Übergib den gefilterten Klon
+            'serviceRecords' => $serviceRecords,
+            'examAttempts' => $examAttempts,
+            'evaluationCounts' => $evaluationCounts,
+            'hourData' => $hourData,
+            'weeklyHours' => $weeklyHours
+        ]);
     }
 
     private function calculateEvaluationCounts(User $user): array
@@ -612,9 +614,9 @@ class UserController extends Controller
              'user_id' => Auth::id(),
              'log_type' => 'USER',
              'action' => 'UPDATED',
-             'target_id' => $user->id,
-             'description' => $description,
-           ]);
+                 'target_id' => $user->id,
+                 'description' => $description,
+              ]);
         
         // --- ENDE: DETAILLIERTES LOGGING (Generation) ---
 
@@ -641,6 +643,10 @@ class UserController extends Controller
             $user,
             Auth::user(),
             [
+                // KORREKTUR: Die formatierte Beschreibung wird nun auch an das Event übergeben.
+                'description' => $description, 
+
+                // Die Rohdaten bleiben für eine detaillierte Verarbeitung erhalten
                 'old_values' => $oldValues, 'added_roles' => $addedRoles, 'removed_roles' => $removedRoles,
                 'added_modules' => $addedModules, 'removed_modules' => $removedModules,
                 'added_permissions' => $addedPermissions, 'removed_permissions' => $removedPermissions
