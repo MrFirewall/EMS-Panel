@@ -561,72 +561,84 @@
     });
 </script>
 
+{{-- ANGEPASSTER SESSION-TIMER --}}
 @if(session('is_remembered') === false)
 <script>
-    // Diese Funktion wird ausgeführt, sobald das Dokument geladen ist.
-    (function() {
-        // 1. Setze die Dauer (aus Laravel Config, z.B. 120 Minuten)
-        // (config('session.lifetime') ist in Minuten, wir brauchen Sekunden)
-        // Wir ziehen 10 Sekunden ab, um einen Puffer zu haben, bevor der Server uns rauswirft.
-        let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
-        
-        // 2. Finde das Timer-Element
-        const timerElement = document.getElementById('session-timer');
-        if(!timerElement) return; // Stopp, wenn das Element nicht da ist
+  (function() {
+    // 1. Setze die Dauer
+    let sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
+    
+    // 2. Finde das Timer-Element
+    const timerElement = document.getElementById('session-timer');
+    const timerTextElement = document.querySelector('.d-sm-inline.mr-1'); // Finde auch den Text davor
+    if(!timerElement) return; 
 
-        // 3. Funktion zum Umleiten (zum Lockscreen)
-        function redirectToLockscreen() {
-            // Setze einen Flag, damit die Middleware weiß, dass dies ein Inaktivitäts-Timeout war
-            // (Obwohl die Middleware dies bereits durch 'is_cfx_authenticated' erkennen sollte)
-            window.location.href = '{{ route('lockscreen') }}';
-        }
+    // 3. Funktion zum Umleiten
+    function redirectToLockscreen() {
+      window.location.href = '{{ route('lockscreen') }}';
+    }
 
-        // 4. Funktion zum Aktualisieren des Timers
-        function updateTimer() {
-            sessionLifetimeInSeconds--;
+    // 4. Funktion zum Aktualisieren des Timers
+    function updateTimer() {
+      // NEU: Zieht 60 Sekunden ab (da wir minütlich aktualisieren)
+      sessionLifetimeInSeconds -= 60; 
 
-            if (sessionLifetimeInSeconds <= 0) {
-                clearInterval(timerInterval);
-                redirectToLockscreen();
-                return;
-            }
+      if (sessionLifetimeInSeconds <= 0) {
+        clearInterval(timerInterval);
+        redirectToLockscreen();
+        return;
+      }
 
-            let minutes = Math.floor(sessionLifetimeInSeconds / 60);
-            let seconds = sessionLifetimeInSeconds % 60;
+      // NEU: Berechne die verbleibenden Minuten
+      let totalMinutes = Math.floor(sessionLifetimeInSeconds / 60);
 
-            // Führende Null hinzufügen
-            minutes = minutes < 10 ? '0' + minutes : minutes;
-            seconds = seconds < 10 ? '0' + seconds : seconds;
+      // NEU: Logik für die Anzeige (hh:mm oder min)
+      if (totalMinutes < 60) {
+        // Weniger als 1 Stunde
+        timerElement.textContent = totalMinutes + ' min';
+        if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:'; // Standardtext
+      } else {
+        // 1 Stunde oder mehr
+        let hours = Math.floor(totalMinutes / 60);
+        let minutes = totalMinutes % 60;
+        minutes = minutes < 10 ? '0' + minutes : minutes; // Führende Null
+        timerElement.textContent = hours + 'h ' + minutes + ' min';
+        if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:'; // Standardtext
+      }
+      
+      // NEU: Farblogik basiert jetzt auf Minuten
+      if(totalMinutes < 5) { // Weniger als 5 Minuten
+        timerElement.classList.remove('badge-danger');
+        timerElement.classList.add('badge-warning');
+        if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:'; // Text ändern
+      }
+    }
 
-            timerElement.textContent = minutes + ':' + seconds;
-            
-            // Ändere die Farbe auf rot, wenn weniger als 5 Minuten übrig sind
-            if(sessionLifetimeInSeconds < 300) {
-                timerElement.classList.remove('badge-danger');
-                timerElement.classList.add('badge-warning');
-            }
-        }
+    // 5. Timer starten
+    updateTimer(); // NEU: Timer sofort beim Laden anzeigen
+    // NEU: Intervall auf 1 Minute (60000 ms) gesetzt
+    let timerInterval = setInterval(updateTimer, 60000);
 
-        // 5. Timer starten
-        let timerInterval = setInterval(updateTimer, 1000);
+    // 6. Inaktivitäts-Reset
+    function resetTimer() {
+      clearInterval(timerInterval);
+      sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
+      updateTimer(); // Timer sofort aktualisieren
+      // NEU: Intervall auf 1 Minute (60000 ms) gesetzt
+      timerInterval = setInterval(updateTimer, 60000);
+      
+      // Farbe zurücksetzen
+      timerElement.classList.remove('badge-warning');
+      timerElement.classList.add('badge-danger');
+      if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:';
+    }
 
-        // 6. Inaktivitäts-Reset
-        // (Setzt den Timer zurück, wenn der Benutzer etwas tut)
-        function resetTimer() {
-            clearInterval(timerInterval);
-            sessionLifetimeInSeconds = ({{ config('session.lifetime', 120) * 60 }}) - 10;
-            updateTimer(); // Timer sofort aktualisieren
-            timerInterval = setInterval(updateTimer, 1000);
-            
-            // Farbe zurücksetzen
-            timerElement.classList.remove('badge-warning');
-            timerElement.classList.add('badge-danger');
-        }
+    // NEU: Events, die den Timer zurücksetzen.
+    // 'mousemove' und 'scroll' wurden entfernt.
+    // 'mousedown' fängt alle Klicks ab. 'keydown' fängt Tastatureingaben ab.
+    $(window).on('mousedown keydown', resetTimer);
 
-        // Events, die den Timer zurücksetzen (jQuery verwenden, da es bereits geladen ist)
-        $(window).on('mousemove mousedown click keydown scroll', resetTimer);
-
-    })();
+  })();
 </script>
 @endif
 
