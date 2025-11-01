@@ -581,15 +581,28 @@
     
     console.log('[DEBUG] ------------------------------------');
 </script>
-{{-- FINALER SESSION-TIMER (SERVER-GESTEUERT MIT PING-RESET) --}}
+{{-- FINALER SESSION-TIMER (SERVER-GESTEUERT MIT PING-RESET & DEBUGGING) --}}
 @if(session('is_remembered') === false)
 <script>
  (function() {
+  // === DEBUGGING: Globale Log-Funktion ===
+  const DEBUG = true;
+  function log(message, ...args) {
+      if (DEBUG) {
+          // %c für CSS-Styling in der Konsole
+          console.log(`%c[TIMER_DEBUG] %c${message}`, 'color: #1e90ff; font-weight: bold;', 'color: black;', ...args);
+      }
+  }
+  log('Skript wird initialisiert.');
+
   const puffer = 10; // 10 Sekunden Puffer
   
   const timerElement = document.getElementById('session-timer');
   const timerTextElement = document.querySelector('.d-sm-inline.mr-1');
-  if(!timerElement) return; 
+  if(!timerElement) {
+      log('%cFEHLER: Timer-Element #session-timer nicht gefunden. Skript gestoppt.', 'color: red;');
+      return; 
+  }
 
   let timerInterval;
   let expiryTimestamp; // Hält den ZIEL-Timestamp (in Sekunden)
@@ -597,21 +610,24 @@
   let isResetting = false; // Sperre, um Ping-Spam zu verhindern
 
   function redirectToLockscreen() {
+   log('%c[ACTION] redirectToLockscreen() wird aufgerufen! Umleitung zu /lock.', 'color: red; font-weight: bold;');
+   clearInterval(timerInterval); // Stoppe alle weiteren Timer
    window.location.href = '{{ route('lock') }}';
   }
 
   function displayTime(remainingSeconds) {
     let totalMinutes = Math.ceil(remainingSeconds / 60);
     
+    // Nur aktualisieren, wenn sich die Minute ändert
     if (totalMinutes === lastDisplayedMinutes && remainingSeconds > 0) {
-        return; // Nicht aktualisieren, wenn sich die Minute nicht geändert hat
+        return; 
     }
+    
+    log(`[DISPLAY] displayTime() wird aufgerufen. Verbleibend: ${remainingSeconds.toFixed(0)}s. Zeige ${totalMinutes}min an.`);
     lastDisplayedMinutes = totalMinutes;
 
-    // Logik für die Anzeige
-    if (totalMinutes <= 0) {
-        // Falls wir im Puffer-Bereich sind, zeige 1 Min.
-        totalMinutes = 1; 
+    if (totalMinutes <= 0) { 
+        totalMinutes = 1; // Falls wir im Puffer-Bereich sind, zeige 1 Min.
     }
     
     if (totalMinutes < 60) {
@@ -625,10 +641,12 @@
     
     // Farblogik
     if(totalMinutes < 5) { 
+      log('[DISPLAY] Status: Warnung (< 5 min)');
       timerElement.classList.remove('badge-primary');
       timerElement.classList.add('badge-warning');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet bald:';
     } else {
+      log('[DISPLAY] Status: Normal (> 5 min)');
       timerElement.classList.remove('badge-warning');
       timerElement.classList.add('badge-primary');
       if(timerTextElement) timerTextElement.textContent = 'Sitzung endet in:';
@@ -638,7 +656,14 @@
   function checkTimer() {
     const nowTimestamp = Math.floor(Date.now() / 1000);
     
+    // Log alle 30 Sekunden, um die Konsole nicht zu fluten
+    if (nowTimestamp % 30 === 0) {
+        log(`[CHECK] Timer-Prüfung... Verbleibend: ${(expiryTimestamp - puffer) - nowTimestamp}s`);
+    }
+    
+    // PRÜFUNG: Ist die Zeit abgelaufen?
     if (nowTimestamp >= (expiryTimestamp - puffer)) {
+      log(`[CHECK] Zeit abgelaufen! now: ${nowTimestamp}, expiry: ${expiryTimestamp} (mit Puffer)`);
       clearInterval(timerInterval);
       redirectToLockscreen();
       return;
@@ -650,7 +675,7 @@
 
   // STARTPUNKT: Holt die "Wahrheit" vom Server
   function fetchSessionExpiry() {
-    // Stoppe den alten Timer, falls er noch läuft
+    log('%c[FETCH] fetchSessionExpiry() startet...', 'color: blue;');
     clearInterval(timerInterval);
 
     $.ajax({
@@ -659,12 +684,15 @@
         dataType: 'json',
         success: function(data) {
             expiryTimestamp = data.expiry_timestamp;
+            const localTime = new Date(expiryTimestamp * 1000).toLocaleString();
+            log(`%c[FETCH] Erfolg! Ziel-Timestamp: ${expiryTimestamp} (Lokal: ${localTime})`, 'color: green;');
             
-            // Starte den Timer
             checkTimer(); // Einmal sofort anzeigen
-            timerInterval = setInterval(checkTimer, 1000); // Dann jede Sekunde prüfen
+            // Starte den sekundengenauen Prüfer
+            timerInterval = setInterval(checkTimer, 1000); 
         },
-        error: function() {
+        error: function(xhr) {
+            log(`%c[FETCH] FEHLER!`, 'color: red;', xhr.responseText);
             console.error("Konnte Session-Ablaufzeit nicht vom Server laden.");
             timerElement.textContent = 'FEHLER';
             timerElement.classList.add('badge-danger');
@@ -672,36 +700,59 @@
     });
   }
 
-  // ===================================================================
-  // HIER IST DER NEUE, "ORDENTLICHE" RESET-TIMER
-  // ===================================================================
+  // "ORDENTLICHER" RESET-TIMER
   function resetTimer() {
-    // 1. Verhindere Spam: Führe den Reset nur alle 5 Sek. aus
-    if (isResetting) return; 
+    if (isResetting) {
+        log('[RESET] Reset-Anfrage ignoriert (Spam-Sperre aktiv).');
+        return; 
+    }
     isResetting = true;
-    
-    // 2. Stoppe den alten Timer
+    log('%c[RESET] resetTimer() startet... Pinge Server.', 'color: orange; font-weight: bold;');
     clearInterval(timerInterval);
 
-    // 3. PING: "Berühre" den Server, um 'last_activity' zu aktualisieren.
     $.ajax({
         url: '{{ route("api.session.ping") }}',
         type: 'GET',
         dataType: 'json'
     }).done(function() {
-        // 4. FETCH: Hole die (jetzt aktualisierte) Ablaufzeit.
+        log('[RESET] Ping erfolgreich. Starte fetchSessionExpiry() neu.');
         // fetchSessionExpiry startet den Timer-Loop (setInterval) neu.
         fetchSessionExpiry();
+    }).fail(function(xhr) {
+        log(`%c[RESET] PING FEHLGESCHLAGEN!`, 'color: red;', xhr.responseText);
     }).always(function() {
-        // 5. Sperre nach 5 Sekunden wieder freigeben
-        setTimeout(() => { isResetting = false; }, 5000);
+        // Sperre nach 5 Sekunden wieder freigeben
+        setTimeout(() => { 
+            log('[RESET] Spam-Sperre aufgehoben.');
+            isResetting = false; 
+        }, 5000);
     });
   }
+  
+  // ===================================================================
+  // === DER "WAKE UP" FIX GEGEN BACKGROUND THROTTLING ===
+  // ===================================================================
+  // Dieser Event feuert, wenn der Tab (oder das Browserfenster)
+  // wieder in den Fokus rückt.
+  window.addEventListener('focus', function() {
+      log('%c[FOCUS] Tab ist wieder im Fokus. Prüfe Zeit...', 'color: purple; font-weight: bold;');
+      
+      // Starte sofort eine manuelle Prüfung. 
+      // checkTimer() ist sicher, da es die Zeit vergleicht und ggf. redirectToLockscreen() aufruft.
+      if (expiryTimestamp) { // Nur ausführen, wenn wir schon ein Ziel haben
+         checkTimer();
+      } else {
+         // Falls der allererste fetch nie passiert ist (z.B. kein Netz beim Laden)
+         log('[FOCUS] Kein Ziel-Timestamp gefunden. Starte fetchSessionExpiry()');
+         fetchSessionExpiry();
+      }
+  });
+  // ===================================================================
 
   // Events, die den Timer zurücksetzen (und neu fetchen)
   $(window).on('mousedown keydown', resetTimer);
   
-  // 5. Timer initial starten
+  // Timer initial starten
   fetchSessionExpiry();
 
  })();
