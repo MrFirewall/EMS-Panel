@@ -6,7 +6,7 @@
         <table class="table table-sm mb-0 table-striped">
             <thead>
                 <tr>
-                    <th>Typ</th>
+                    <th>Datum</th>
                     <th>Titel</th>
                     <th>Ausbilder</th>
                 </tr>
@@ -24,7 +24,7 @@
                         $statusText = $attempt->evaluator->name ?? 'System';
                     @endphp
                     <tr>
-                        <td><span class="badge bg-primary text-sm">Prüfung</span></td>
+                        <td><span class="badge bg-primary text-sm">@dd($attempt)completed_at</span></td>
                         <td>
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
                            <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small>
