@@ -73,8 +73,9 @@ class ProfileController extends Controller
         }
         
         // NEU: Laden Sie die Prüfungsversuche (dein bestehender Code)
+        // KORREKTUR: 'evaluator' wird jetzt mitgeladen (und 'exam' statt exam.trainingModule)
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam.trainingModule')
+                                    ->with(['exam', 'evaluator'])
                                     ->latest('completed_at')
                                     ->get();
         
@@ -134,4 +135,5 @@ class ProfileController extends Controller
         return $counts;
     }
 }
+
 

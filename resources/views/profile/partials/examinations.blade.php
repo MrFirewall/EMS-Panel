@@ -24,25 +24,22 @@
                             $statusText = 'In Bearbeitung';
                         } elseif ($attempt->status === 'submitted') {
                             $statusColor = 'bg-warning';
-                            $statusText = 'Eingereicht (Wartet auf Bewertung)';
+                            $statusText = 'Wartet auf Bewertung';
                         } elseif ($attempt->status === 'evaluated') {
                             
-                            // --- KORRIGIERTE LOGIK START ---
-                            // Prüfe, ob die Relationen geladen sind, um Fehler zu vermeiden
-                            if ($attempt->exam) {
-                                // Vergleiche den Score des Versuchs direkt mit der Bestehensgrenze der Prüfung
-                                if ($attempt->score >= $attempt->exam->pass_mark) {
-                                    $statusColor = 'bg-success';
-                                    $statusText = 'Bestanden';
-                                } else {
-                                    $statusColor = 'bg-danger';
-                                    $statusText = 'Nicht bestanden';
-                                }
+                            // --- KORRIGIERTE LOGIK START (Zeigt Bewerter an) ---
+                            // (Stelle sicher, dass ->with('evaluator') im Controller geladen wurde!)
+                            $evaluatorName = $attempt->evaluator->name ?? 'System';
+                            
+                            // Setze Farbe basierend auf bestanden/nicht bestanden
+                            if ($attempt->exam && $attempt->score >= $attempt->exam->pass_mark) {
+                                $statusColor = 'bg-success';
                             } else {
-                                // Fallback, falls 'exam' Relation fehlt (sollte nicht passieren)
-                                $statusColor = 'bg-dark';
-                                $statusText = 'Bewertet (Fehler)';
+                                $statusColor = 'bg-danger';
                             }
+                            
+                            // Zeige den Namen des Bewerters an
+                            $statusText = "Bewertet von: {$evaluatorName}";
                             // --- KORRIGIERTE LOGIK ENDE ---
                             
                         }

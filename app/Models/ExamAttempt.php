@@ -42,4 +42,8 @@ class ExamAttempt extends Model
     {
         return 'uuid'; // Sagt Laravel, dass es immer die 'uuid'-Spalte für Routen verwenden soll
     }
+    public function evaluator()
+    {
+        return $this->belongsTo(User::class, 'evaluator_id');
+    }
 }

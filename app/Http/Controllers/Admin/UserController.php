@@ -269,15 +269,16 @@ class UserController extends Controller
         // 1. Lade die Module
         $user->load('trainingModules');
 
-        // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte
+        // 2. Lade die 'assigner'-Beziehung AUF die Pivot-Objekte (verhindert N+1 Queries)
         if ($user->trainingModules->isNotEmpty()) {
             $pivots = $user->trainingModules->pluck('pivot'); 
             (new \Illuminate\Database\Eloquent\Collection($pivots))->load('assigner');
         }
 
         // 1. Prüfungsversuche laden
+        // KORREKTUR: 'evaluator' wird jetzt mitgeladen (und 'exam' statt exam.trainingModule)
         $examAttempts = ExamAttempt::where('user_id', $user->id)
-                                    ->with('exam.trainingModule')
+                                    ->with(['exam', 'evaluator'])
                                     ->latest('completed_at') 
                                     ->get();
 
@@ -686,5 +687,6 @@ class UserController extends Controller
         return redirect()->route('admin.users.show', $user); // Ohne success
     }
 }
+
 
 

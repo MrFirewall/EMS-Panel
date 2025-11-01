@@ -32,7 +32,8 @@ class ExamAttemptController extends Controller
     {
         // $this->authorize('viewAny', ExamAttempt::class); // Bereits durch Middleware
 
-        $attempts = ExamAttempt::with(['exam', 'user']) // Ohne trainingModule
+        // KORREKTUR: Lade den Bewerter (evaluator) direkt mit, für die Ansicht
+        $attempts = ExamAttempt::with(['exam', 'user', 'evaluator']) 
                             ->orderBy('updated_at', 'desc')
                             ->paginate(25);
         return view('admin.exams.attempts-index', compact('attempts'));
@@ -77,7 +78,8 @@ class ExamAttemptController extends Controller
     {
         $this->authorize('viewResult', $attempt);
         // Lade die nötigen Relationen (Exam wird benötigt)
-        $attempt->load(['exam', 'user', 'answers.question.options']);
+        // KORREKTUR: Lade 'evaluator' mit
+        $attempt->load(['exam', 'user', 'answers.question.options', 'evaluator']);
         return view('exams.result', compact('attempt'));
     }
 
@@ -89,8 +91,13 @@ class ExamAttemptController extends Controller
         // Status für Log/Event ableiten (nicht mehr gespeichert)
         $isPassed = $validated['final_score'] >= $attempt->exam->pass_mark;
         $status_result_for_log = $isPassed ? 'bestanden' : 'nicht_bestanden';
+        
+        // KORREKTUR: Füge die ID des Admins als Bewerter hinzu
+        $validated['evaluator_id'] = Auth::id();
 
-        $attempt = $this->attemptService->finalizeAttempt($attempt, $validated); // Service aktualisiert nur Score & Status
+        // KORREKTUR: Übergib alle validierten Daten (inkl. evaluator_id) an den Service
+        // (Stelle sicher, dass dein ExamAttemptService 'evaluator_id' verarbeiten kann)
+        $attempt = $this->attemptService->finalizeAttempt($attempt, $validated); 
 
         $actionDesc = "Prüfung '{$attempt->exam->title}' von {$attempt->user->name} wurde als '{$status_result_for_log}' bewertet. Score: {$validated['final_score']}%";
         ActivityLog::create(['user_id' => Auth::id(), 'log_type' => 'EXAM', 'action' => 'EVALUATED', 'target_id' => $attempt->id, 'description' => $actionDesc]);
@@ -130,7 +137,7 @@ class ExamAttemptController extends Controller
         return back()->with('success', 'Prüfungsversuch wurde zurückgesetzt.'); // Optional: Erfolgsmeldung
     }
 
-    public function sendLink(ExamAttempt $attempt) // <<<--- HIER IST DIE KORREKTUR
+    public function sendLink(ExamAttempt $attempt) 
     {
         $this->authorize('sendLink', $attempt);
         $secureUrl = route('exams.take', $attempt);
@@ -158,6 +165,7 @@ class ExamAttemptController extends Controller
          $attempt->update([
              'status' => 'evaluated', // Nur Status und Score setzen
              'score' => $validated['score'],
+             'evaluator_id' => Auth::id(), // KORREKTUR: Bewerter hier auch setzen
          ]);
 
          $message = "Prüfungsversuch #{$attempt->id} von {$attempt->user->name} wurde manuell bewertet: Score {$validated['score']}% ({$resultText}).";
@@ -213,3 +221,4 @@ class ExamAttemptController extends Controller
         return redirect()->route('admin.exams.attempts.index')->with('success', 'Prüfungsversuch wurde endgültig gelöscht.');
     }
 }
+
