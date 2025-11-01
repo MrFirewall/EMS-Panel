@@ -80,14 +80,13 @@
 
         <ul class="navbar-nav ml-auto">
             
-            {{-- NEU: Session-Timer (nur wenn "Angemeldet bleiben" FALSCH ist) --}}
-            @if(session('is_remembered') === false)
+
+            <!-- @if(session('is_remembered') === false)
                 <li class="nav-item d-flex align-items-center px-2">
                     <span class="text-muted small d-none d-sm-inline mr-1">Sitzung endet in:</span>
                     <span class="badge badge-danger" id="session-timer">--:--</span>
                 </li>
-            @endif
-            {{-- ENDE NEU --}}
+            @endif -->
 
             {{-- Dark Mode Toggle --}}
             <li class="nav-item">
