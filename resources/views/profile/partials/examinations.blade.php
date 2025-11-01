@@ -27,7 +27,7 @@
                         <td><span class="badge bg-primary text-sm">Prüfung</span></td>
                         <td>
                             <strong>{{ $attempt->exam->title ?? 'N/A' }}</strong>
-                           <small class="text-muted d-block">({{ $attempt->exam->trainingModule->name ?? 'N/A' }})</small>
+                           <small class="text-muted d-block">({{ $attempt->exam->description ?? 'N/A' }})</small>
                         </td>
                         <td><span class="badge {{ $statusColor }}">{{ $statusText }}</span></td>
                     </tr>
