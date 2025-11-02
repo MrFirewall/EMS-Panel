@@ -1,72 +1,24 @@
-# Created by Gemini for Laravel Projects
+### Laravel ###
+/vendor/
+node_modules/
+npm-debug.log
+yarn-error.log
 
-# Dependencies
-/node_modules
-/vendor
+# Laravel 4 specific
+bootstrap/compiled.php
+app/storage/
 
-# Laravel Environment File
-# NEVER commit this file to a public repository!
-/.env
-/.env.backup
-/.env.production
+# Laravel 5 & Lumen specific
+public/storage
+public/hot
 
-# Laravel Application Keys
+# Laravel 5 & Lumen specific with changed public path
+public_html/storage
+public_html/hot
+
 storage/*.key
-
-# Laravel IDE Helper
-_ide_helper.php
-_ide_helper_models.php
-.phpstorm.meta.php
-
-# Laravel Telescope
-/storage/telescope/*
-!/storage/telescope/.gitignore
-
-# Laravel Log files
-/storage/logs/*.log
-
-# Laravel Cache, Sessions, and Views
-/storage/framework/
-/bootstrap/cache/*
-!/bootstrap/cache/.gitignore
-
-# Compiled assets
-/public/hot
-/public/storage
-/public/build
-
-# Local Development Tools
+.env
 Homestead.yaml
 Homestead.json
 /.vagrant
-
-# Testing
-/storage/testing/*
-!/storage/testing/.gitignore
-/.phpunit.result.cache
-
-# Debugging & Package Manager Logs
-npm-debug.log
-yarn-error.log
-error_log
-php_errorlog
-
-# Editor & IDE Directories
-.idea/
-.vscode/
-*.sublime-project
-*.sublime-workspace
-
-# OS Generated Files
-.DS_Store
-Thumbs.db
-
-# Pail
-/storage/pail/*
-!/storage/pail/.gitignore
-
-# PHP Actor
-.phpactor.json
-
-# Auth file for private packages
-auth.json
+.phpunit.result.cache
