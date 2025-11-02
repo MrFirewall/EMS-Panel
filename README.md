@@ -110,6 +110,7 @@ Basierend auf dem Entwicklungsverlauf umfasst das Panel folgende Kernmodule:
    ```bash
    cp .env.example .env
    php artisan key:generate
+   php artisan cfx:keys   
    ```
 5. Datenbank konfigurieren
    ⚠️ *Ersetze Benutzername und Passwort durch reale Werte.*
