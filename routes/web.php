@@ -29,7 +29,7 @@ use App\Http\Controllers\Admin\ExamController as AdminExamController;
 use App\Http\Controllers\Admin\ExamAttemptController as AdminExamAttemptController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Session;
 
 use App\Http\Controllers\PushSubscriptionController;
 /*
@@ -138,7 +138,16 @@ Route::middleware('auth.cfx')->group(function () {
             return response()->json(['error' => 'Session not found'], 404);
         }
         
-        $expiryTimestamp = $lastActivity + (config('session.lifetime') * 60);
+        // --- NEUE LOGIK ---
+        // Wir spiegeln die Logik aus der Middleware:
+        // Ist der User "remembered"? Dann nutze die volle Lifetime (1440).
+        // Sonst nutze den harten 120-Minuten-Lock-Timer.
+        $isRemembered = Session::get('is_remembered', false);
+
+        $timeoutMinutes = $isRemembered ? config('session.lifetime') : 120;
+        
+        // $expiryTimestamp = $lastActivity + (config('session.lifetime') * 60); // ALT
+        $expiryTimestamp = $lastActivity + ($timeoutMinutes * 60); // NEU
         
         return response()->json([
             'expiry_timestamp' => $expiryTimestamp,
