@@ -565,7 +565,7 @@
 <script>
  (function() {
   // === DEBUGGING: Globale Log-Funktion ===
-  const DEBUG = false;
+  const DEBUG = true;
   function log(message, ...args) {
       if (DEBUG) {
           // %c für CSS-Styling in der Konsole
